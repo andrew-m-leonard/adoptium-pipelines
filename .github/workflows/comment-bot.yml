@@ -1,0 +1,31 @@
+name: "Comment Bot"
+
+on:
+  pull_request_target:
+    types: [ opened ]
+
+permissions:
+  contents: read
+
+jobs:
+  Comment:
+    permissions:
+      issues: write  # for peter-evans/create-or-update-comment to create or update comment
+      pull-requests: write  # for peter-evans/create-or-update-comment to create or update comment
+    name: Add Comment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create comment
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            # Thank you for creating a pull request!
+            Please check out the information below if you have not made a pull request here before (or if you need a reminder how things work).
+
+            ## Code Quality and Contributing Guidelines
+            If you have not done so already, please familiarise yourself with our [Contributing Guidelines](https://github.com/adoptium/ci-adoptium-pipelines/blob/main/CONTRIBUTING.md) and [Code Of Conduct](https://github.com/adoptium/.github/blob/main/CODE_OF_CONDUCT.md), even if you have contributed before.
+
+            ## Tests
+            Github actions will run a set of jobs against your PR that will lint your changes. Keep an eye out for the results from these on the latest commit you submitted.
