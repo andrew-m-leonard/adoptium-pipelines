@@ -67,10 +67,10 @@ copy_artifacts() {
 # Sets the FILENAME environment variable
 # Requires: JAVA_TO_BUILD, ARCHITECTURE, TARGET_OS, VARIANT, SCM_REF (optional)
 determine_filename() {
-    local java_to_build="${JAVA_TO_BUILD}"
-    local architecture="${ARCHITECTURE}"
+    local java_to_build="${JAVA_TO_BUILD}"  # shellcheck disable=SC2153
+    local architecture="${ARCHITECTURE}"    # shellcheck disable=SC2153
     local os="${TARGET_OS}"
-    local variant="${VARIANT}"
+    local variant="${VARIANT}"              # shellcheck disable=SC2153
     local scm_ref="${SCM_REF:-}"
 
     # Validate required variables
@@ -123,7 +123,8 @@ determine_filename() {
         filename="${filename}_${name_tag}"
     else
         # Use timestamp if no SCM_REF provided
-        local timestamp=$(date -u '+%Y-%m-%d-%H-%M')
+        local timestamp
+        timestamp=$(date -u '+%Y-%m-%d-%H-%M')
         filename="${filename}_${timestamp}"
     fi
 
@@ -143,7 +144,8 @@ verify_artifact() {
 
     if [[ -f "${artifact_path}" ]]; then
         log_info "Verified artifact exists: ${artifact_path}"
-        local size=$(du -h "${artifact_path}" | cut -f1)
+        local size
+        size=$(du -h "${artifact_path}" | cut -f1)
         log_info "Artifact size: ${size}"
         return 0
     else
@@ -178,7 +180,7 @@ create_checksums() {
 
     find . -type f ! -name "checksums.txt" -exec sha256sum {} \; > "${checksum_file}"
 
-    popd > /dev/null
+    popd > /dev/null || return
 
     log_info "Checksums created: ${checksum_file}"
     cat "${checksum_file}"
@@ -200,11 +202,11 @@ verify_checksums() {
 
     if sha256sum -c "${checksum_file}"; then
         log_info "All checksums verified successfully"
-        popd > /dev/null
+        popd > /dev/null || return
         return 0
     else
         log_error "Checksum verification failed"
-        popd > /dev/null
+        popd > /dev/null || return
         return 1
     fi
 }

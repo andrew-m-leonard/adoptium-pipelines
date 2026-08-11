@@ -166,8 +166,10 @@ setup_build_environment() {
     log_info "Setting up build environment"
 
     # Detect OS and architecture
-    local detected_os=$(uname -s | tr '[:upper:]' '[:lower:]')
-    local detected_arch=$(uname -m)
+    local detected_os
+    detected_os=$(uname -s | tr '[:upper:]' '[:lower:]')
+    local detected_arch
+    detected_arch=$(uname -m)
 
     log_info "Detected OS: ${detected_os}"
     log_info "Detected Architecture: ${detected_arch}"
@@ -438,7 +440,9 @@ execute_build() {
     export WORKSPACE="${WORKSPACE}"
     export SCM_REF="${scm_ref}"
     export CONFIGURE_ARGS="${configure_args}"
-    export RELEASE="$([[ "${RELEASE_TYPE:-NIGHTLY}" == "RELEASE" ]] && echo "true" || echo "false")"
+    local release_value
+    release_value="$([[ "${RELEASE_TYPE:-NIGHTLY}" == "RELEASE" ]] && echo "true" || echo "false")"
+    export RELEASE="${release_value}"
 
     # Determine output filename if not already set
     if [[ -z "${FILENAME:-}" ]]; then
@@ -549,7 +553,7 @@ organize_build_outputs() {
 
     # Look for tar.gz, zip, and json files (including SBOM)
     while IFS= read -r -d '' artifact; do
-        log_info "Found artifact: $(basename ${artifact})"
+        log_info "Found artifact: $(basename "${artifact}")"
         cp "${artifact}" "${TARGET_DIR}/"
         artifacts_found=$((artifacts_found + 1))
     done < <(find "${target_dir}" -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.json" \) -print0)

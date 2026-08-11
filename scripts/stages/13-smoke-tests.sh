@@ -56,9 +56,12 @@ main() {
     log_info "Loading configuration from ${CONFIG_FILE}"
 
     # Extract configuration (pass file path directly)
-    local java_version=$(get_config_value "${CONFIG_FILE}" ".buildConfig.JAVA_TO_BUILD")
-    local target_os=$(get_config_value "${CONFIG_FILE}" ".buildConfig.TARGET_OS")
-    local architecture=$(get_config_value "${CONFIG_FILE}" ".buildConfig.ARCHITECTURE")
+    local java_version
+    java_version=$(get_config_value "${CONFIG_FILE}" ".buildConfig.JAVA_TO_BUILD")
+    local target_os
+    target_os=$(get_config_value "${CONFIG_FILE}" ".buildConfig.TARGET_OS")
+    local architecture
+    architecture=$(get_config_value "${CONFIG_FILE}" ".buildConfig.ARCHITECTURE")
 
     log_info "Test Configuration:"
     log_info "  Java Version: ${java_version}"
@@ -69,11 +72,13 @@ main() {
     prepare_output_dir "${TARGET_DIR}"
 
     # Find JDK artifact
-    local jdk_artifact=$(find_jdk_artifact)
+    local jdk_artifact
+    jdk_artifact=$(find_jdk_artifact)
     log_info "Testing JDK: ${jdk_artifact}"
 
     # Extract JDK
-    local jdk_dir=$(extract_jdk "${jdk_artifact}")
+    local jdk_dir
+    jdk_dir=$(extract_jdk "${jdk_artifact}")
 
     # Run smoke tests
     local test_result=0
@@ -95,7 +100,8 @@ main() {
 find_jdk_artifact() {
     # Look for the main JDK image, excluding other image types
     # JDK image pattern: *jdk_*.tar.gz or *jdk_*.zip (Windows)
-    local artifact=$(find "${INPUT_ARTIFACTS_DIR}" \( -name "*jdk_*.tar.gz" -o -name "*jdk_*.zip" \) \
+    local artifact
+    artifact=$(find "${INPUT_ARTIFACTS_DIR}" \( -name "*jdk_*.tar.gz" -o -name "*jdk_*.zip" \) \
         | head -n 1)
 
     if [[ -z "${artifact}" ]]; then
@@ -106,7 +112,7 @@ find_jdk_artifact() {
         exit 1
     fi
 
-    log_info "Found JDK artifact: $(basename ${artifact})"
+    log_info "Found JDK artifact: $(basename "${artifact}")"
     echo "${artifact}"
 }
 
@@ -131,7 +137,8 @@ extract_jdk() {
     fi
 
     # Find the JDK directory (usually has a version in the name)
-    local jdk_dir=$(find "${extract_dir}" -maxdepth 1 -type d ! -path "${extract_dir}" | head -n 1)
+    local jdk_dir
+    jdk_dir=$(find "${extract_dir}" -maxdepth 1 -type d ! -path "${extract_dir}" | head -n 1)
 
     if [[ -z "${jdk_dir}" ]]; then
         log_error "Failed to find extracted JDK directory"
@@ -313,7 +320,8 @@ EOF
     log_info "Test metadata created"
 }
 
-# Error handler
+# Error handler (called indirectly via trap)
+# shellcheck disable=SC2317
 error_handler() {
     local line_number=$1
     log_error "Smoke test stage failed at line ${line_number}"
