@@ -116,7 +116,8 @@ validate_standard_environment() {
 
     require_env "WORKSPACE"
     require_env "CONFIG_FILE"
-    require_file "${CONFIG_FILE}"  # shellcheck disable=SC2153
+    # shellcheck disable=SC2153
+    require_file "${CONFIG_FILE}"
 
     # Set default directory if not set.
     # WORKSPACE points to stage_workspace/ (local) or the Jenkins agent workspace.

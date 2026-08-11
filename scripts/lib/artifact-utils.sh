@@ -67,10 +67,13 @@ copy_artifacts() {
 # Sets the FILENAME environment variable
 # Requires: JAVA_TO_BUILD, ARCHITECTURE, TARGET_OS, VARIANT, SCM_REF (optional)
 determine_filename() {
-    local java_to_build="${JAVA_TO_BUILD}"  # shellcheck disable=SC2153
-    local architecture="${ARCHITECTURE}"    # shellcheck disable=SC2153
+    # shellcheck disable=SC2153
+    local java_to_build="${JAVA_TO_BUILD}"
+    # shellcheck disable=SC2153
+    local architecture="${ARCHITECTURE}"
     local os="${TARGET_OS}"
-    local variant="${VARIANT}"              # shellcheck disable=SC2153
+    # shellcheck disable=SC2153
+    local variant="${VARIANT}"
     local scm_ref="${SCM_REF:-}"
 
     # Validate required variables

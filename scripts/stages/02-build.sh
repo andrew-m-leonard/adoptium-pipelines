@@ -126,6 +126,7 @@ main() {
     prepare_workspace "${clean_workspace}"
 
     # Prepare target directory
+    # shellcheck disable=SC2153
     prepare_output_dir "${TARGET_DIR}"
 
     # Execute build using build-farm/make-adopt-build-farm.sh
