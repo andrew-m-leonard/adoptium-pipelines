@@ -1,0 +1,22 @@
+{
+  "stageId": "16-publish",
+  "stageDisabled": false,
+  "stageCondition": [
+    { "param": "PUBLISH_ARTIFACTS", "value": true }
+  ],
+  "description": "Parameters consumed by the publish artifacts stage.",
+  "parameterGroups": [
+    {
+      "name": "Stage Selections",
+      "description": "Boolean flags that control which pipeline stages are enabled. All stage-gate parameters are collected here so operators can see and adjust the full execution plan in one place.",
+      "parameters": [
+        {
+          "name": "PUBLISH_ARTIFACTS",
+          "type": "boolean",
+          "default": false,
+          "description": "Publish built artifacts to the release repository."
+        }
+      ]
+    }
+  ]
+}

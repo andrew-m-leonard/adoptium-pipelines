@@ -1,0 +1,22 @@
+{
+  "stageId": "07-installer",
+  "stageDisabled": false,
+  "stageCondition": [
+    { "param": "ENABLE_INSTALLERS", "value": true }
+  ],
+  "description": "Parameters consumed by the installer build stage.",
+  "parameterGroups": [
+    {
+      "name": "Stage Selections",
+      "description": "Boolean flags that control which pipeline stages are enabled. All stage-gate parameters are collected here so operators can see and adjust the full execution plan in one place.",
+      "parameters": [
+        {
+          "name": "ENABLE_INSTALLERS",
+          "type": "boolean",
+          "default": true,
+          "description": "Build platform-specific installer packages (.msi on Windows, .pkg on macOS, .deb/.rpm on Linux)."
+        }
+      ]
+    }
+  ]
+}

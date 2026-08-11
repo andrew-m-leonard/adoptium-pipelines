@@ -1,0 +1,8 @@
+{
+  "stageId": "04-assemble-images",
+  "stageDisabled": false,
+  "stageCondition": [
+    { "param": "SIGN_ARTIFACTS", "value": true }
+  ],
+  "description": "Gate-only params.json for the assemble-images stage. This stage has no parameters of its own — it runs only when SIGN_ARTIFACTS is true and the platform is mac or windows on a non-jdk8u build."
+}

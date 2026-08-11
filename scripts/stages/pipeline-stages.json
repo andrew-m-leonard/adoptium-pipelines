@@ -1,0 +1,20 @@
+{
+  "pipelineStages": [
+    { "id": "01-initialize",           "label": "Initialize",               "hasScript": false },
+    { "id": "02-build",                "label": "Build",                    "hasScript": true  },
+    { "id": "03-internal-code-sign",   "label": "Internal Code Sign",       "hasScript": true  },
+    { "id": "04-assemble-images",      "label": "Assemble Images",          "hasScript": true  },
+    { "id": "06-post-build-code-sign", "label": "Post-Build Code Sign",     "hasScript": true  },
+    { "id": "07-installer",            "label": "Build Installers",         "hasScript": true  },
+    { "id": "08-code-sign-installer",  "label": "Code Sign Installer",      "hasScript": true  },
+    { "id": "09-sbom-sign",            "label": "SBOM Sign",                "hasScript": true  },
+    { "id": "10-digital-artifact-sign","label": "Digital Artifact Sign",    "hasScript": true  },
+    { "id": "11-verify-signing",       "label": "Verify Signing",           "hasScript": true  },
+    { "id": "12-validate-sbom",        "label": "Validate SBOM",            "hasScript": true  },
+    { "id": "13-smoke-tests",          "label": "Smoke Tests",              "hasScript": true  },
+    { "id": "14-aqa-tests",            "label": "AQA Tests",                "hasScript": true  },
+    { "id": "15-tck-tests",            "label": "TCK Tests",                "hasScript": true  },
+    { "id": "16-publish",              "label": "Publish Artifacts",        "hasScript": true  },
+    { "id": "20-reproducible-compare", "label": "Reproducible Compare Build","hasScript": true  }
+  ]
+}
