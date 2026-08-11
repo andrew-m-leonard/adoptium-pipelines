@@ -32,7 +32,7 @@ limitations under the License.
  * @param pipelineCommitSha  SHA of the ci-adoptium-pipelines checkout — stamped
  *                           into job descriptions for change detection.
  */
-def generateJobs(String configRepoUrl, String configRepoBranch, String pipelineCommitSha) {
+void generateJobs(String configRepoUrl, String configRepoBranch, String pipelineCommitSha) {
     // Run the CI-agnostic Python collator — the single source of truth for
     // stage parameter collation shared by seed, launch, and build jobs.
     // vendor-scripts/ lives in the workspace root (config repo SCM checkout).
@@ -43,7 +43,7 @@ def generateJobs(String configRepoUrl, String configRepoBranch, String pipelineC
     // Note: pipelines/ prefix because the seed job checks out ci-adoptium-pipelines
     // into pipelines/ (see Jenkinsfile.seed dir('pipelines') block).
     def ps = load('pipelines/ci/jenkins/lib/PipelineStages.groovy')
-    def collectCmd = 'python3 pipelines/scripts/lib/collect-stage-params.py' +
+    String collectCmd = 'python3 pipelines/scripts/lib/collect-stage-params.py' +
         ' --default-stages-dir pipelines/scripts/stages' +
         " --orchestrated-stages ${ps.orchestratedStages()}" +
         ' --output collated-stage-params.json'
@@ -52,7 +52,7 @@ def generateJobs(String configRepoUrl, String configRepoBranch, String pipelineC
     }
     sh(script: collectCmd)
 
-    def collatedJson = readFile('collated-stage-params.json')
+    String collatedJson = readFile('collated-stage-params.json')
     if (!collatedJson?.trim()) {
         error('collect-stage-params.py produced empty output — ensure the pipeline repo checkout succeeded.')
     }

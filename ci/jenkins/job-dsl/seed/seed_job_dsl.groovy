@@ -51,37 +51,42 @@ import groovy.json.JsonSlurper
 // STEP 1: Validate binding variables
 // ============================================================================
 
-def configRepoUrl       = binding.variables.get('CONFIG_REPO_URL')       ?: ''
-def configRepoBranch    = binding.variables.get('CONFIG_REPO_BRANCH')    ?: ''
-def pipelineCommitSha   = binding.variables.get('PIPELINE_COMMIT_SHA')   ?: 'unknown'
-def collatedParamsJson  = binding.variables.get('COLLATED_PARAMS_JSON')  ?: ''
+def configRepoUrl      = binding.variables.get('CONFIG_REPO_URL')       ?: ''
+def configRepoBranch   = binding.variables.get('CONFIG_REPO_BRANCH')    ?: ''
+def pipelineCommitSha  = binding.variables.get('PIPELINE_COMMIT_SHA')   ?: 'unknown'
+def collatedParamsJson = binding.variables.get('COLLATED_PARAMS_JSON')  ?: ''
+
+final int SEPARATOR_WIDTH  = 80
+final int VERSION_MODULO   = 4
+final int LTS_BASE_VERSION = 17
+final int DUPLICATE_ZERO   = 0
 
 if (!configRepoUrl?.trim()) {
-    throw new RuntimeException(
-        "CONFIG_REPO_URL is required but was not provided.\n" +
-        "Set it as a parameter on the seed job (see docs/JOB_DSL_AUTOMATION.md)."
+    throw new IllegalStateException(
+        'CONFIG_REPO_URL is required but was not provided.\n' +
+        'Set it as a parameter on the seed job (see docs/JOB_DSL_AUTOMATION.md).'
     )
 }
 if (!configRepoBranch?.trim()) {
-    throw new RuntimeException(
-        "CONFIG_REPO_BRANCH is required but was not provided.\n" +
-        "Set it as a parameter on the seed job (see docs/JOB_DSL_AUTOMATION.md)."
+    throw new IllegalStateException(
+        'CONFIG_REPO_BRANCH is required but was not provided.\n' +
+        'Set it as a parameter on the seed job (see docs/JOB_DSL_AUTOMATION.md).'
     )
 }
 if (!collatedParamsJson?.trim()) {
-    throw new RuntimeException(
-        "COLLATED_PARAMS_JSON is empty.\n" +
-        "Ensure SeedHelper.groovy ran collect-stage-params.py successfully."
+    throw new IllegalStateException(
+        'COLLATED_PARAMS_JSON is empty.\n' +
+        'Ensure SeedHelper.groovy ran collect-stage-params.py successfully.'
     )
 }
 
-println "=" * 80
-println "SEED JOB"
+println '=' * SEPARATOR_WIDTH
+println 'SEED JOB'
 println "  CONFIG_REPO_URL    : ${configRepoUrl}"
 println "  CONFIG_REPO_BRANCH : ${configRepoBranch}"
 println "  PIPELINE_COMMIT_SHA: ${pipelineCommitSha}"
-println "=" * 80
-println ""
+println '=' * SEPARATOR_WIDTH
+println ''
 
 // ============================================================================
 // STEP 2: Load configuration using readFileFromWorkspace
@@ -90,11 +95,11 @@ println ""
 def slurper = new JsonSlurper()
 
 def pipelineConfig = slurper.parseText(readFileFromWorkspace('adoptium_pipeline_config.json'))
-println "✓ Loaded adoptium_pipeline_config.json"
-println "  Active JDK versions: ${pipelineConfig.activeJdkVersions.findAll { it.enabled }.collect { it.version }.join(', ')}"
+println '✓ Loaded adoptium_pipeline_config.json'
+println "  Active JDK versions: ${pipelineConfig.activeJdkVersions.findAll { it.enabled }*.version.join(', ')}"
 
 def jenkinsConfig = slurper.parseText(readFileFromWorkspace('jenkins_job_config.json'))
-println "✓ Loaded jenkins_job_config.json\n"
+println '✓ Loaded jenkins_job_config.json\n'
 
 // ============================================================================
 // STEP 3: Parse collated stage parameters from pre-computed JSON
@@ -114,7 +119,7 @@ rawGroups.each { grp ->
     // non-priority groups carry a scalar stageId — normalise to a list in both cases.
     def incomingIds = grp.stageIds instanceof List ? grp.stageIds : [grp.stageId]
     if (mergedGroupMap.containsKey(gname)) {
-        incomingIds.each { id -> if (id && !mergedGroupMap[gname].stageIds.contains(id)) mergedGroupMap[gname].stageIds << id }
+        incomingIds.each { id -> if (id && !mergedGroupMap[gname].stageIds.contains(id)) { mergedGroupMap[gname].stageIds << id } }
         mergedGroupMap[gname].parameters.addAll(grp.parameters ?: [])
     } else {
         mergedGroupMap[gname] = [
@@ -155,13 +160,13 @@ def pipelineRepoBranch        = pipelineConfig.repository?.branch ?: 'main'
 def pipelineRepoCredentialsId = pipelineConfig.repository?.credentialsId ?: ''
 def defaultParams             = jenkinsConfig.jobConfiguration?.defaultParameters ?: [:]
 
-println "Creating launch orchestrator jobs for active JDK versions:"
+println 'Creating launch orchestrator jobs for active JDK versions:'
 pipelineConfig.activeJdkVersions.findAll { it.enabled }.each { versionInfo ->
     def version    = versionInfo.version
     def configFile = "${pipelineConfig.configFilePrefix ?: 'configurations/'}${version}${pipelineConfig.configFileSuffix ?: '_pipeline_config.json'}"
 
     def versionNum = version.replaceAll(/[^\d]/, '').toInteger()
-    def isLts      = (versionNum == 8 || versionNum == 11 || (versionNum >= 17 && (versionNum - 17) % 4 == 0))
+    def isLts      = (versionNum == 8 || versionNum == 11 || (versionNum >= LTS_BASE_VERSION && (versionNum - LTS_BASE_VERSION) % VERSION_MODULO == 0))
 
     println "  → JDK ${version}${isLts ? ' [LTS]' : ''}"
 
@@ -214,10 +219,10 @@ pipelineConfig.activeJdkVersions.findAll { it.enabled }.each { versionInfo ->
             // Priority group ordering (Stage Selections first) is already applied
             // by collect-stage-params.py — collatedParamGroups preserves that order.
             collatedParamGroups.each { group ->
-                if (group.stageDisabled == true) return
+                if (group.stageDisabled == true) { return }
                 def stageLabel  = group.stageIds.join('_').replaceAll(/\W+/, '_')
                 def stageHeader = group.stageIds.size() == 1
-                    ? "stage: ${group.stageIds[0]}"
+                    ? "stage: ${group.stageIds[DUPLICATE_ZERO]}"
                     : "stages: ${group.stageIds.join(', ')}"
                 separator {
                     name("__sep_${stageLabel}_${group.name.replaceAll(/\W+/, '_')}")
@@ -298,7 +303,7 @@ pipelineConfig.activeJdkVersions.findAll { it.enabled }.each { versionInfo ->
     }
 }
 
-println "✓ Launch orchestrator jobs created successfully\n"
+println '✓ Launch orchestrator jobs created successfully\n'
 
 // ============================================================================
 // STEP 6: Create Views
@@ -338,7 +343,7 @@ listView('Build_openjdk') {
     }
 }
 
-println "✓ Views created successfully\n"
-println "=" * 80
-println "Seed job execution complete!"
-println "=" * 80
+println '✓ Views created successfully\n'
+println '=' * SEPARATOR_WIDTH
+println 'Seed job execution complete!'
+println '=' * SEPARATOR_WIDTH

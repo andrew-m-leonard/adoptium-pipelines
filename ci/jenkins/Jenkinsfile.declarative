@@ -37,7 +37,8 @@ limitations under the License.
  * CI adapters (Jenkins, local runner, migration tools).
  */
 
-import groovy.json.*
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import groovy.transform.Field
 
 // Library instances — initialised lazily after first checkout
@@ -58,22 +59,22 @@ import groovy.transform.Field
 // These @Field finals cannot be replaced by a load() of PipelineStages.groovy
 // because declarative stage() names are evaluated at pipeline definition time —
 // before any script{} block runs — so the constants must exist at this scope.
-@Field final INITIALIZE           = '01-initialize'
-@Field final BUILD                = '02-build'
-@Field final INTERNAL_CODE_SIGN   = '03-internal-code-sign'
-@Field final ASSEMBLE_IMAGES      = '04-assemble-images'
-@Field final POST_BUILD_CODE_SIGN = '06-post-build-code-sign'
-@Field final BUILD_INSTALLERS     = '07-installer'
-@Field final CODE_SIGN_INSTALLER  = '08-code-sign-installer'
-@Field final SBOM_SIGN            = '09-sbom-sign'
-@Field final DIGITAL_ARTIFACT_SIGN= '10-digital-artifact-sign'
-@Field final VERIFY_SIGNING       = '11-verify-signing'
-@Field final VALIDATE_SBOM        = '12-validate-sbom'
-@Field final SMOKE_TESTS          = '13-smoke-tests'
-@Field final AQA_TESTS            = '14-aqa-tests'
-@Field final TCK_TESTS            = '15-tck-tests'
-@Field final PUBLISH_ARTIFACTS    = '16-publish'
-@Field final REPRODUCIBLE_COMPARE = '20-reproducible-compare'
+@Field final INITIALIZE            = '01-initialize'
+@Field final BUILD                 = '02-build'
+@Field final INTERNAL_CODE_SIGN    = '03-internal-code-sign'
+@Field final ASSEMBLE_IMAGES       = '04-assemble-images'
+@Field final POST_BUILD_CODE_SIGN  = '06-post-build-code-sign'
+@Field final BUILD_INSTALLERS      = '07-installer'
+@Field final CODE_SIGN_INSTALLER   = '08-code-sign-installer'
+@Field final SBOM_SIGN             = '09-sbom-sign'
+@Field final DIGITAL_ARTIFACT_SIGN = '10-digital-artifact-sign'
+@Field final VERIFY_SIGNING        = '11-verify-signing'
+@Field final VALIDATE_SBOM         = '12-validate-sbom'
+@Field final SMOKE_TESTS           = '13-smoke-tests'
+@Field final AQA_TESTS             = '14-aqa-tests'
+@Field final TCK_TESTS             = '15-tck-tests'
+@Field final PUBLISH_ARTIFACTS     = '16-publish'
+@Field final REPRODUCIBLE_COMPARE  = '20-reproducible-compare'
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -85,23 +86,23 @@ import groovy.transform.Field
  * Called once inside the Initialize stage steps so the inline script block stays
  * small.  stageConditionMet() reads the stored JSON on every when{} evaluation.
  */
-def loadStageConditions() {
+void loadStageConditions() {
     if (!fileExists('collated-stage-params.json')) {
-        echo "ℹ️  collated-stage-params.json not found — stageConditions will not be evaluated"
+        echo 'ℹ️  collated-stage-params.json not found — stageConditions will not be evaluated'
         return
     }
-    def collated = new groovy.json.JsonSlurper()
+    Map collated = new JsonSlurper()
         .parseText(readFile('collated-stage-params.json'))
-    def condMap = [:]
-    (collated.groups ?: []).each { grp ->
-        def conds = grp.stageCondition ?: []
+    Map condMap = [:]
+    (collated.groups ?: []).each { Map grp ->
+        List conds = grp.stageCondition ?: []
         if (conds) {
             // Multiple groups may share a stageId — merge, dedup by param name
-            def existing = condMap[grp.stageId] ?: []
-            condMap[grp.stageId] = (existing + conds).unique { it.param }
+            List existing = condMap[grp.stageId] ?: []
+            condMap[grp.stageId] = (existing + conds).unique { Map c -> c.param }
         }
     }
-    env.COLLATED_STAGE_CONDITIONS = groovy.json.JsonOutput.toJson(condMap)
+    env.COLLATED_STAGE_CONDITIONS = JsonOutput.toJson(condMap)
     echo "✓ Loaded stage conditions for ${condMap.size()} stage(s)"
 }
 
@@ -116,8 +117,8 @@ def loadStageConditions() {
  * reads env.STAGE_PARAM_NAMES to forward every stage param into Docker/Podman
  * containers via -e flags.
  */
-def loadStageParamNames() {
-    def names = params.keySet().toList()
+void loadStageParamNames() {
+    List names = params.keySet().toList()
     env.STAGE_PARAM_NAMES = names.join(',')
     echo "✓ STAGE_PARAM_NAMES set from job params: ${names.size()} param(s)"
 }
@@ -137,15 +138,15 @@ def loadStageParamNames() {
  *
  * Called from within when{} expression{} blocks — must be CPS-safe.
  */
-def stageConditionMet(String stageId) {
-    def condJson = env.COLLATED_STAGE_CONDITIONS
-    if (!condJson) return true
-    def conditions = new groovy.json.JsonSlurper().parseText(condJson)[stageId]
-    if (!conditions) return true
-    return conditions.every { cond ->
+boolean stageConditionMet(String stageId) {
+    String condJson = env.COLLATED_STAGE_CONDITIONS
+    if (!condJson) { return true }
+    List conditions = new JsonSlurper().parseText(condJson)[stageId]
+    if (!conditions) { return true }
+    return conditions.every { Map cond ->
         // Check job params first (explicit user override), then env
-        def actual = params[cond.param]?.toString() ?: env[cond.param] ?: ''
-        def expected = cond.value.toString()
+        String actual = params[cond.param]?.toString() ?: env[cond.param] ?: ''
+        String expected = cond.value.toString()
         if (expected.startsWith('regex:')) {
             return actual =~ expected.substring('regex:'.length())
         }
@@ -162,9 +163,8 @@ def stageConditionMet(String stageId) {
  * restart), so we always wrap the load in node(): stages with an allocated
  * agent reuse their executor; agent-none stages (e.g. Build) acquire a
  * temporary one just long enough to checkout and load.
- *
  */
-def ensureLibsLoaded(String stageId) {
+void ensureLibsLoaded(String stageId) {
     if (pipelineHelper != null) {
         return
     }
@@ -185,14 +185,14 @@ def ensureLibsLoaded(String stageId) {
  * For the Initialize stage (evaluated before CONFIG_STAGE_AGENT_LABELS exists)
  * falls back to the hardcoded default 'ci.role.worker'.
  */
-def getStageLabel(String stageId) {
+String getStageLabel(String stageId) {
     // CONFIG_STAGE_AGENT_LABELS is populated by ConfigHelper.generateJenkinsConfig()
     // during the Initialize stage.  Labels are already fully resolved — no
     // further placeholder substitution is performed here.
-    def labelsJson = env.CONFIG_STAGE_AGENT_LABELS
+    String labelsJson = env.CONFIG_STAGE_AGENT_LABELS
     if (labelsJson) {
-        def labels = new groovy.json.JsonSlurper().parseText(labelsJson)
-        def label = labels[stageId]
+        Map labels = new JsonSlurper().parseText(labelsJson)
+        String label = labels[stageId]
         if (label) {
             return label
         }
@@ -207,9 +207,10 @@ def getStageLabel(String stageId) {
  * Return the active-node timeout in minutes from CONFIG_ACTIVE_NODE_TIMEOUT,
  * falling back to 10 minutes if the config has not yet been loaded.
  */
-def getActiveNodeTimeout() {
-    if (env.CONFIG_ACTIVE_NODE_TIMEOUT) return env.CONFIG_ACTIVE_NODE_TIMEOUT.toInteger()
-    return 10
+int activeNodeTimeout() {
+    final int DEFAULT_TIMEOUT = 10
+    if (env.CONFIG_ACTIVE_NODE_TIMEOUT) { return env.CONFIG_ACTIVE_NODE_TIMEOUT.toInteger() }
+    return DEFAULT_TIMEOUT
 }
 
 // ============================================================================
@@ -232,13 +233,13 @@ pipeline {
                     ensureLibsLoaded(INITIALIZE)
                     // NOTE: CONFIG_ACTIVE_NODE_TIMEOUT is not yet set at this point — it is only
                     // populated by ConfigHelper.generateJenkinsConfig() which runs *inside* this stage.
-                    // getActiveNodeTimeout() will therefore fall back to 10 minutes.
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(INITIALIZE), getActiveNodeTimeout())
+                    // activeNodeTimeout() will therefore fall back to 10 minutes.
+                    nodeAgentHelper.waitForActiveNode(getStageLabel(INITIALIZE), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(INITIALIZE) {
                         pipelineHelper.initializeStage(INITIALIZE, [])
 
-                        def pipelineConfig = configHelper.generatePipelineConfig('./config-repo')
-                        def jenkinsConfig  = configHelper.generateJenkinsConfig('./config-repo')
+                        Map pipelineConfig = configHelper.generatePipelineConfig('./config-repo')
+                        Map jenkinsConfig  = configHelper.generateJenkinsConfig('./config-repo')
 
                         archiveArtifacts artifacts: 'pipeline-config.json,jenkins-config.json',
                                        fingerprint: true,
@@ -264,17 +265,17 @@ pipeline {
                     ensureLibsLoaded(BUILD)
                     nodeAgentHelper.withBuildAgent {
                         pipelineHelper.executeStageWithTracking(BUILD) {
-                            def config = pipelineHelper.initializeStage(BUILD, [INITIALIZE])
+                            Map config = pipelineHelper.initializeStage(BUILD, [INITIALIZE])
 
                             env.TARGET_DIR = "${WORKSPACE}/build_output"
 
-                            def buildExitCode = stageRunner.run(BUILD, config)
+                            int buildExitCode = stageRunner.run(BUILD, config)
                             if (buildExitCode != 0) {
                                 error("Build failed with exit code: ${buildExitCode}")
                             }
 
                             dir(env.TARGET_DIR) {
-                                archiveArtifacts artifacts: "**/*",
+                                archiveArtifacts artifacts: '**/*',
                                                fingerprint: true,
                                                allowEmptyArchive: false
                             }
@@ -303,11 +304,11 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(INTERNAL_CODE_SIGN)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(INTERNAL_CODE_SIGN), getActiveNodeTimeout())
+                    nodeAgentHelper.waitForActiveNode(getStageLabel(INTERNAL_CODE_SIGN), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(INTERNAL_CODE_SIGN) {
-                        def config = pipelineHelper.initializeStage(INTERNAL_CODE_SIGN, [BUILD], 'pipeline-config.json,workspace/target/jmods/**/*')
+                        Map config = pipelineHelper.initializeStage(INTERNAL_CODE_SIGN, [BUILD], 'pipeline-config.json,workspace/target/jmods/**/*')
 
-                        def signExitCode = stageRunner.run(INTERNAL_CODE_SIGN, config)
+                        int signExitCode = stageRunner.run(INTERNAL_CODE_SIGN, config)
                         if (signExitCode != 0) { error("Internal Code Sign failed with exit code: ${signExitCode}") }
 
                         pipelineHelper.finalizeStage(INTERNAL_CODE_SIGN)
@@ -333,11 +334,11 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(ASSEMBLE_IMAGES)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(ASSEMBLE_IMAGES), getActiveNodeTimeout())
+                    nodeAgentHelper.waitForActiveNode(getStageLabel(ASSEMBLE_IMAGES), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(ASSEMBLE_IMAGES) {
-                        def config = pipelineHelper.initializeStage(ASSEMBLE_IMAGES, [INTERNAL_CODE_SIGN], 'pipeline-config.json,signed-jmods/**/*')
+                        Map config = pipelineHelper.initializeStage(ASSEMBLE_IMAGES, [INTERNAL_CODE_SIGN], 'pipeline-config.json,signed-jmods/**/*')
 
-                        def assembleExitCode = stageRunner.run(ASSEMBLE_IMAGES, config)
+                        int assembleExitCode = stageRunner.run(ASSEMBLE_IMAGES, config)
                         if (assembleExitCode != 0) { error("Assemble Images failed with exit code: ${assembleExitCode}") }
 
                         pipelineHelper.finalizeStage(ASSEMBLE_IMAGES)
@@ -357,11 +358,11 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(POST_BUILD_CODE_SIGN)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(POST_BUILD_CODE_SIGN), getActiveNodeTimeout())
+                    nodeAgentHelper.waitForActiveNode(getStageLabel(POST_BUILD_CODE_SIGN), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(POST_BUILD_CODE_SIGN) {
-                        def config = pipelineHelper.initializeStage(POST_BUILD_CODE_SIGN, [BUILD], 'pipeline-config.json,workspace/target/**/*.tar.gz,workspace/target/**/*.zip,workspace/target/metadata/**/*')
+                        Map config = pipelineHelper.initializeStage(POST_BUILD_CODE_SIGN, [BUILD], 'pipeline-config.json,workspace/target/**/*.tar.gz,workspace/target/**/*.zip,workspace/target/metadata/**/*')
 
-                        def signExitCode = stageRunner.run(POST_BUILD_CODE_SIGN, config)
+                        int signExitCode = stageRunner.run(POST_BUILD_CODE_SIGN, config)
                         if (signExitCode != 0) { error("Post-Build Code Sign failed with exit code: ${signExitCode}") }
 
                         pipelineHelper.finalizeStage(POST_BUILD_CODE_SIGN)
@@ -381,11 +382,11 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(BUILD_INSTALLERS)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(BUILD_INSTALLERS), getActiveNodeTimeout())
+                    nodeAgentHelper.waitForActiveNode(getStageLabel(BUILD_INSTALLERS), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(BUILD_INSTALLERS) {
-                        def config = pipelineHelper.initializeStage(BUILD_INSTALLERS, [BUILD], 'pipeline-config.json,**/*.tar.gz,**/*.zip,**/metadata/**/*')
+                        Map config = pipelineHelper.initializeStage(BUILD_INSTALLERS, [BUILD], 'pipeline-config.json,**/*.tar.gz,**/*.zip,**/metadata/**/*')
 
-                        def installerExitCode = stageRunner.run(BUILD_INSTALLERS, config)
+                        int installerExitCode = stageRunner.run(BUILD_INSTALLERS, config)
                         if (installerExitCode != 0) { error("Build Installers failed with exit code: ${installerExitCode}") }
 
                         pipelineHelper.finalizeStage(BUILD_INSTALLERS)
@@ -405,11 +406,11 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(CODE_SIGN_INSTALLER)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(CODE_SIGN_INSTALLER), getActiveNodeTimeout())
+                    nodeAgentHelper.waitForActiveNode(getStageLabel(CODE_SIGN_INSTALLER), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(CODE_SIGN_INSTALLER) {
-                        def config = pipelineHelper.initializeStage(CODE_SIGN_INSTALLER, [BUILD_INSTALLERS], 'pipeline-config.json,installers/**/*')
+                        Map config = pipelineHelper.initializeStage(CODE_SIGN_INSTALLER, [BUILD_INSTALLERS], 'pipeline-config.json,installers/**/*')
 
-                        def signInstExitCode = stageRunner.run(CODE_SIGN_INSTALLER, config)
+                        int signInstExitCode = stageRunner.run(CODE_SIGN_INSTALLER, config)
                         if (signInstExitCode != 0) { error("Code Sign Installer failed with exit code: ${signInstExitCode}") }
 
                         pipelineHelper.finalizeStage(CODE_SIGN_INSTALLER)
@@ -429,11 +430,11 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(SBOM_SIGN)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(SBOM_SIGN), getActiveNodeTimeout())
+                    nodeAgentHelper.waitForActiveNode(getStageLabel(SBOM_SIGN), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(SBOM_SIGN) {
-                        def config = pipelineHelper.initializeStage(SBOM_SIGN, [BUILD], 'pipeline-config.json,**/*.json')
+                        Map config = pipelineHelper.initializeStage(SBOM_SIGN, [BUILD], 'pipeline-config.json,**/*.json')
 
-                        def sbomExitCode = stageRunner.run(SBOM_SIGN, config)
+                        int sbomExitCode = stageRunner.run(SBOM_SIGN, config)
                         if (sbomExitCode != 0) { error("SBOM Sign failed with exit code: ${sbomExitCode}") }
 
                         pipelineHelper.finalizeStage(SBOM_SIGN)
@@ -453,11 +454,11 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(DIGITAL_ARTIFACT_SIGN)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(DIGITAL_ARTIFACT_SIGN), getActiveNodeTimeout())
+                    nodeAgentHelper.waitForActiveNode(getStageLabel(DIGITAL_ARTIFACT_SIGN), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(DIGITAL_ARTIFACT_SIGN) {
-                        def config = pipelineHelper.initializeStage(DIGITAL_ARTIFACT_SIGN, [POST_BUILD_CODE_SIGN, SBOM_SIGN], 'pipeline-config.json,signed/**/*,signed-installers/**/*,signed-sbom/**/*')
+                        Map config = pipelineHelper.initializeStage(DIGITAL_ARTIFACT_SIGN, [POST_BUILD_CODE_SIGN, SBOM_SIGN], 'pipeline-config.json,signed/**/*,signed-installers/**/*,signed-sbom/**/*')
 
-                        def gpgExitCode = stageRunner.run(DIGITAL_ARTIFACT_SIGN, config)
+                        int gpgExitCode = stageRunner.run(DIGITAL_ARTIFACT_SIGN, config)
                         if (gpgExitCode != 0) { error("Digital Artifact Sign failed with exit code: ${gpgExitCode}") }
 
                         pipelineHelper.finalizeStage(DIGITAL_ARTIFACT_SIGN)
@@ -477,11 +478,11 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(VERIFY_SIGNING)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(VERIFY_SIGNING), getActiveNodeTimeout())
+                    nodeAgentHelper.waitForActiveNode(getStageLabel(VERIFY_SIGNING), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(VERIFY_SIGNING) {
-                        def config = pipelineHelper.initializeStage(VERIFY_SIGNING, [DIGITAL_ARTIFACT_SIGN, SBOM_SIGN, CODE_SIGN_INSTALLER, POST_BUILD_CODE_SIGN], 'pipeline-config.json,signed/**/*,*.sig,*.asc')
+                        Map config = pipelineHelper.initializeStage(VERIFY_SIGNING, [DIGITAL_ARTIFACT_SIGN, SBOM_SIGN, CODE_SIGN_INSTALLER, POST_BUILD_CODE_SIGN], 'pipeline-config.json,signed/**/*,*.sig,*.asc')
 
-                        def verifyExitCode = stageRunner.run(VERIFY_SIGNING, config)
+                        int verifyExitCode = stageRunner.run(VERIFY_SIGNING, config)
                         if (verifyExitCode != 0) { error("Verify Signing failed with exit code: ${verifyExitCode}") }
 
                         pipelineHelper.finalizeStage(VERIFY_SIGNING)
@@ -501,13 +502,13 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(VALIDATE_SBOM)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(VALIDATE_SBOM), getActiveNodeTimeout())
+                    nodeAgentHelper.waitForActiveNode(getStageLabel(VALIDATE_SBOM), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(VALIDATE_SBOM) {
-                        def config = pipelineHelper.initializeStage(VALIDATE_SBOM, [BUILD], 'pipeline-config.json,*sbom*.json')
+                        Map config = pipelineHelper.initializeStage(VALIDATE_SBOM, [BUILD], 'pipeline-config.json,*sbom*.json')
 
                         env.TARGET_DIR = "${WORKSPACE}/sbom_validation_output"
 
-                        def sbomValExitCode = stageRunner.run(VALIDATE_SBOM, config)
+                        int sbomValExitCode = stageRunner.run(VALIDATE_SBOM, config)
                         if (sbomValExitCode != 0) { error("Validate SBOM failed with exit code: ${sbomValExitCode}") }
 
                         pipelineHelper.finalizeStage(VALIDATE_SBOM)
@@ -527,13 +528,13 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(SMOKE_TESTS)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(SMOKE_TESTS), getActiveNodeTimeout())
+                    nodeAgentHelper.waitForActiveNode(getStageLabel(SMOKE_TESTS), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(SMOKE_TESTS) {
-                        def config = pipelineHelper.initializeStage(SMOKE_TESTS, [BUILD], 'pipeline-config.json,*.tar.gz,*.zip')
+                        Map config = pipelineHelper.initializeStage(SMOKE_TESTS, [BUILD], 'pipeline-config.json,*.tar.gz,*.zip')
 
                         env.TARGET_DIR = "${WORKSPACE}/smoke_test_output"
 
-                        def smokeTestExitCode = stageRunner.run(SMOKE_TESTS, config)
+                        int smokeTestExitCode = stageRunner.run(SMOKE_TESTS, config)
                         if (smokeTestExitCode != 0) {
                             error("Smoke Tests failed with exit code: ${smokeTestExitCode}")
                         }
@@ -555,16 +556,16 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(REPRODUCIBLE_COMPARE)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(REPRODUCIBLE_COMPARE), getActiveNodeTimeout())
+                    nodeAgentHelper.waitForActiveNode(getStageLabel(REPRODUCIBLE_COMPARE), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(REPRODUCIBLE_COMPARE) {
-                        def config = pipelineHelper.initializeStage(REPRODUCIBLE_COMPARE, [BUILD], 'pipeline-config.json,*.tar.gz,*.zip')
+                        Map config = pipelineHelper.initializeStage(REPRODUCIBLE_COMPARE, [BUILD], 'pipeline-config.json,*.tar.gz,*.zip')
 
                         env.TARGET_DIR    = "${WORKSPACE}/reproducible_compare_output"
                         env.PIPELINE_ROOT = "${WORKSPACE}"
                         env.SCM_REF       = params.SCM_REF
                         env.RELEASE       = (params.RELEASE_TYPE == 'RELEASE') ? 'true' : 'false'
 
-                        def comparisonExitCode = stageRunner.run(REPRODUCIBLE_COMPARE, config)
+                        int comparisonExitCode = stageRunner.run(REPRODUCIBLE_COMPARE, config)
 
                         dir(env.TARGET_DIR) {
                             archiveArtifacts artifacts: '**/*',
@@ -593,11 +594,11 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(AQA_TESTS)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(AQA_TESTS), getActiveNodeTimeout())
+                    nodeAgentHelper.waitForActiveNode(getStageLabel(AQA_TESTS), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(AQA_TESTS) {
-                        def config = pipelineHelper.initializeStage(AQA_TESTS, [SMOKE_TESTS], 'pipeline-config.json,workspace/target/**/*.tar.gz,workspace/target/metadata/**/*')
+                        Map config = pipelineHelper.initializeStage(AQA_TESTS, [SMOKE_TESTS], 'pipeline-config.json,workspace/target/**/*.tar.gz,workspace/target/metadata/**/*')
 
-                        def aqaExitCode = stageRunner.run(AQA_TESTS, config)
+                        int aqaExitCode = stageRunner.run(AQA_TESTS, config)
                         if (aqaExitCode != 0) { error("AQA Tests failed with exit code: ${aqaExitCode}") }
 
                         pipelineHelper.finalizeStage(AQA_TESTS)
@@ -617,11 +618,11 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(TCK_TESTS)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(TCK_TESTS), getActiveNodeTimeout())
+                    nodeAgentHelper.waitForActiveNode(getStageLabel(TCK_TESTS), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(TCK_TESTS) {
-                        def config = pipelineHelper.initializeStage(TCK_TESTS, [SMOKE_TESTS], 'pipeline-config.json,workspace/target/**/*.tar.gz,workspace/target/metadata/**/*')
+                        Map config = pipelineHelper.initializeStage(TCK_TESTS, [SMOKE_TESTS], 'pipeline-config.json,workspace/target/**/*.tar.gz,workspace/target/metadata/**/*')
 
-                        def tckExitCode = stageRunner.run(TCK_TESTS, config)
+                        int tckExitCode = stageRunner.run(TCK_TESTS, config)
                         if (tckExitCode != 0) { error("TCK Tests failed with exit code: ${tckExitCode}") }
 
                         pipelineHelper.finalizeStage(TCK_TESTS)
@@ -641,13 +642,13 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(PUBLISH_ARTIFACTS)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(PUBLISH_ARTIFACTS), getActiveNodeTimeout())
+                    nodeAgentHelper.waitForActiveNode(getStageLabel(PUBLISH_ARTIFACTS), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(PUBLISH_ARTIFACTS) {
-                        def config = pipelineHelper.initializeStage(PUBLISH_ARTIFACTS, [BUILD], 'pipeline-config.json,**/*.tar.gz,**/*.zip,**/*.msi,**/*.pkg,**/metadata/**/*')
+                        Map config = pipelineHelper.initializeStage(PUBLISH_ARTIFACTS, [BUILD], 'pipeline-config.json,**/*.tar.gz,**/*.zip,**/*.msi,**/*.pkg,**/metadata/**/*')
 
                         env.TARGET_DIR = "${WORKSPACE}/publish_output"
 
-                        def publishExitCode = stageRunner.run(PUBLISH_ARTIFACTS, config)
+                        int publishExitCode = stageRunner.run(PUBLISH_ARTIFACTS, config)
                         if (publishExitCode != 0) { error("Publish Artifacts failed with exit code: ${publishExitCode}") }
 
                         pipelineHelper.finalizeStage(PUBLISH_ARTIFACTS)
@@ -660,13 +661,13 @@ pipeline {
     post {
         always {
             script {
-                echo "=== Pipeline Cleanup ==="
+                echo '=== Pipeline Cleanup ==='
 
                 if (env.BUILD_UID == null) {
                     currentBuild.result = 'FAILURE'
-                    echo "❌ ERROR: BUILD_UID is not set — no stages executed. " +
-                         "This is most likely caused by performing a Rebuild on a build that was " +
-                         "itself a Restart. Please trigger a new build instead."
+                    echo '❌ ERROR: BUILD_UID is not set — no stages executed. ' +
+                         'This is most likely caused by performing a Rebuild on a build that was ' +
+                         'itself a Restart. Please trigger a new build instead.'
                 }
 
                 if (params.CLEAN_WORKSPACE_AFTER_STAGE) {
@@ -675,42 +676,42 @@ pipeline {
                     // attempting cleanWs would give Jenkins a null workspace path and produce a
                     // spurious "Cannot delete workspace: null" error in the post-pipeline teardown
                     // that cannot be caught by a try/catch.
-                    if (!env.CONFIG_STAGE_AGENT_LABELS) {
-                        echo "Final cleanup skipped: Initialize stage did not complete — no workspace was allocated."
-                    } else {
+                    if (env.CONFIG_STAGE_AGENT_LABELS) {
                         try {
                             // NOTE: If the pipeline failed before generateJenkinsConfig() completed,
                             // CONFIG_ACTIVE_NODE_TIMEOUT may be unset; falls back to 10 minutes.
-                            nodeAgentHelper.waitForActiveNode(getStageLabel(INITIALIZE), getActiveNodeTimeout())
+                            nodeAgentHelper.waitForActiveNode(getStageLabel(INITIALIZE), activeNodeTimeout())
                             node(getStageLabel(INITIALIZE)) {
-                                echo "Final workspace cleanup..."
+                                echo 'Final workspace cleanup...'
                                 cleanWs notFailBuild: true, deleteDirs: true
                             }
                         } catch (Exception e) {
                             echo "Final cleanup skipped: ${e.message}"
                         }
+                    } else {
+                        echo 'Final cleanup skipped: Initialize stage did not complete — no workspace was allocated.'
                     }
                 }
             }
         }
         success {
             script {
-                echo "✅ Build completed successfully"
+                echo '✅ Build completed successfully'
             }
         }
         failure {
             script {
-                echo "❌ Build failed"
+                echo '❌ Build failed'
             }
         }
         unstable {
             script {
-                echo "⚠️ Build unstable"
+                echo '⚠️ Build unstable'
             }
         }
         aborted {
             script {
-                echo "🚫 Build aborted"
+                echo '🚫 Build aborted'
             }
         }
     }

@@ -119,37 +119,37 @@ limitations under the License.
  * @param timeoutMinutes How long to wait for at least one matching agent to appear.
  *                       Defaults to CONFIG_ACTIVE_NODE_TIMEOUT env var or 10.
  */
-def waitForActiveNode(String labelExpr, Integer timeoutMinutes = null) {
-    def timeoutMins = timeoutMinutes
-                   ?: (env.CONFIG_ACTIVE_NODE_TIMEOUT ? env.CONFIG_ACTIVE_NODE_TIMEOUT.toInteger() : 10)
+void waitForActiveNode(String labelExpr, Integer timeoutMinutes = null) {
     final int POLL_INTERVAL_SECONDS = 30
+    Integer timeoutMins = timeoutMinutes
+                   ?: (env.CONFIG_ACTIVE_NODE_TIMEOUT ? env.CONFIG_ACTIVE_NODE_TIMEOUT.toInteger() : 10)
 
     echo "Checking for active agents matching label: '${labelExpr}' (timeout: ${timeoutMins} min)"
 
-    def deadline = System.currentTimeMillis() + timeoutMins * 60 * 1000L
+    long deadline = System.currentTimeMillis() + timeoutMins * 60 * 1000L
 
     while (true) {
         // nodesByLabel is a sandboxed Pipeline Utility Steps step — no Script Security
         // approval needed.  It returns node names whose label set satisfies labelExpr,
         // online or not.  An empty list means zero agents carry this label at all.
-        def matchingNodes = nodesByLabel(label: labelExpr, offline: true)
-        def activeCount = matchingNodes.size()
+        List matchingNodes = nodesByLabel(label: labelExpr, offline: true)
+        int activeCount = matchingNodes.size()
 
         if (activeCount > 0) {
             echo "✓ Found ${activeCount} agent(s) matching '${labelExpr}' — proceeding."
             return
         }
 
-        def remaining = (deadline - System.currentTimeMillis()) / 1000
+        long remaining = (deadline - System.currentTimeMillis()) / 1000
         if (remaining <= 0) {
             // Set ABORTED before calling error() — Jenkins preserves a result that is
             // already worse-than-SUCCESS, so the build shows as Aborted rather than Failed.
             // FlowInterruptedException constructors are not sandbox-safe, so this is the
             // correct approach for sandboxed declarative/scripted pipelines.
-            def msg = "No agent found for label '${labelExpr}' after ${timeoutMins} minute(s). " +
-                      "Ensure at least one agent with this label is online (busy agents are fine — " +
-                      "this timeout only fires when zero agents match the label). " +
-                      "If using cloud provisioning, verify the cloud template is configured correctly."
+            String msg = "No agent found for label '${labelExpr}' after ${timeoutMins} minute(s). " +
+                      'Ensure at least one agent with this label is online (busy agents are fine — ' +
+                      'this timeout only fires when zero agents match the label). ' +
+                      'If using cloud provisioning, verify the cloud template is configured correctly.'
             currentBuild.result = 'ABORTED'
             error(msg)
         }
@@ -170,8 +170,9 @@ def waitForActiveNode(String labelExpr, Integer timeoutMinutes = null) {
  * 'docker --version' on a Podman shim prints "podman version X.Y.Z".
  * On real Docker it prints "Docker version X.Y.Z, build ...".
  */
-def isPodmanNode() {
-    return sh(script: 'docker --version 2>&1 | grep -qi podman', returnStatus: true) == 0
+boolean isPodmanNode() {
+    final int PODMAN_EXIT_SUCCESS = 0
+    return sh(script: 'docker --version 2>&1 | grep -qi podman', returnStatus: true) == PODMAN_EXIT_SUCCESS
 }
 
 /**
@@ -181,8 +182,9 @@ def isPodmanNode() {
  * prepend "docker.io/" the way Docker does.  A name is unqualified when
  * the part before the first '/' contains no '.' or ':' (host indicators).
  */
-def isUnqualifiedImageName(String image) {
-    def prefix = image.contains('/') ? image.split('/')[0] : image
+boolean isUnqualifiedImageName(String image) {
+    final int FIRST_PART = 0
+    String prefix = image.contains('/') ? image.split('/')[FIRST_PART] : image
     return !prefix.contains('.') && !prefix.contains(':')
 }
 
@@ -211,10 +213,10 @@ def isUnqualifiedImageName(String image) {
  *
  * Must be called from within a node() block.
  */
-def runInDockerContainer(String image, String extraArgs, Closure body) {
-    def ws          = env.WORKSPACE
-    def hostHome    = sh(script: 'echo $HOME', returnStdout: true).trim()
-    def containerId = ''
+void runInDockerContainer(String image, String extraArgs, Closure body) {
+    String ws          = env.WORKSPACE
+    String hostHome    = sh(script: 'echo $HOME', returnStdout: true).trim()
+    String containerId = ''
     try {
         echo "Pulling image (docker): ${image}"
         sh "docker pull '${image}'"
@@ -236,7 +238,7 @@ def runInDockerContainer(String image, String extraArgs, Closure body) {
 
         withEnv([
             "BUILD_CONTAINER_ID=${containerId}",
-            "BUILD_CONTAINER_RUNTIME=docker",
+            'BUILD_CONTAINER_RUNTIME=docker',
             "BUILD_CONTAINER_WORKSPACE=${ws}",
         ]) {
             body()
@@ -273,10 +275,10 @@ def runInDockerContainer(String image, String extraArgs, Closure body) {
  *
  * Must be called from within a node() block.
  */
-def runInPodmanContainer(String image, String extraArgs, Closure body) {
-    def ws          = env.WORKSPACE
-    def hostHome    = sh(script: 'echo $HOME', returnStdout: true).trim()
-    def containerId = ''
+void runInPodmanContainer(String image, String extraArgs, Closure body) {
+    String ws          = env.WORKSPACE
+    String hostHome    = sh(script: 'echo $HOME', returnStdout: true).trim()
+    String containerId = ''
     try {
         echo "Pulling image (podman): ${image}"
         sh "podman pull '${image}'"
@@ -299,7 +301,7 @@ def runInPodmanContainer(String image, String extraArgs, Closure body) {
 
         withEnv([
             "BUILD_CONTAINER_ID=${containerId}",
-            "BUILD_CONTAINER_RUNTIME=podman",
+            'BUILD_CONTAINER_RUNTIME=podman',
             "BUILD_CONTAINER_WORKSPACE=${ws}",
         ]) {
             body()
@@ -332,9 +334,9 @@ def runInPodmanContainer(String image, String extraArgs, Closure body) {
  * Without CONFIG_DOCKER_IMAGE:
  *   Checks active agents, then allocates a node by CONFIG_NODE_LABEL and runs body directly.
  */
-def withBuildAgent(Closure body) {
-    def nodeLabel   = env.CONFIG_NODE_LABEL?.trim() ?: 'worker'
-    def image       = env.CONFIG_DOCKER_IMAGE?.trim()
+void withBuildAgent(Closure body) {
+    String nodeLabel = env.CONFIG_NODE_LABEL?.trim() ?: 'worker'
+    String image     = env.CONFIG_DOCKER_IMAGE?.trim()
 
     waitForActiveNode(nodeLabel)
     node(nodeLabel) {
@@ -343,10 +345,10 @@ def withBuildAgent(Closure body) {
             return
         }
 
-        def registry   = env.CONFIG_DOCKER_REGISTRY?.trim()
-        def credential = env.CONFIG_DOCKER_CREDENTIAL?.trim()
-        def podman     = isPodmanNode()
-        def runtime    = podman ? 'podman' : 'docker'
+        String registry   = env.CONFIG_DOCKER_REGISTRY?.trim()
+        String credential = env.CONFIG_DOCKER_CREDENTIAL?.trim()
+        boolean podman    = podmanNode
+        String runtime    = podman ? 'podman' : 'docker'
 
         // Podman requires fully-qualified image names.
         if (podman && !registry && isUnqualifiedImageName(image)) {
@@ -355,7 +357,7 @@ def withBuildAgent(Closure body) {
         }
 
         // Use podmanArgs on Podman nodes, dockerArgs on Docker nodes.
-        def extraArgs = podman
+        String extraArgs = podman
             ? (env.CONFIG_PODMAN_ARGS?.trim() ?: env.CONFIG_DOCKER_ARGS?.trim() ?: '')
             : (env.CONFIG_DOCKER_ARGS?.trim() ?: '')
 

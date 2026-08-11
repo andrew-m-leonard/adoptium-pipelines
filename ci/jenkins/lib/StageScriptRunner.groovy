@@ -66,11 +66,11 @@ limitations under the License.
  *     - GIT_ASKPASS / SSH_ASKPASS point to Jenkins agent binaries that don't
  *       exist inside the container; git tries to exec them and fails.
  */
-def containerEnvFlags() {
+String containerEnvFlags() {
     // Derived/resolved CONFIG_* vars set by ConfigHelper.generatePipelineConfig().
     // Raw stage param values (SIGN_ARTIFACTS, RUN_TESTS, etc.) are NOT listed here —
     // they arrive automatically via the STAGE_PARAM_NAMES dynamic block below.
-    def vars = [
+    List vars = [
         'WORKSPACE',
         'CONFIG_FILE',
         'TARGET_DIR',
@@ -108,16 +108,16 @@ def containerEnvFlags() {
     // at job-generation time by the Job DSL). This ensures any vendor-specific
     // parameter (e.g. OPENJ9_REPO) is automatically available inside the container
     // without needing manual additions to the list above.
-    def stageParamNames = (env.getProperty('STAGE_PARAM_NAMES') ?: '')
+    List stageParamNames = (env.getProperty('STAGE_PARAM_NAMES') ?: '')
         .split(',')
-        .collect { it.trim() }
-        .findAll { it }
+        .collect { String name -> name.trim() }
+        .findAll { String name -> name }
     vars = vars + stageParamNames
 
-    def flags = vars
+    List flags = vars
         .unique()
-        .findAll { env.getProperty(it) != null && env.getProperty(it) != '' }
-        .collect { "-e '${it}=${env.getProperty(it)}'" }
+        .findAll { String v -> env.getProperty(v) != null && env.getProperty(v) != '' }
+        .collect { String v -> "-e '${v}=${env.getProperty(v)}'" }
 
     // Clear Jenkins agent-side askpass binaries that don't exist in the container.
     flags << "-e 'GIT_ASKPASS='"
@@ -132,7 +132,7 @@ def containerEnvFlags() {
     // Set HOME to the Jenkins agent's home directory.  The host home is
     // bind-mounted into the container at the same path (by NodeAgentHelper),
     // so it is writable.  Without a valid HOME, git's temp-file allocation fails.
-    def jenkinsHome = env.getProperty('HOME') ?: '/home/jenkins'
+    String jenkinsHome = env.getProperty('HOME') ?: '/home/jenkins'
     flags << "-e 'HOME=${jenkinsHome}'"
 
     return flags.join(' ')
@@ -146,8 +146,9 @@ def containerEnvFlags() {
  *                    .sh and .py scripts receive config via environment variables.
  * @return int exit code — 0 = success, non-zero = failure.
  */
-def run(String scriptStem, def config = null) {
-    def candidates = [
+int run(String scriptStem, Map config = null) {
+    final int EXIT_SUCCESS = 0
+    List candidates = [
         [path: "config-repo/vendor-scripts/${scriptStem}.sh",     type: 'sh'],
         [path: "config-repo/vendor-scripts/${scriptStem}.groovy", type: 'groovy'],
         [path: "config-repo/vendor-scripts/${scriptStem}.py",     type: 'py'],
@@ -156,18 +157,18 @@ def run(String scriptStem, def config = null) {
         [path: "scripts/stages/${scriptStem}.py",                 type: 'py'],
     ]
 
-    def found = candidates.find { fileExists(it.path) }
+    Map found = candidates.find { Map c -> fileExists(c.path) }
 
     if (!found) {
         echo "ℹ️  No script found for '${scriptStem}' — stage is a no-op"
-        return 0
+        return EXIT_SUCCESS
     }
 
     echo "▶ Running ${found.type.toUpperCase()} stage script: ${found.path}"
 
-    def containerId = env.BUILD_CONTAINER_ID?.trim()
-    def containerWs = env.BUILD_CONTAINER_WORKSPACE?.trim()
-    def runtime     = env.BUILD_CONTAINER_RUNTIME?.trim() ?: 'docker'
+    String containerId = env.BUILD_CONTAINER_ID?.trim()
+    String containerWs = env.BUILD_CONTAINER_WORKSPACE?.trim()
+    String runtime     = env.BUILD_CONTAINER_RUNTIME?.trim() ?: 'docker'
 
     // Ensure workspace and TARGET_DIR exist on the host.  initializeStage()
     // calls cleanWs() which wipes and recreates the workspace after the
@@ -183,7 +184,7 @@ def run(String scriptStem, def config = null) {
     switch (found.type) {
         case 'sh':
             if (containerId) {
-                def eFlags = containerEnvFlags()
+                String eFlags = containerEnvFlags()
                 return sh(script: "${runtime} exec ${eFlags} -w '${containerWs}' '${containerId}' bash '${found.path}'", returnStatus: true)
             }
             return sh(script: "bash ${found.path}", returnStatus: true)
@@ -195,21 +196,22 @@ def run(String scriptStem, def config = null) {
             if (containerId) {
                 echo "⚠️  WARNING: Groovy stage script '${found.path}' is running on the host JVM " +
                      "while the build agent is a container (BUILD_CONTAINER_ID=${containerId}). " +
-                     "Options: " +
-                     "(1) Convert to a .sh or .py script — these are dispatched into the container automatically. " +
+                     'Options: ' +
+                     '(1) Convert to a .sh or .py script — these are dispatched into the container automatically. ' +
                      "(2) Issue '${runtime} exec' calls directly using BUILD_CONTAINER_ID and BUILD_CONTAINER_WORKSPACE."
             }
             def script = load(found.path)
-            return script(config) ?: 0
+            return script(config) ?: EXIT_SUCCESS
 
         case 'py':
             // python-runner.sh resolves python3/python and execs the script.
             if (containerId) {
-                def eFlags = containerEnvFlags()
+                String eFlags = containerEnvFlags()
                 return sh(script: "${runtime} exec ${eFlags} -w '${containerWs}' '${containerId}' scripts/lib/python-runner.sh '${found.path}'", returnStatus: true)
             }
             return sh(script: "scripts/lib/python-runner.sh '${found.path}'", returnStatus: true)
     }
+    return EXIT_SUCCESS
 }
 
 return this

@@ -52,30 +52,33 @@ import jenkins.model.Jenkins
 // STEP 1: Validate binding variables
 // ============================================================================
 
-def jdkVersion          = binding.variables.get('JDK_VERSION')
-def platform            = binding.variables.get('PLATFORM')
-def collatedParamsJson  = binding.variables.get('COLLATED_PARAMS_JSON') ?: ''
-def pipelineCommitSha   = binding.variables.get('PIPELINE_COMMIT_SHA')  ?: 'unknown'
-def configRepoUrl       = binding.variables.get('CONFIG_REPO_URL')       ?: ''
-def configRepoBranch    = binding.variables.get('CONFIG_REPO_BRANCH')    ?: ''
+def jdkVersion         = binding.variables.get('JDK_VERSION')
+def platform           = binding.variables.get('PLATFORM')
+def collatedParamsJson = binding.variables.get('COLLATED_PARAMS_JSON') ?: ''
+def pipelineCommitSha  = binding.variables.get('PIPELINE_COMMIT_SHA')  ?: 'unknown'
+def configRepoUrl      = binding.variables.get('CONFIG_REPO_URL')       ?: ''
+def configRepoBranch   = binding.variables.get('CONFIG_REPO_BRANCH')    ?: ''
 
-if (!jdkVersion) throw new IllegalArgumentException("JDK_VERSION binding variable is required")
-if (!platform)   throw new IllegalArgumentException("PLATFORM binding variable is required")
+final int SEPARATOR_WIDTH = 80
+final int DUPLICATE_ZERO  = 0
+
+if (!jdkVersion) { throw new IllegalArgumentException('JDK_VERSION binding variable is required') }
+if (!platform)   { throw new IllegalArgumentException('PLATFORM binding variable is required') }
 if (!collatedParamsJson?.trim()) {
-    throw new RuntimeException(
-        "COLLATED_PARAMS_JSON is empty.\n" +
+    throw new IllegalStateException(
+        'COLLATED_PARAMS_JSON is empty.\n' +
         "Ensure the 'Collate Stage Parameters' stage in Jenkinsfile.launch completed successfully."
     )
 }
 
-println "=" * 80
-println "openjdk_build_pipeline"
+println '=' * SEPARATOR_WIDTH
+println 'openjdk_build_pipeline'
 println "  JDK_VERSION         : ${jdkVersion}"
 println "  PLATFORM            : ${platform}"
 println "  PIPELINE_COMMIT_SHA : ${pipelineCommitSha}"
 println "  CONFIG_REPO_URL     : ${configRepoUrl}"
 println "  CONFIG_REPO_BRANCH  : ${configRepoBranch}"
-println "=" * 80
+println '=' * SEPARATOR_WIDTH
 
 // ============================================================================
 // STEP 2: Load configuration via readFileFromWorkspace
@@ -84,10 +87,10 @@ println "=" * 80
 def slurper = new JsonSlurper()
 
 def pipelineConfig = slurper.parseText(readFileFromWorkspace('config-repo/adoptium_pipeline_config.json'))
-println "✓ Loaded adoptium_pipeline_config.json"
+println '✓ Loaded adoptium_pipeline_config.json'
 
 def jenkinsConfig = slurper.parseText(readFileFromWorkspace('config-repo/jenkins_job_config.json'))
-println "✓ Loaded jenkins_job_config.json"
+println '✓ Loaded jenkins_job_config.json'
 
 def jdkConfig = slurper.parseText(readFileFromWorkspace("config-repo/configurations/jdk${jdkVersion}_pipeline_config.json"))
 
@@ -110,7 +113,7 @@ println "✓ Platform: arch=${architecture}, os=${targetOs}, variant=${variant}"
 def defaultParams = jenkinsConfig?.jobConfiguration?.defaultParameters
 
 // ============================================================================
-// STEP 3: Build collated param groups from pre-computed JSON. 
+// STEP 3: Build collated param groups from pre-computed JSON.
 // ============================================================================
 
 // COLLATED_PARAMS_JSON was produced by collect-stage-params.py and the
@@ -126,7 +129,7 @@ rawGroups.each { grp ->
     // non-priority groups carry a scalar stageId — normalise to a list in both cases.
     def incomingIds = grp.stageIds instanceof List ? grp.stageIds : [grp.stageId]
     if (mergedGroupMap.containsKey(gname)) {
-        incomingIds.each { id -> if (id && !mergedGroupMap[gname].stageIds.contains(id)) mergedGroupMap[gname].stageIds << id }
+        incomingIds.each { id -> if (id && !mergedGroupMap[gname].stageIds.contains(id)) { mergedGroupMap[gname].stageIds << id } }
         mergedGroupMap[gname].parameters.addAll(grp.parameters ?: [])
     } else {
         mergedGroupMap[gname] = [
@@ -153,11 +156,11 @@ def existingJob = Jenkins.instance.getItemByFullName(jobName)
 def storedSha   = (existingJob?.description ?: '') =~ /pipeline-sha:([0-9a-f]+)/
 
 if (existingJob == null) {
-    println "  → Job does not exist yet — will create"
-} else if (!storedSha || storedSha[0][1] != pipelineCommitSha) {
-    println "  → Stored pipeline-sha (${storedSha ? storedSha[0][1] : 'none'}) differs from current (${pipelineCommitSha}) — will regenerate"
+    println '  → Job does not exist yet — will create'
+} else if (!storedSha || storedSha[DUPLICATE_ZERO][1] != pipelineCommitSha) {
+    println "  → Stored pipeline-sha (${storedSha ? storedSha[DUPLICATE_ZERO][1] : 'none'}) differs from current (${pipelineCommitSha}) — will regenerate"
 } else {
-    println "  → Job is up-to-date (pipeline-sha: ${storedSha[0][1]}) — skipping regeneration"
+    println "  → Job is up-to-date (pipeline-sha: ${storedSha[DUPLICATE_ZERO][1]}) — skipping regeneration"
     return
 }
 
@@ -212,10 +215,10 @@ pipelineJob(jobName) {
         // stage-specific params are emitted here from the collated params JSON.
         // Groups where stageDisabled=true are skipped — no parameters generated.
         collatedParamGroups.each { group ->
-            if (group.stageDisabled == true) return
+            if (group.stageDisabled == true) { return }
             def stageLabel  = group.stageIds.join('_').replaceAll(/\W+/, '_')
             def stageHeader = group.stageIds.size() == 1
-                ? "stage: ${group.stageIds[0]}"
+                ? "stage: ${group.stageIds[DUPLICATE_ZERO]}"
                 : "stages: ${group.stageIds.join(', ')}"
             separator {
                 name("__sep_${stageLabel}_${group.name.replaceAll(/\W+/, '_')}")
@@ -292,7 +295,6 @@ pipelineJob(jobName) {
             projectNames('*')
         }
     }
-
 }
 
 println "✓ Platform build job created/updated: ${jobName}"

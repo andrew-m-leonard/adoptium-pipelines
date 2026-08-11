@@ -39,7 +39,7 @@ limitations under the License.
  * Return a comma-separated string of all stage IDs orchestrated by Jenkins,
  * suitable for passing directly to collect-stage-params.py --orchestrated-stages.
  */
-def orchestratedStages() {
+String orchestratedStages() {
     return JENKINS_STAGES.join(',')
 }
 
@@ -47,7 +47,7 @@ def orchestratedStages() {
  * Return the ordered List<String> of all Jenkins-orchestrated stage IDs.
  * Matches the @Field final constants in Jenkinsfile.declarative exactly.
  */
-def stageList() {
+List stageList() {
     return Collections.unmodifiableList(JENKINS_STAGES)
 }
 

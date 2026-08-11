@@ -30,11 +30,11 @@ limitations under the License.
  * @return Map of stage names to their results
  */
 @NonCPS
-def parseStageResults(String resultsStr) {
-    if (!resultsStr) return [:]
-    def results = [:]
-    resultsStr.split('\\|\\|').each { entry ->
-        def parts = entry.split('==', 2)
+Map parseStageResults(String resultsStr) {
+    if (!resultsStr) { return [:] }
+    Map results = [:]
+    resultsStr.split('\\|\\|').each { String entry ->
+        String[] parts = entry.split('==', 2)
         if (parts.size() == 2) {
             results[parts[0]] = parts[1]
         }
@@ -48,7 +48,7 @@ def parseStageResults(String resultsStr) {
  * @return Serialized string in format "Stage1==SUCCESS||Stage2==FAILURE"
  */
 @NonCPS
-def serializeStageResults(Map results) {
+String serializeStageResults(Map results) {
     return results.collect { k, v -> "${k}==${v}" }.join('||')
 }
 
@@ -57,11 +57,11 @@ def serializeStageResults(Map results) {
  * @param stageName Name of the stage
  * @param result Result status (SUCCESS/FAILURE/UNSTABLE/ABORTED)
  */
-def recordStageResult(String stageName, String result) {
+void recordStageResult(String stageName, String result) {
     echo "Recording stage result: ${stageName} = ${result}"
 
     // Load existing results
-    def existingResults = env.BUILD_STAGE_RESULTS ?
+    Map existingResults = env.BUILD_STAGE_RESULTS ?
         parseStageResults(env.BUILD_STAGE_RESULTS) : [:]
 
     // Update with new result
@@ -79,21 +79,21 @@ def recordStageResult(String stageName, String result) {
  * @param requiredStages List of stage names that must have completed successfully
  * @throws Exception if any prerequisite failed or is missing
  */
-def validatePrerequisites(String currentStage, List<String> requiredStages) {
-    if (!requiredStages || requiredStages.isEmpty()) {
+void validatePrerequisites(String currentStage, List<String> requiredStages) {
+    if (!requiredStages || requiredStages.empty) {
         echo "No prerequisites required for ${currentStage}"
         return
     }
 
     echo "Validating prerequisites for ${currentStage}: ${requiredStages}"
 
-    def stageResults = env.BUILD_STAGE_RESULTS ?
+    Map stageResults = env.BUILD_STAGE_RESULTS ?
         parseStageResults(env.BUILD_STAGE_RESULTS) : [:]
 
     // Special case: If BUILD_STAGE_RESULTS is empty and we're not in Initialize stage,
     // this is likely a Rebuild of a restarted build. Fail with clear user error.
-    if (stageResults.isEmpty() && currentStage != '01-initialize') {
-        def errorMsg = """
+    if (stageResults.empty && currentStage != '01-initialize') {
+        String errorMsg = """
 ╔════════════════════════════════════════════════════════════════════════════╗
 ║                              USER ERROR                                    ║
 ╚════════════════════════════════════════════════════════════════════════════╝
@@ -117,11 +117,11 @@ SOLUTION:
         error(errorMsg)
     }
 
-    def missingStages = []
-    def failedStages = []
+    List missingStages = []
+    List failedStages = []
 
-    requiredStages.each { requiredStage ->
-        def result = stageResults[requiredStage]
+    requiredStages.each { String requiredStage ->
+        String result = stageResults[requiredStage]
         if (!result) {
             missingStages.add(requiredStage)
         } else if (result != 'SUCCESS') {
@@ -129,12 +129,12 @@ SOLUTION:
         }
     }
 
-    if (!missingStages.isEmpty() || !failedStages.isEmpty()) {
-        def errorMsg = "Cannot run ${currentStage}:"
-        if (!missingStages.isEmpty()) {
+    if (!missingStages.empty || !failedStages.empty) {
+        String errorMsg = "Cannot run ${currentStage}:"
+        if (!missingStages.empty) {
             errorMsg += "\n  Missing stages: ${missingStages.join(', ')}"
         }
-        if (!failedStages.isEmpty()) {
+        if (!failedStages.empty) {
             errorMsg += "\n  Failed stages: ${failedStages.join(', ')}"
         }
         echo errorMsg
@@ -149,45 +149,46 @@ SOLUTION:
  * Call this at the start of each stage
  * @param stageName Name of the current stage
  */
-def initializeBuildContext(String stageName) {
+void initializeBuildContext(String stageName) {
     echo "Initializing build context for ${stageName}"
 
     // Generate or reuse BUILD_UID
-    if (!env.BUILD_UID) {
-        def timestamp = new Date().format('yyyyMMdd-HHmmss')
-        def random = UUID.randomUUID().toString().take(8)
+    if (env.BUILD_UID) {
+        echo "Reusing existing BUILD_UID: ${env.BUILD_UID}"
+    } else {
+        String timestamp = new Date().format('yyyyMMdd-HHmmss')
+        String random = UUID.randomUUID().toString().take(8)
         env.BUILD_UID = "build-${timestamp}-${random}"
         echo "Generated new BUILD_UID: ${env.BUILD_UID}"
-    } else {
-        echo "Reusing existing BUILD_UID: ${env.BUILD_UID}"
     }
 
     // Resolve GROUP_UID: use param if supplied, reuse env if already set, else auto-generate
-    if (!env.GROUP_UID) {
-        def supplied = params?.GROUP_UID?.trim()
+    if (env.GROUP_UID) {
+        echo "Reusing existing GROUP_UID: ${env.GROUP_UID}"
+    } else {
+        String supplied = params?.GROUP_UID?.trim()
         if (supplied) {
             env.GROUP_UID = supplied
             echo "Using supplied GROUP_UID: ${env.GROUP_UID}"
         } else {
-            def timestamp = new Date().format('yyyyMMdd-HHmmss')
-            def random = UUID.randomUUID().toString().take(8)
+            final int UID_LENGTH = 8
+            String timestamp = new Date().format('yyyyMMdd-HHmmss')
+            String random = UUID.randomUUID().toString().take(UID_LENGTH)
             env.GROUP_UID = "group-${timestamp}-${random}"
             echo "Generated new GROUP_UID: ${env.GROUP_UID}"
         }
-    } else {
-        echo "Reusing existing GROUP_UID: ${env.GROUP_UID}"
     }
 
     // Load existing stage results if available
     if (env.BUILD_STAGE_RESULTS) {
-        def results = parseStageResults(env.BUILD_STAGE_RESULTS)
+        Map results = parseStageResults(env.BUILD_STAGE_RESULTS)
         echo "Loaded ${results.size()} previous stage results"
-        results.each { stage, result ->
+        results.each { String stage, String result ->
             echo "  ${stage}: ${result}"
         }
     } else {
-        echo "No previous stage results found (first run)"
-        env.BUILD_STAGE_RESULTS = ""
+        echo 'No previous stage results found (first run)'
+        env.BUILD_STAGE_RESULTS = ''
     }
 }
 
@@ -197,7 +198,7 @@ def initializeBuildContext(String stageName) {
  * @param stageName Name of the stage
  * @return Map with post block closures
  */
-def createPostBlocks(String stageName) {
+Map createPostBlocks(String stageName) {
     return [
         success: {
             script {
