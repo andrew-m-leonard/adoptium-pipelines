@@ -43,7 +43,7 @@ class SbomWorkspaceExtractor(object):
 
     def _load(self):
         try:
-            with open(self._sbom_path) as fh:
+            with open(self._sbom_path, encoding="utf-8") as fh:
                 return json.load(fh)
         except (IOError, OSError) as exc:
             print(

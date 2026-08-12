@@ -322,7 +322,7 @@ def convert_groovy_to_json(input_file: Path, output_file: Path):
     print(f"Converting {input_file} to {output_file}...")
 
     # Read Groovy file
-    with open(input_file, "r") as f:
+    with open(input_file, "r", encoding="utf-8") as f:
         content = f.read()
 
     # Extract version from filename
@@ -365,7 +365,7 @@ def convert_groovy_to_json(input_file: Path, output_file: Path):
         formatted_lines.append(line)
 
     # Write formatted JSON
-    with open(output_file, "w") as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         f.write("\n".join(formatted_lines))
 
     print(f"✅ Successfully converted to {output_file}")

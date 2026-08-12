@@ -83,7 +83,7 @@ def _load_stage_registry(script_dir: Path) -> dict:
         e.g. {'02-build': 'Build', '13-smoke-tests': 'Smoke Tests', ...}
     """
     registry_path = script_dir / "scripts" / "stages" / "pipeline-stages.json"
-    with open(registry_path, "r") as f:
+    with open(registry_path, "r", encoding="utf-8") as f:
         stages = json.load(f)["pipelineStages"]
     return {s["id"]: s["label"] for s in stages}
 
@@ -511,7 +511,7 @@ class PipelineRunner:
                 f"Configuration file not created: {self.config_file}"
             )
 
-        with open(self.config_file, "r") as f:
+        with open(self.config_file, "r", encoding="utf-8") as f:
             config = json.load(f)
         print("\nGenerated Configuration:")
         print(json.dumps(config, indent=2))
@@ -684,18 +684,18 @@ Examples:
     failed = False
     if unrecognised:
         print(
-            f"\n❌ Unrecognised parameter(s) — not defined in any *.params.json for this config repo:"
+            "\n❌ Unrecognised parameter(s) — not defined in any *.params.json for this config repo:"
         )
         for flag in unrecognised:
             print(f"   {flag}")
-        print(f"\n   Run with --help to see all available stage parameters.")
+        print("\n   Run with --help to see all available stage parameters.")
         failed = True
 
     if param_errors:
-        print(f"\n❌ Invalid parameter value(s):")
+        print("\n❌ Invalid parameter value(s):")
         for msg in param_errors:
             print(msg)
-        print(f"\n   Run with --help to see all available stage parameters.")
+        print("\n   Run with --help to see all available stage parameters.")
         failed = True
 
     if failed:

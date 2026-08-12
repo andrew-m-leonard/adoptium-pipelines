@@ -136,7 +136,7 @@ def generateJenkinsConfig(config_repo_path, pipeline_config_path, output_path):
         )
         sys.exit(1)
 
-    with open(jenkins_config_path, "r") as f:
+    with open(jenkins_config_path, "r", encoding="utf-8") as f:
         jenkins_config = json.load(f)
 
     stage_agent_labels = jenkins_config.get("stageAgentLabels", {})
@@ -155,7 +155,7 @@ def generateJenkinsConfig(config_repo_path, pipeline_config_path, output_path):
         )
         sys.exit(1)
 
-    with open(pipeline_config_path, "r") as f:
+    with open(pipeline_config_path, "r", encoding="utf-8") as f:
         pipeline_config = json.load(f)
 
     target_os = pipeline_config["buildConfig"]["TARGET_OS"]
@@ -192,7 +192,7 @@ def generateJenkinsConfig(config_repo_path, pipeline_config_path, output_path):
         "activeNodeTimeoutMinutes": active_node_timeout,
     }
 
-    with open(Path(output_path), "w") as f:
+    with open(Path(output_path), "w", encoding="utf-8") as f:
         json.dump(jenkins_out, f, indent=2)
 
     print(f"✓ Created {output_path}")

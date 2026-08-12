@@ -93,7 +93,7 @@ class BuildMetadataWriter(object):
     def write(self):
         metadata = self._collect()
         try:
-            with open(self._output, "w") as fh:
+            with open(self._output, "w", encoding="utf-8") as fh:
                 json.dump(metadata, fh, indent=2)
                 fh.write("\n")
         except (IOError, OSError) as exc:

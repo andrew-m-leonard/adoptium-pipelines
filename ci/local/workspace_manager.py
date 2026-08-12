@@ -88,10 +88,10 @@ class WorkspaceManager:
         if clean_requested and is_restarting:
             # Option conflict: can't clean workspace when restarting
             raise ValueError(
-                f"ERROR: Option conflict - cannot use --clean-workspace with --start-from-stage\n"
-                f"\n"
-                f"When restarting from a stage, the workspace must be preserved to access\n"
-                f"artifacts from previous stages. Remove --clean-workspace to continue.\n"
+                "ERROR: Option conflict - cannot use --clean-workspace with --start-from-stage\n"
+                "\n"
+                "When restarting from a stage, the workspace must be preserved to access\n"
+                "artifacts from previous stages. Remove --clean-workspace to continue.\n"
             )
 
         if is_restarting:
@@ -138,7 +138,7 @@ class WorkspaceManager:
                 print("✅ Workspace cleaned")
 
             # Create workspace structure
-            print(f"📁 Creating workspace structure:")
+            print("📁 Creating workspace structure:")
             self.pipeline_workspace.mkdir(parents=True, exist_ok=True)
             self.stage_workspace.mkdir(parents=True, exist_ok=True)
             self.build_artifacts_dir.mkdir(parents=True, exist_ok=True)
@@ -158,7 +158,7 @@ class WorkspaceManager:
         if cleanup_type == "pre":
             # Pre-cleanup: ALWAYS clean stage_workspace
             if self.stage_workspace.exists():
-                print(f"🧹 Pre-cleanup: Cleaning stage workspace...")
+                print("🧹 Pre-cleanup: Cleaning stage workspace...")
                 shutil.rmtree(self.stage_workspace)
             self.stage_workspace.mkdir(parents=True, exist_ok=True)
             print(f"   ✅ Stage workspace cleaned: {self.stage_workspace}")
@@ -168,7 +168,7 @@ class WorkspaceManager:
             try:
                 # Read config to check cleanWorkspaceAfterStage setting
                 if self.config_file.exists():
-                    with open(self.config_file, "r") as f:
+                    with open(self.config_file, "r", encoding="utf-8") as f:
                         config = json.load(f)
 
                     clean_after = config.get("parameters", {}).get(
@@ -177,7 +177,7 @@ class WorkspaceManager:
 
                     if clean_after:
                         if self.stage_workspace.exists():
-                            print(f"🧹 Post-cleanup: Cleaning stage workspace...")
+                            print("🧹 Post-cleanup: Cleaning stage workspace...")
                             shutil.rmtree(self.stage_workspace)
                             self.stage_workspace.mkdir(parents=True, exist_ok=True)
                             print(
@@ -185,7 +185,7 @@ class WorkspaceManager:
                             )
                     else:
                         print(
-                            f"ℹ️  Post-cleanup: Skipped (cleanWorkspaceAfterStage=false)"
+                            "ℹ️  Post-cleanup: Skipped (cleanWorkspaceAfterStage=false)"
                         )
             except Exception as e:
                 print(f"⚠️  Warning: Post-cleanup failed: {e}")

@@ -42,7 +42,6 @@ import sys
 import json
 import re
 import subprocess
-import shutil
 import tempfile
 from pathlib import Path
 from typing import List, Dict, Any
@@ -79,7 +78,7 @@ def load_pipeline_stages() -> list[dict]:
             f"pipeline-stages.json not found: {registry}\n"
             "Ensure scripts/stages/pipeline-stages.json exists in the repository."
         )
-    with open(registry, "r") as f:
+    with open(registry, "r", encoding="utf-8") as f:
         return json.load(f)["pipelineStages"]
 
 
@@ -107,7 +106,7 @@ def check_if_job_disabled(source_dir: Path, version: str) -> bool:
         groovy_file = source_dir / f"{version}{suffix}.groovy"
         if groovy_file.exists():
             try:
-                with open(groovy_file, "r") as f:
+                with open(groovy_file, "r", encoding="utf-8") as f:
                     content = f.read()
                     # Look for disableJob = true (with optional whitespace)
                     if re.search(r"disableJob\s*=\s*true", content):
@@ -567,10 +566,12 @@ Examples:
             if args.verbose:
                 cmd.append("--verbose")
 
-            result = subprocess.run(cmd, capture_output=not args.verbose, text=True)
+            result = subprocess.run(
+                cmd, capture_output=not args.verbose, text=True, check=False
+            )
 
             if result.returncode != 0:
-                print(f"Error: Conversion failed", file=sys.stderr)
+                print("Error: Conversion failed", file=sys.stderr)
                 if result.stderr:
                     print(result.stderr, file=sys.stderr)
                 return 1
@@ -601,7 +602,7 @@ Examples:
 
                 try:
                     # Read the converted file
-                    with open(temp_file, "r") as f:
+                    with open(temp_file, "r", encoding="utf-8") as f:
                         config = json.load(f)
 
                     # Update version field (remove 'u' suffix)
@@ -641,7 +642,7 @@ Examples:
                         f"[{i}/{len(converted_files)}] {temp_file.name} -> {output_file.name} {status}"
                     )
 
-                    with open(output_file, "w") as f:
+                    with open(output_file, "w", encoding="utf-8") as f:
                         json.dump(config, f, indent=2)
 
                     if args.verbose:
@@ -652,12 +653,12 @@ Examples:
                             f"  Platforms: {len(config.get('buildConfigurations', {}))}"
                         )
                         print(
-                            f"  Migrated platform keys to aqa-aligned {arch}_{os} convention"
+                            "  Migrated platform keys to aqa-aligned <arch>_<os> convention"
                         )
                         print(
-                            f"  Removed obsolete fields: test, additionalTestParams, additionalTestLabels"
+                            "  Removed obsolete fields: test, additionalTestParams, additionalTestLabels"
                         )
-                        print(f"  Migrated additionalNodeLabels to label schema tokens")
+                        print("  Migrated additionalNodeLabels to label schema tokens")
 
                 except json.JSONDecodeError as e:
                     print(
@@ -679,7 +680,7 @@ Examples:
                 adoptium_config = generate_adoptium_pipeline_config(version_configs)
                 adoptium_config_file = args.output / "adoptium_pipeline_config.json"
 
-                with open(adoptium_config_file, "w") as f:
+                with open(adoptium_config_file, "w", encoding="utf-8") as f:
                     json.dump(adoptium_config, f, indent=2)
 
                 print(f"  Created: {adoptium_config_file.name}")
@@ -693,7 +694,7 @@ Examples:
                 jenkins_config = generate_jenkins_job_config()
                 jenkins_config_file = args.output / "jenkins_job_config.json"
 
-                with open(jenkins_config_file, "w") as f:
+                with open(jenkins_config_file, "w", encoding="utf-8") as f:
                     json.dump(jenkins_config, f, indent=2)
 
                 print(f"  Created: {jenkins_config_file.name}")
@@ -725,8 +726,8 @@ Examples:
                 return 1
             print()
             print("Generated files:")
-            print(f"  - adoptium_pipeline_config.json  (CI-agnostic)")
-            print(f"  - jenkins_job_config.json         (Jenkins-specific)")
+            print("  - adoptium_pipeline_config.json  (CI-agnostic)")
+            print("  - jenkins_job_config.json         (Jenkins-specific)")
             for config in version_configs:
                 print(f"  - configurations/{config['version']}_pipeline_config.json")
             print()

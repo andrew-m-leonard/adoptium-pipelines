@@ -207,7 +207,7 @@ def load_configuration(args):
             file=sys.stderr,
         )
         sys.exit(1)
-    with open(adoptium_cfg_path, "r") as f:
+    with open(adoptium_cfg_path, "r", encoding="utf-8") as f:
         adoptium_cfg = json.load(f)
 
     repo_defaults = adoptium_cfg.get("repository", {})
@@ -250,7 +250,7 @@ def load_configuration(args):
         f"Loading configuration for: {jdk_version} {variant} {target_os} {architecture}"
     )
 
-    with open(config_file, "r") as f:
+    with open(config_file, "r", encoding="utf-8") as f:
         json_config = json.load(f)
 
     build_configurations = json_config.get("buildConfigurations", {})
@@ -363,7 +363,7 @@ def load_configuration(args):
     output_path.mkdir(parents=True, exist_ok=True)
 
     pipeline_config_file = output_path / "pipeline-config.json"
-    with open(pipeline_config_file, "w") as f:
+    with open(pipeline_config_file, "w", encoding="utf-8") as f:
         json.dump(pipeline_config, f, indent=2)
     print(f"Created: {pipeline_config_file}")
 

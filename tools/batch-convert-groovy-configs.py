@@ -36,7 +36,6 @@ import argparse
 import sys
 from pathlib import Path
 import subprocess
-import glob
 
 
 def find_converter_script() -> Path:
@@ -260,7 +259,7 @@ Examples:
             print()
             return 1
 
-        print(f"✅ All configurations converted successfully!")
+        print("✅ All configurations converted successfully!")
         print()
         print("Next steps:")
         print("1. Review the generated JSON files")

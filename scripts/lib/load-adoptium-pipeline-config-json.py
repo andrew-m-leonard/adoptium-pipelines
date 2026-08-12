@@ -63,7 +63,7 @@ def load_from_local(config_repo_dir: str) -> dict:
         print(f"ERROR: {CONFIG_FILENAME} not found at: {config_path}", file=sys.stderr)
         sys.exit(1)
 
-    with open(config_path, "r") as f:
+    with open(config_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 

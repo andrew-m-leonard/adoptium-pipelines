@@ -207,7 +207,7 @@ def _load_json_local(path: Path) -> dict | None:
     """Load a JSON file from a local path. Returns None if the file does not exist."""
     if not path.exists():
         return None
-    with open(path, "r") as f:
+    with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -876,7 +876,7 @@ Examples:
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w") as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2)
 
     total_params = len(result["paramNames"])

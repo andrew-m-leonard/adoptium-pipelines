@@ -40,7 +40,6 @@ run() returns the exit code (0 = success, non-zero = failure).
 Callers decide whether to raise or continue (e.g. UNSTABLE-equivalent).
 """
 
-import json
 import subprocess
 import sys
 from pathlib import Path
@@ -111,5 +110,5 @@ class StageResolver:
         else:
             raise ValueError(f"Unsupported script type: {script.suffix}")
 
-        result = subprocess.run(cmd, env=env)
+        result = subprocess.run(cmd, env=env, check=False)
         return result.returncode
