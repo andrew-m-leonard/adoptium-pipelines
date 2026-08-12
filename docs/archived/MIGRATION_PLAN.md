@@ -641,7 +641,7 @@ git checkout main
 - **Technical Lead**: TBD
 - **QA Lead**: TBD
 - **Slack Channel**: #pipeline-migration
-- **Email**: pipeline-migration@adoptium.net
+- **Email**: <pipeline-migration@adoptium.net>
 
 ---
 

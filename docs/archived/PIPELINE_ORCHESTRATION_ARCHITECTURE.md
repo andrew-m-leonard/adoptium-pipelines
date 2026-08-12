@@ -668,7 +668,7 @@ New Cost:
 
 ## Monitoring and Observability
 
-### Old Architecture
+### Monitoring Old Architecture
 
 ```text
 Single View (Confusing):
@@ -677,7 +677,7 @@ Single View (Confusing):
     └── Action: Must investigate to find out
 ```
 
-### New Architecture
+### Monitoring New Architecture
 
 ```text
 Clear Separation:

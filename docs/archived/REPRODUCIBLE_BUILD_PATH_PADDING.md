@@ -214,6 +214,7 @@ The path padding process provides detailed logging:
 To test path padding locally:
 
 1. Create a pipeline configuration with `compareBuild: true`:
+
    ```bash
    cat > pipeline-config.json <<EOF
    {
@@ -236,6 +237,7 @@ To test path padding locally:
    ```
 
 1. Run the build stage:
+
    ```bash
    export WORKSPACE=$(pwd)
    export CONFIG_FILE=pipeline-config.json
@@ -246,6 +248,7 @@ To test path padding locally:
    ```
 
 1. Verify padding in logs:
+
    ```bash
    grep "Padded" build.log
    grep "WORKSPACE updated" build.log
@@ -256,18 +259,21 @@ To test path padding locally:
 After building with path padding:
 
 1. **Check workspace structure**:
+
    ```bash
    ls -la ${WORKSPACE}/
    # Should show padded directory with 'P' characters
    ```
 
 1. **Verify build artifacts**:
+
    ```bash
    ls -la ${TARGET_DIR}/
    # Should contain JDK artifacts
    ```
 
 1. **Compare with upstream** (macOS):
+
    ```bash
    # Extract LC_UUID from local build
    otool -l ${TARGET_DIR}/jdk-*/Contents/Home/lib/server/libjvm.dylib | grep uuid

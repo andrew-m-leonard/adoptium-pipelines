@@ -304,6 +304,7 @@ When directory doesn't exist:
 1. Verify parameters: `jq '.parameters' pipeline-config.json`
 1. Check script permissions: `ls -l scripts/lib/workspace-cleanup.sh`
 1. Run script manually with debug:
+
    ```bash
    export WORKSPACE="$PWD"
    export CONFIG_FILE="$PWD/pipeline-config.json"
