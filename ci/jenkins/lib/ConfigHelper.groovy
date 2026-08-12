@@ -96,26 +96,24 @@ Map generatePipelineConfig(String configRepoPath = './config-repo') {
     // Set CI-agnostic environment variables for use in when{} blocks and by
     // stage scripts.  Only values derived from config files at init time live
     // here — stage params flow through Jenkins job parameters automatically.
-    env.with {
-        CONFIG_VARIANT           = pipelineConfig.buildConfig.VARIANT
-        CONFIG_TARGET_OS         = pipelineConfig.buildConfig.TARGET_OS
-        CONFIG_ARCHITECTURE      = pipelineConfig.buildConfig.ARCHITECTURE
-        CONFIG_JAVA_TO_BUILD     = pipelineConfig.buildConfig.JAVA_TO_BUILD
-        CONFIG_NODE_LABEL        = pipelineConfig.buildConfig.NODE_LABEL ?: 'worker'
-        // Config-file baseline args — stage scripts merge these with EXTRA_BUILD_ARGS /
-        // EXTRA_CONFIGURE_ARGS (stage params) at runtime.
-        CONFIG_BUILD_ARGS        = pipelineConfig.buildConfig.BUILD_ARGS ?: ''
-        CONFIG_CONFIGURE_ARGS    = pipelineConfig.buildConfig.CONFIGURE_ARGS ?: ''
-        // repoDefaults — fallback refs for stage scripts when their stage params are empty
-        CONFIG_BUILD_REF         = pipelineConfig.repoDefaults.buildRef ?: 'master'
-        CONFIG_BUILD_REPO_URL    = pipelineConfig.repoDefaults.buildRepoUrl ?: ''
-        CONFIG_AQA_REF           = pipelineConfig.repoDefaults.aqaRef ?: ''
-        CONFIG_DOCKER_IMAGE      = pipelineConfig.buildConfig.DOCKER_IMAGE ?: ''
-        CONFIG_DOCKER_REGISTRY   = pipelineConfig.buildConfig.DOCKER_REGISTRY ?: ''
-        CONFIG_DOCKER_CREDENTIAL = pipelineConfig.buildConfig.DOCKER_CREDENTIAL ?: ''
-        CONFIG_DOCKER_ARGS       = pipelineConfig.buildConfig.DOCKER_ARGS ?: ''
-        CONFIG_PODMAN_ARGS       = pipelineConfig.buildConfig.PODMAN_ARGS ?: ''
-    }
+    env.CONFIG_VARIANT           = pipelineConfig.buildConfig.VARIANT
+    env.CONFIG_TARGET_OS         = pipelineConfig.buildConfig.TARGET_OS
+    env.CONFIG_ARCHITECTURE      = pipelineConfig.buildConfig.ARCHITECTURE
+    env.CONFIG_JAVA_TO_BUILD     = pipelineConfig.buildConfig.JAVA_TO_BUILD
+    env.CONFIG_NODE_LABEL        = pipelineConfig.buildConfig.NODE_LABEL ?: 'worker'
+    // Config-file baseline args — stage scripts merge these with EXTRA_BUILD_ARGS /
+    // EXTRA_CONFIGURE_ARGS (stage params) at runtime.
+    env.CONFIG_BUILD_ARGS        = pipelineConfig.buildConfig.BUILD_ARGS ?: ''
+    env.CONFIG_CONFIGURE_ARGS    = pipelineConfig.buildConfig.CONFIGURE_ARGS ?: ''
+    // repoDefaults — fallback refs for stage scripts when their stage params are empty
+    env.CONFIG_BUILD_REF         = pipelineConfig.repoDefaults.buildRef ?: 'master'
+    env.CONFIG_BUILD_REPO_URL    = pipelineConfig.repoDefaults.buildRepoUrl ?: ''
+    env.CONFIG_AQA_REF           = pipelineConfig.repoDefaults.aqaRef ?: ''
+    env.CONFIG_DOCKER_IMAGE      = pipelineConfig.buildConfig.DOCKER_IMAGE ?: ''
+    env.CONFIG_DOCKER_REGISTRY   = pipelineConfig.buildConfig.DOCKER_REGISTRY ?: ''
+    env.CONFIG_DOCKER_CREDENTIAL = pipelineConfig.buildConfig.DOCKER_CREDENTIAL ?: ''
+    env.CONFIG_DOCKER_ARGS       = pipelineConfig.buildConfig.DOCKER_ARGS ?: ''
+    env.CONFIG_PODMAN_ARGS       = pipelineConfig.buildConfig.PODMAN_ARGS ?: ''
 
     return pipelineConfig
 }
