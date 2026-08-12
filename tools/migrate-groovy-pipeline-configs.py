@@ -452,23 +452,23 @@ def generate_jenkins_job_config(pipeline_base_folder: str = "") -> Dict[str, Any
         config["pipelineBaseFolder"] = pipeline_base_folder
 
     config["jobConfiguration"] = {
-            "defaultParameters": {
-                "VARIANT": "temurin",
-                "CLEAN_WORKSPACE_AFTER_STAGE": True,
-                "CREATE_SBOM": True,
-                "RUN_TESTS": True,
-                "ENABLE_INSTALLERS": True,
-                "SIGN_ARTIFACTS": True,
-                "PUBLISH_ARTIFACTS": False,
-                "RUN_REPRODUCIBLE_COMPARE": False,
-            },
-            "logRotation": {
-                "daysToKeep": 30,
-                "numToKeep": 50,
-                "artifactDaysToKeep": 7,
-                "artifactNumToKeep": 10,
-            },
-        }
+        "defaultParameters": {
+            "VARIANT": "temurin",
+            "CLEAN_WORKSPACE_AFTER_STAGE": True,
+            "CREATE_SBOM": True,
+            "RUN_TESTS": True,
+            "ENABLE_INSTALLERS": True,
+            "SIGN_ARTIFACTS": True,
+            "PUBLISH_ARTIFACTS": False,
+            "RUN_REPRODUCIBLE_COMPARE": False,
+        },
+        "logRotation": {
+            "daysToKeep": 30,
+            "numToKeep": 50,
+            "artifactDaysToKeep": 7,
+            "artifactNumToKeep": 10,
+        },
+    }
     config["stageAgentLabels"] = stage_agent_labels
     return config
 
