@@ -202,23 +202,42 @@ pipelineJob(jobName.replaceAll(/^\//, '')) {
             description('Fixed platform coordinates and runtime controls for this build job.')
             separatorStyle('')
         }
-        stringParam('JDK_VERSION', jdkVersion,
-            'JDK version number — fixed at job-generation time')
-        stringParam('TARGET_OS', targetOs,
-            'Target operating system — fixed at job-generation time')
-        stringParam('ARCHITECTURE', architecture,
-            'Target CPU architecture — fixed at job-generation time')
+        stringParam {
+            name('JDK_VERSION')
+            defaultValue(jdkVersion)
+            description('JDK version number — fixed at job-generation time')
+            trim(true)
+        }
+        stringParam {
+            name('TARGET_OS')
+            defaultValue(targetOs)
+            description('Target operating system — fixed at job-generation time')
+            trim(true)
+        }
+        stringParam {
+            name('ARCHITECTURE')
+            defaultValue(architecture)
+            description('Target CPU architecture — fixed at job-generation time')
+            trim(true)
+        }
         choiceParam('RELEASE_TYPE',
             ['NIGHTLY', 'WEEKLY', 'RELEASE'],
             'Type of release build')
-        stringParam('GROUP_UID', '',
-            'Group identifier linking all platform builds from the same launch.')
+        stringParam {
+            name('GROUP_UID')
+            defaultValue('')
+            description('Group identifier linking all platform builds from the same launch.')
+            trim(true)
+        }
         booleanParam('CLEAN_WORKSPACE_AFTER_STAGE',
             defaultParams?.CLEAN_WORKSPACE_AFTER_STAGE != null ? defaultParams.CLEAN_WORKSPACE_AFTER_STAGE : true,
             'Clean workspace after each stage completes')
-        stringParam('PIPELINE_TIMEOUT_HOURS',
-            (jenkinsConfig.pipelineTimeoutHours ?: 8).toString(),
-            'Overall pipeline timeout in hours')
+        stringParam {
+            name('PIPELINE_TIMEOUT_HOURS')
+            defaultValue((jenkinsConfig.pipelineTimeoutHours ?: 8).toString())
+            description('Overall pipeline timeout in hours')
+            trim(true)
+        }
 
         // ── Collated stage parameters ─────────────────────────────────────────
         // Stage-gate booleans (RUN_TESTS, SIGN_ARTIFACTS, etc.) and all other
@@ -249,7 +268,12 @@ pipelineJob(jobName.replaceAll(/^\//, '')) {
                     def strDefault = defaultParams?.containsKey(p.name)
                         ? (defaultParams[p.name] ?: '')
                         : (p.default ?: '')
-                    stringParam(p.name, strDefault, p.description ?: '')
+                    stringParam {
+                        name(p.name)
+                        defaultValue(strDefault)
+                        description(p.description ?: '')
+                        trim(true)
+                    }
                 }
             }
         }
@@ -262,10 +286,18 @@ pipelineJob(jobName.replaceAll(/^\//, '')) {
             description('Vendor config repo coordinates — baked in at job-generation time. Do not edit manually.')
             separatorStyle('')
         }
-        stringParam('CONFIG_REPO_URL', configRepoUrl,
-            'Vendor config repo URL — baked in at job-generation time')
-        stringParam('CONFIG_REPO_BRANCH', configRepoBranch,
-            'Vendor config repo branch — baked in at job-generation time')
+        stringParam {
+            name('CONFIG_REPO_URL')
+            defaultValue(configRepoUrl)
+            description('Vendor config repo URL — baked in at job-generation time')
+            trim(true)
+        }
+        stringParam {
+            name('CONFIG_REPO_BRANCH')
+            defaultValue(configRepoBranch)
+            description('Vendor config repo branch — baked in at job-generation time')
+            trim(true)
+        }
     }
 
     definition {

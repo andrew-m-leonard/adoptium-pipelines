@@ -229,10 +229,18 @@ pipelineConfig.activeJdkVersions.findAll { it.enabled }.each { versionInfo ->
         quietPeriod(5)
 
         parameters {
-            stringParam('JDK_VERSION', version.replaceAll(/[^\d]/, ''),
-                'JDK version number — fixed for this launch job')
-            stringParam('GROUP_UID', '',
-                'Group identifier for this launch run. Auto-generated if empty.')
+            stringParam {
+                name('JDK_VERSION')
+                defaultValue(version.replaceAll(/[^\d]/, ''))
+                description('JDK version number — fixed for this launch job')
+                trim(true)
+            }
+            stringParam {
+                name('GROUP_UID')
+                defaultValue('')
+                description('Group identifier for this launch run. Auto-generated if empty.')
+                trim(true)
+            }
             choiceParam('PLATFORMS', ['all'] + platforms,
                 'Select platform to build, or "all" for all available platforms')
             choiceParam('RELEASE_TYPE',
@@ -270,7 +278,12 @@ pipelineConfig.activeJdkVersions.findAll { it.enabled }.each { versionInfo ->
                         def strDefault = defaultParams?.containsKey(p.name)
                             ? (defaultParams[p.name] ?: '')
                             : (p.default ?: '')
-                        stringParam(p.name, strDefault, p.description ?: '')
+                        stringParam {
+                            name(p.name)
+                            defaultValue(strDefault)
+                            description(p.description ?: '')
+                            trim(true)
+                        }
                     }
                 }
             }
@@ -283,10 +296,18 @@ pipelineConfig.activeJdkVersions.findAll { it.enabled }.each { versionInfo ->
                 description('Vendor config repo coordinates — baked in at job-generation time. Do not edit manually.')
                 separatorStyle('')
             }
-            stringParam('CONFIG_REPO_URL', configRepoUrl,
-                'Vendor config repo URL — baked in at job-generation time')
-            stringParam('CONFIG_REPO_BRANCH', configRepoBranch,
-                'Vendor config repo branch — baked in at job-generation time')
+            stringParam {
+                name('CONFIG_REPO_URL')
+                defaultValue(configRepoUrl)
+                description('Vendor config repo URL — baked in at job-generation time')
+                trim(true)
+            }
+            stringParam {
+                name('CONFIG_REPO_BRANCH')
+                defaultValue(configRepoBranch)
+                description('Vendor config repo branch — baked in at job-generation time')
+                trim(true)
+            }
         }
 
         definition {
