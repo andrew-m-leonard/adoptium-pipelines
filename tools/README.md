@@ -23,9 +23,16 @@ migrate-groovy-pipeline-configs.py   ← top-level: run this
 **Usage**:
 
 ```bash
+# Basic migration (jobs created at the Jenkins root)
 python3 tools/migrate-groovy-pipeline-configs.py \
     --source ~/workspace/ci-jenkins-pipelines/pipelines/jobs/configurations \
     --output ~/workspace/ci-temurin-config
+
+# Place all generated jobs inside a Jenkins folder
+python3 tools/migrate-groovy-pipeline-configs.py \
+    --source ~/workspace/ci-jenkins-pipelines/pipelines/jobs/configurations \
+    --output ~/workspace/ci-temurin-config \
+    --pipeline-base-folder MyOrg/OpenJDK
 ```
 
 **Options**:
@@ -34,6 +41,7 @@ python3 tools/migrate-groovy-pipeline-configs.py \
 |---|---|
 | `--source` / `-s` | Source directory containing `*_pipeline_config.groovy` files (required) |
 | `--output` / `-o` | Output directory — receives `jenkins_job_config.json` and `configurations/*.json` (required) |
+| `--pipeline-base-folder FOLDER` | Jenkins folder path under which all generated jobs and views will be placed (e.g. `MyOrg/OpenJDK`). Written as `pipelineBaseFolder` in `jenkins_job_config.json`. Omit to generate at the Jenkins root. |
 | `--dry-run` / `-n` | Preview what would be converted without writing files |
 | `--verbose` / `-v` | Show detailed conversion output |
 | `--force` / `-f` | Overwrite existing JSON files |
@@ -78,6 +86,7 @@ python3 tools/migrate-groovy-pipeline-configs.py \
 {
   "jenkinsfilePath": "ci/jenkins/Jenkinsfile.declarative",
   "pipelineTimeoutHours": 8,
+  "activeNodeTimeoutMinutes": 10,
   "jobConfiguration": {
     "defaultParameters": {
       "VARIANT": "temurin",
@@ -94,7 +103,21 @@ python3 tools/migrate-groovy-pipeline-configs.py \
       "artifactDaysToKeep": 7,
       "artifactNumToKeep": 10
     }
-  }
+  },
+  "stageAgentLabels": { "...": "..." }
+}
+```
+
+When `--pipeline-base-folder` is supplied the field is inserted between `activeNodeTimeoutMinutes` and `jobConfiguration`:
+
+```json
+{
+  "jenkinsfilePath": "ci/jenkins/Jenkinsfile.declarative",
+  "pipelineTimeoutHours": 8,
+  "activeNodeTimeoutMinutes": 10,
+  "pipelineBaseFolder": "MyOrg/OpenJDK",
+  "jobConfiguration": { "...": "..." },
+  "stageAgentLabels": { "...": "..." }
 }
 ```
 
@@ -159,6 +182,15 @@ git clone https://github.com/adoptium/ci-jenkins-pipelines.git ~/workspace/ci-je
 python3 tools/migrate-groovy-pipeline-configs.py \
     --source ~/workspace/ci-jenkins-pipelines/pipelines/jobs/configurations \
     --output ~/workspace/ci-temurin-config
+```
+
+To place all generated Jenkins jobs inside a folder (e.g. `MyOrg/OpenJDK`), add `--pipeline-base-folder`:
+
+```bash
+python3 tools/migrate-groovy-pipeline-configs.py \
+    --source ~/workspace/ci-jenkins-pipelines/pipelines/jobs/configurations \
+    --output ~/workspace/ci-temurin-config \
+    --pipeline-base-folder MyOrg/OpenJDK
 ```
 
 Expected output:

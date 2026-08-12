@@ -229,6 +229,12 @@ pipeline {
                             }
                         }
                         env.PIPELINE_TIMEOUT_HOURS = (jenkinsJobConfig?.pipelineTimeoutHours ?: 8).toString()
+                        // Capture the optional base folder so downstream stages can
+                        // build the correct job path when triggering platform builds.
+                        env.PIPELINE_BASE_FOLDER = ((jenkinsJobConfig?.pipelineBaseFolder ?: '') as String).trim().replaceAll(/\/+$/, '')
+                        if (env.PIPELINE_BASE_FOLDER) {
+                            echo "✓ Pipeline base folder: ${env.PIPELINE_BASE_FOLDER}"
+                        }
                     }
                 }
             }
@@ -336,9 +342,11 @@ pipeline {
                     Map buildJobs      = [:]
                     Map buildResults   = [:]
 
+                    String baseFolder = env.PIPELINE_BASE_FOLDER ?: ''
                     env.SELECTED_PLATFORMS.split(',').each { String platform ->
                         Map cfg     = versionConfig.buildConfigurations[platform]
-                        String jobName = "/Build_openjdk/Build_openjdk${env.JDK_VERSION}_${cfg?.variant ?: 'temurin'}_${cfg?.arch ?: platform}_${cfg?.os ?: platform}"
+                        String jobPath  = "Build_openjdk/Build_openjdk${env.JDK_VERSION}_${cfg?.variant ?: 'temurin'}_${cfg?.arch ?: platform}_${cfg?.os ?: platform}"
+                        String jobName  = baseFolder ? "/${baseFolder}/${jobPath}" : "/${jobPath}"
 
                         // Capture cfg in a local variable so the closure does not
                         // capture the loop variable (Groovy late-binding gotcha).

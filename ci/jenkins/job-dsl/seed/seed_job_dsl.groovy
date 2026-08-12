@@ -43,6 +43,11 @@ limitations under the License.
  *   CONFIG_REPO_BRANCH   — vendor config repo branch (baked into generated launch jobs)
  *   COLLATED_PARAMS_JSON — JSON produced by collect-stage-params.py
  *   PIPELINE_COMMIT_SHA  — SHA of the ci-adoptium-pipelines checkout
+ *
+ * jenkins_job_config.json fields consumed here:
+ *   pipelineBaseFolder   — (optional) Jenkins folder path under which all generated
+ *                          jobs and views are placed (e.g. "MyOrg/OpenJDK").
+ *                          Omit or set to "" to generate at the Jenkins root.
  */
 
 import groovy.json.JsonSlurper
@@ -87,6 +92,7 @@ println "  CONFIG_REPO_BRANCH : ${configRepoBranch}"
 println "  PIPELINE_COMMIT_SHA: ${pipelineCommitSha}"
 println '=' * SEPARATOR_WIDTH
 println ''
+// (pipelineBaseFolder is printed after jenkinsConfig is loaded below)
 
 // ============================================================================
 // STEP 2: Load configuration using readFileFromWorkspace
@@ -99,7 +105,17 @@ println '✓ Loaded adoptium_pipeline_config.json'
 println "  Active JDK versions: ${pipelineConfig.activeJdkVersions.findAll { it.enabled }*.version.join(', ')}"
 
 def jenkinsConfig = slurper.parseText(readFileFromWorkspace('jenkins_job_config.json'))
-println '✓ Loaded jenkins_job_config.json\n'
+println '✓ Loaded jenkins_job_config.json'
+
+// Read optional base folder from jenkins_job_config.json.
+// Strip any trailing slashes so path construction is consistent.
+def pipelineBaseFolder = (jenkinsConfig?.pipelineBaseFolder ?: '').toString().trim().replaceAll(/\/+$/, '')
+
+// Helper: prefix a job/view/folder name with the base folder when one is set.
+// Returns the name unchanged when pipelineBaseFolder is empty (Jenkins root).
+def inFolder = { String name -> pipelineBaseFolder ? "${pipelineBaseFolder}/${name}" : name }
+
+println "  pipelineBaseFolder : ${pipelineBaseFolder ?: '(root)'}\n"
 
 // ============================================================================
 // STEP 3: Parse collated stage parameters from pre-computed JSON
@@ -141,12 +157,23 @@ println "✓ Received ${rawGroups.size()} raw group(s), merged to ${collatedPara
 // STEP 4: Create folders
 // ============================================================================
 
-folder('Build_openjdk_launchers') {
+// If a base folder is specified, ensure every ancestor folder in the path
+// exists before creating the leaf folders.  Job DSL's folder() only creates
+// the leaf; intermediate path segments must each be declared explicitly.
+if (pipelineBaseFolder) {
+    List parts = pipelineBaseFolder.tokenize('/')
+    parts.eachWithIndex { String part, int idx ->
+        String ancestorPath = parts[0..idx].join('/')
+        folder(ancestorPath) { }
+    }
+}
+
+folder(inFolder('Build_openjdk_launchers')) {
     displayName('Build_openjdk_launchers')
     description('Launch orchestrator jobs that trigger platform-specific builds across all selected platforms for a given JDK version')
 }
 
-folder('Build_openjdk') {
+folder(inFolder('Build_openjdk')) {
     displayName('Build_openjdk')
     description('OpenJDK platform build pipeline jobs, named using the AQA-style Build_openjdk<version>_<distro>_<arch>_<os> convention')
 }
@@ -181,7 +208,7 @@ pipelineConfig.activeJdkVersions.findAll { it.enabled }.each { versionInfo ->
         platforms = ['all']
     }
 
-    def jobName = "Build_openjdk_launchers/Build_openjdk${version.replaceAll(/[^\d]/, '')}_launch"
+    def jobName = inFolder("Build_openjdk_launchers/Build_openjdk${version.replaceAll(/[^\d]/, '')}_launch")
 
     pipelineJob(jobName) {
         displayName("Build_openjdk${version.replaceAll(/[^\d]/, '')}_launch${isLts ? ' (LTS)' : ''}")
@@ -309,10 +336,16 @@ println '✓ Launch orchestrator jobs created successfully\n'
 // STEP 6: Create Views
 // ============================================================================
 
-listView('Build_openjdk_launchers') {
+// listView() names are relative to their parent folder.
+// The jobs{} regex matches full job paths from the Jenkins root, so it must
+// include the base folder prefix when one is set.
+def launcherPrefix = pipelineBaseFolder ? "${pipelineBaseFolder}/Build_openjdk_launchers/" : 'Build_openjdk_launchers/'
+def buildPrefix    = pipelineBaseFolder ? "${pipelineBaseFolder}/Build_openjdk/"            : 'Build_openjdk/'
+
+listView(inFolder('Build_openjdk_launchers')) {
     description('Launch orchestrator jobs for coordinating platform builds (Build_openjdk<version>_launch)')
     jobs {
-        regex('Build_openjdk_launchers/Build_openjdk\\d+_launch')
+        regex("${launcherPrefix}Build_openjdk\\d+_launch")
     }
     recurse(true)
     columns {
@@ -326,10 +359,10 @@ listView('Build_openjdk_launchers') {
     }
 }
 
-listView('Build_openjdk') {
+listView(inFolder('Build_openjdk')) {
     description('Platform-specific build jobs — AQA-style naming: Build_openjdk<version>_<distro>_<arch>_<os>')
     jobs {
-        regex('Build_openjdk/Build_openjdk\\d+_[^_]+_[^_]+_[^_]+')
+        regex("${buildPrefix}Build_openjdk\\d+_[^_]+_[^_]+_[^_]+")
     }
     recurse(true)
     columns {

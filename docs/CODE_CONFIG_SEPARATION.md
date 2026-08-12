@@ -93,7 +93,7 @@ This is the top-level config file that glues everything together. It tells the s
 
 Contains two distinct groups of settings:
 
-- **Job-creation settings** (`jenkinsfilePath`, `pipelineTimeoutHours`, `activeNodeTimeoutMinutes`, `jobConfiguration`) — used by the seed job to configure Jenkins job definitions. Not needed at build runtime.
+- **Job-creation settings** (`jenkinsfilePath`, `pipelineTimeoutHours`, `activeNodeTimeoutMinutes`, `pipelineBaseFolder`, `jobConfiguration`) — used by the seed job and launch job to configure Jenkins job definitions. Not needed at build runtime.
 - **Agent-selection settings** (`stageAgentLabels`) — used at build runtime to resolve which Jenkins node each pipeline stage runs on. Keys are **stage IDs** (from `pipeline-stages.json`), not display labels. The `{os}` and `{arch}` placeholders are substituted with `sw.os.*` / `hw.arch.*` schema label tokens derived from the platform's `os` and `arch` fields. The special key `__any__` provides the fallback label used for any stage whose ID is not explicitly listed.
 
 **Example structure**:

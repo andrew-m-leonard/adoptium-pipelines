@@ -35,7 +35,12 @@ limitations under the License.
  *                           Used to detect when the build job was generated from a
  *                           different commit and must be regenerated.
  *
- * Creates: Build_openjdk/Build_openjdk<version>_<distro>_<arch>_<os>
+ * jenkins_job_config.json fields consumed here:
+ *   pipelineBaseFolder    — (optional) Jenkins folder path prefix for the generated
+ *                           build job (e.g. "MyOrg/OpenJDK").  Must match what the
+ *                           seed job used.  Omit or set to "" for the Jenkins root.
+ *
+ * Creates: [pipelineBaseFolder/]Build_openjdk/Build_openjdk<version>_<distro>_<arch>_<os>
  *
  * Regeneration logic (automatic — no manual parameter needed):
  *   The generated job's description embeds the SHA it was created from as
@@ -91,6 +96,11 @@ println '✓ Loaded adoptium_pipeline_config.json'
 
 def jenkinsConfig = slurper.parseText(readFileFromWorkspace('config-repo/jenkins_job_config.json'))
 println '✓ Loaded jenkins_job_config.json'
+
+// Read optional base folder — must match what the seed job used.
+def pipelineBaseFolder = (jenkinsConfig?.pipelineBaseFolder ?: '').toString().trim().replaceAll(/\/+$/, '')
+def inFolder = { String name -> pipelineBaseFolder ? "${pipelineBaseFolder}/${name}" : name }
+println "  pipelineBaseFolder : ${pipelineBaseFolder ?: '(root)'}"
 
 def jdkConfig = slurper.parseText(readFileFromWorkspace("config-repo/configurations/jdk${jdkVersion}_pipeline_config.json"))
 
@@ -151,7 +161,7 @@ println "✓ Received ${rawGroups.size()} raw group(s), merged to ${collatedPara
 
 // Job DSL scripts run on the Jenkins controller in a trusted (non-sandboxed)
 // context, so Jenkins.instance is available without script approval.
-def jobName     = "/Build_openjdk/Build_openjdk${jdkVersion}_${variant}_${architecture}_${targetOs}"
+def jobName     = "/${inFolder("Build_openjdk/Build_openjdk${jdkVersion}_${variant}_${architecture}_${targetOs}")}"
 def existingJob = Jenkins.instance.getItemByFullName(jobName)
 def storedSha   = (existingJob?.description ?: '') =~ /pipeline-sha:([0-9a-f]+)/
 
@@ -168,14 +178,14 @@ if (existingJob == null) {
 // STEP 5: Create / update platform build job
 // ============================================================================
 
-folder('/Build_openjdk') {
+folder(inFolder('Build_openjdk')) {
     displayName('Build_openjdk')
     description('OpenJDK platform build pipeline jobs, AQA-style naming: Build_openjdk<version>_<distro>_<arch>_<os>')
 }
 
 println "Creating platform build job: ${jobName}"
 
-pipelineJob(jobName) {
+pipelineJob(jobName.replaceAll(/^\//, '')) {
     displayName("Build_openjdk${jdkVersion}_${variant}_${architecture}_${targetOs}")
     description("""\
         Platform-specific build pipeline for OpenJDK ${jdkVersion} (${variant}) on ${architecture}/${targetOs}.
