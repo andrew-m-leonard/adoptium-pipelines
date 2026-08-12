@@ -336,16 +336,15 @@ println '✓ Launch orchestrator jobs created successfully\n'
 // STEP 6: Create Views
 // ============================================================================
 
-// listView() names are relative to their parent folder.
-// The jobs{} regex matches full job paths from the Jenkins root, so it must
-// include the base folder prefix when one is set.
-def launcherPrefix = pipelineBaseFolder ? "${pipelineBaseFolder}/Build_openjdk_launchers/" : 'Build_openjdk_launchers/'
-def buildPrefix    = pipelineBaseFolder ? "${pipelineBaseFolder}/Build_openjdk/"            : 'Build_openjdk/'
-
+// listView() is created at the path returned by inFolder(), which places it
+// inside the parent folder when pipelineBaseFolder is set.  Jenkins matches
+// the jobs{} regex against names relative to the view's own folder — i.e.
+// relative to Build_openjdk_launchers/ or Build_openjdk/ — so no base-folder
+// prefix is needed in the regex; only the immediate subfolder name is used.
 listView(inFolder('Build_openjdk_launchers')) {
     description('Launch orchestrator jobs for coordinating platform builds (Build_openjdk<version>_launch)')
     jobs {
-        regex("${launcherPrefix}Build_openjdk\\d+_launch")
+        regex('Build_openjdk\\d+_launch')
     }
     recurse(true)
     columns {
@@ -362,7 +361,7 @@ listView(inFolder('Build_openjdk_launchers')) {
 listView(inFolder('Build_openjdk')) {
     description('Platform-specific build jobs — AQA-style naming: Build_openjdk<version>_<distro>_<arch>_<os>')
     jobs {
-        regex("${buildPrefix}Build_openjdk\\d+_[^_]+_[^_]+_[^_]+")
+        regex('Build_openjdk\\d+_[^_]+_[^_]+_[^_]+')
     }
     recurse(true)
     columns {
