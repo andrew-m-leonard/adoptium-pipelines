@@ -79,7 +79,7 @@ def build_stage_env(
     # shell scripts can consume them without a jq dependency.
     config_path = build_artifacts_dir / "pipeline-config.json"
     if config_path.exists():
-        with open(config_path, "r") as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             cfg = json.load(f)
 
         build_cfg = cfg.get("buildConfig", {})

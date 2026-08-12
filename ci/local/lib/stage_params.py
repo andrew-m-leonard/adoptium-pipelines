@@ -70,7 +70,7 @@ def collect_stage_params(
     if orchestrated_stages:
         cmd += ["--orchestrated-stages", ",".join(orchestrated_stages)]
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
         print(
             f"WARNING: collect-stage-params.py failed — stage params not loaded.\n"
@@ -82,7 +82,7 @@ def collect_stage_params(
     if not silent and result.stdout.strip():
         print(f"  {result.stdout.strip()}")
 
-    with open(tmp_path, "r") as f:
+    with open(tmp_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 

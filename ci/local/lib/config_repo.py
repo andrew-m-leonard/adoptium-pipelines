@@ -114,7 +114,7 @@ def sync_config_repo(
             raise RuntimeError(f"Failed to update config-repo from remote: {e}") from e
 
     else:
-        print(f"📥 Cloning configuration repository...")
+        print("📥 Cloning configuration repository...")
         print(f"   URL: {config_repo_url}")
         print(f"   Branch: {config_repo_branch}")
         subprocess.run(
@@ -152,7 +152,7 @@ def load_adoptium_pipeline_config(config_repo_dir: Path) -> dict:
         )
         return {}
 
-    with open(cfg_path, "r") as f:
+    with open(cfg_path, "r", encoding="utf-8") as f:
         cfg = json.load(f)
 
     print("✅ Loaded adoptium_pipeline_config.json")
