@@ -38,9 +38,9 @@ Usage:
         --output-dir .
 """
 
+import argparse
 import json
 import sys
-import argparse
 from pathlib import Path
 
 # Mapping from temurin-build arch values to the aqa-tests hw.arch suffix.

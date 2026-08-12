@@ -38,13 +38,13 @@ Usage:
 """
 
 import argparse
-import sys
 import json
 import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 
 def find_converter_script() -> Path:

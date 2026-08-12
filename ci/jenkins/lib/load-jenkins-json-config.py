@@ -37,9 +37,9 @@ Usage:
         --output           ./jenkins-config.json
 """
 
+import argparse
 import json
 import sys
-import argparse
 from pathlib import Path
 
 # ---------------------------------------------------------------------------

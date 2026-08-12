@@ -30,22 +30,23 @@ Usage:
 
 import argparse
 import enum
-import os
-import sys
-import subprocess
 import json
+import os
 import re
-from pathlib import Path
+import subprocess
+import sys
 from datetime import datetime
-from workspace_manager import WorkspaceManager
-from stage_resolver import StageResolver
+from pathlib import Path
+
+from lib.config_repo import load_adoptium_pipeline_config, sync_config_repo
+from lib.stage_env import build_stage_env
 from lib.stage_params import (
+    build_stage_params_help,
     collect_stage_params,
     parse_extra_args,
-    build_stage_params_help,
 )
-from lib.stage_env import build_stage_env
-from lib.config_repo import sync_config_repo, load_adoptium_pipeline_config
+from stage_resolver import StageResolver
+from workspace_manager import WorkspaceManager
 
 
 class StageResult(enum.Enum):

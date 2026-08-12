@@ -22,11 +22,11 @@ Usage:
     python3 groovy-pipeline-config-to-json.py <input.groovy> <output.json>
 """
 
-import sys
 import json
 import re
-from typing import Any, Dict, List, Union
+import sys
 from pathlib import Path
+from typing import Any, Dict, List, Union
 
 
 class GroovyParser:

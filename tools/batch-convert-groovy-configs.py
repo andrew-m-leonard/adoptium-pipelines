@@ -33,9 +33,9 @@ Usage:
 """
 
 import argparse
+import subprocess
 import sys
 from pathlib import Path
-import subprocess
 
 
 def find_converter_script() -> Path:
