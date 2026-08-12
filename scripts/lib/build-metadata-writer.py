@@ -52,8 +52,12 @@ def _utc_iso(ts):
     """Return an ISO-8601 UTC timestamp string for the given epoch seconds."""
     t = time.gmtime(ts)
     return "{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}Z".format(
-        t.tm_year, t.tm_mon, t.tm_mday,
-        t.tm_hour, t.tm_min, t.tm_sec,
+        t.tm_year,
+        t.tm_mon,
+        t.tm_mday,
+        t.tm_hour,
+        t.tm_min,
+        t.tm_sec,
     )
 
 
@@ -72,18 +76,18 @@ class BuildMetadataWriter(object):
     def _collect(self):
         now = time.time()
         return {
-            "version":      self._version,
-            "buildNumber":  self._build_number,
-            "buildUid":     self._build_uid,
-            "groupUid":     self._group_uid,
-            "timestamp":    int(now),
+            "version": self._version,
+            "buildNumber": self._build_number,
+            "buildUid": self._build_uid,
+            "groupUid": self._group_uid,
+            "timestamp": int(now),
             "timestampISO": _utc_iso(now),
-            "stage":        self._stage,
-            "workspace":    self._workspace,
-            "javaVersion":  os.environ.get("CONFIG_JAVA_TO_BUILD", ""),
-            "targetOS":     os.environ.get("CONFIG_TARGET_OS", ""),
+            "stage": self._stage,
+            "workspace": self._workspace,
+            "javaVersion": os.environ.get("CONFIG_JAVA_TO_BUILD", ""),
+            "targetOS": os.environ.get("CONFIG_TARGET_OS", ""),
             "architecture": os.environ.get("CONFIG_ARCHITECTURE", ""),
-            "variant":      os.environ.get("CONFIG_VARIANT", ""),
+            "variant": os.environ.get("CONFIG_VARIANT", ""),
         }
 
     def write(self):
@@ -93,8 +97,10 @@ class BuildMetadataWriter(object):
                 json.dump(metadata, fh, indent=2)
                 fh.write("\n")
         except (IOError, OSError) as exc:
-            print("ERROR: could not write {0}: {1}".format(self._output, exc),
-                  file=sys.stderr)
+            print(
+                "ERROR: could not write {0}: {1}".format(self._output, exc),
+                file=sys.stderr,
+            )
             sys.exit(1)
 
 
@@ -104,13 +110,19 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    parser.add_argument("--output",       required=True,  help="Destination path for build-metadata.json")
-    parser.add_argument("--version",      required=True,  help="JDK version string (e.g. jdk-21.0.12+7)")
-    parser.add_argument("--build-number", required=True,  help="Build number")
-    parser.add_argument("--stage",        required=True,  help="Stage name (e.g. build)")
-    parser.add_argument("--workspace",    required=True,  help="Absolute path to the build workspace")
-    parser.add_argument("--build-uid",    default="",     help="Build UID (optional)")
-    parser.add_argument("--group-uid",    default="",     help="Group UID (optional)")
+    parser.add_argument(
+        "--output", required=True, help="Destination path for build-metadata.json"
+    )
+    parser.add_argument(
+        "--version", required=True, help="JDK version string (e.g. jdk-21.0.12+7)"
+    )
+    parser.add_argument("--build-number", required=True, help="Build number")
+    parser.add_argument("--stage", required=True, help="Stage name (e.g. build)")
+    parser.add_argument(
+        "--workspace", required=True, help="Absolute path to the build workspace"
+    )
+    parser.add_argument("--build-uid", default="", help="Build UID (optional)")
+    parser.add_argument("--group-uid", default="", help="Group UID (optional)")
 
     args = parser.parse_args()
     BuildMetadataWriter(args).write()

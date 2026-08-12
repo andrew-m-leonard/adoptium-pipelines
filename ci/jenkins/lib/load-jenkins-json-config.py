@@ -42,7 +42,6 @@ import sys
 import argparse
 from pathlib import Path
 
-
 # ---------------------------------------------------------------------------
 # Label-schema mappings (self-contained — no dependency on load-json-config.py)
 # ---------------------------------------------------------------------------
@@ -54,15 +53,15 @@ from pathlib import Path
 # Note: x64 and x86-32 both map to 'x86' — the aqa-tests schema uses
 # hw.arch.x86 for the whole x86 family; there is no hw.arch.x86-64.
 _ARCH_SUFFIX = {
-    'x64':     'x86',
-    'x86-32':  'x86',
-    'aarch64': 'aarch64',
-    'arm':     'aarch32',
-    'ppc64':   'ppc64',
-    'ppc64le': 'ppc64le',
-    's390x':   's390x',
-    'riscv64': 'riscv',
-    'sparcv9': 'sparcv9',
+    "x64": "x86",
+    "x86-32": "x86",
+    "aarch64": "aarch64",
+    "arm": "aarch32",
+    "ppc64": "ppc64",
+    "ppc64le": "ppc64le",
+    "s390x": "s390x",
+    "riscv64": "riscv",
+    "sparcv9": "sparcv9",
 }
 
 # Mapping from temurin-build os values to the aqa-tests sw.os suffix.
@@ -70,13 +69,13 @@ _ARCH_SUFFIX = {
 # Templates in jenkins_job_config.json use 'sw.os.{os}' — the {os}
 # placeholder is replaced with just the suffix so the full token is correct.
 _OS_SUFFIX = {
-    'linux':        'linux',
-    'alpine-linux': 'alpine-linux',
-    'mac':          'mac',
-    'windows':      'windows',
-    'aix':          'aix',
-    'solaris':      'solaris',
-    'zos':          'zos',
+    "linux": "linux",
+    "alpine-linux": "alpine-linux",
+    "mac": "mac",
+    "windows": "windows",
+    "aix": "aix",
+    "solaris": "solaris",
+    "zos": "zos",
 }
 
 
@@ -93,7 +92,7 @@ _OS_SUFFIX = {
 #     "Build": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
 #     ...
 #   }
-_ANY_SENTINEL = '__any__'
+_ANY_SENTINEL = "__any__"
 
 
 def _resolve_label(template, target_os, architecture):
@@ -107,9 +106,9 @@ def _resolve_label(template, target_os, architecture):
     The __any__ sentinel key is passed through verbatim — call sites must skip
     substitution for that key (see generateJenkinsConfig).
     """
-    os_suffix   = _OS_SUFFIX.get(target_os, target_os)
+    os_suffix = _OS_SUFFIX.get(target_os, target_os)
     arch_suffix = _ARCH_SUFFIX.get(architecture, architecture)
-    return template.replace('{os}', os_suffix).replace('{arch}', arch_suffix)
+    return template.replace("{os}", os_suffix).replace("{arch}", arch_suffix)
 
 
 def generateJenkinsConfig(config_repo_path, pipeline_config_path, output_path):
@@ -129,57 +128,71 @@ def generateJenkinsConfig(config_repo_path, pipeline_config_path, output_path):
         output_path:          Path to write jenkins-config.json.
     """
     # Load jenkins_job_config.json
-    jenkins_config_path = Path(config_repo_path) / 'jenkins_job_config.json'
+    jenkins_config_path = Path(config_repo_path) / "jenkins_job_config.json"
     if not jenkins_config_path.exists():
-        print(f"ERROR: jenkins_job_config.json not found: {jenkins_config_path}", file=sys.stderr)
+        print(
+            f"ERROR: jenkins_job_config.json not found: {jenkins_config_path}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
-    with open(jenkins_config_path, 'r') as f:
+    with open(jenkins_config_path, "r") as f:
         jenkins_config = json.load(f)
 
-    stage_agent_labels = jenkins_config.get('stageAgentLabels', {})
+    stage_agent_labels = jenkins_config.get("stageAgentLabels", {})
     if not stage_agent_labels:
-        print("WARNING: stageAgentLabels is empty in jenkins_job_config.json", file=sys.stderr)
+        print(
+            "WARNING: stageAgentLabels is empty in jenkins_job_config.json",
+            file=sys.stderr,
+        )
 
     # Read TARGET_OS and ARCHITECTURE from the CI-agnostic pipeline-config.json
     pipeline_config_path = Path(pipeline_config_path)
     if not pipeline_config_path.exists():
-        print(f"ERROR: pipeline-config.json not found: {pipeline_config_path}", file=sys.stderr)
+        print(
+            f"ERROR: pipeline-config.json not found: {pipeline_config_path}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
-    with open(pipeline_config_path, 'r') as f:
+    with open(pipeline_config_path, "r") as f:
         pipeline_config = json.load(f)
 
-    target_os    = pipeline_config['buildConfig']['TARGET_OS']
-    architecture = pipeline_config['buildConfig']['ARCHITECTURE']
+    target_os = pipeline_config["buildConfig"]["TARGET_OS"]
+    architecture = pipeline_config["buildConfig"]["ARCHITECTURE"]
 
     # Resolve {os}/{arch} placeholders to sw.os.* / hw.arch.* schema tokens.
     # The __any__ sentinel is passed through verbatim — it represents a generic
     # agent label with no OS/arch binding.
     resolved = {
-        stage: (template if stage == _ANY_SENTINEL
-                else _resolve_label(template, target_os, architecture))
+        stage: (
+            template
+            if stage == _ANY_SENTINEL
+            else _resolve_label(template, target_os, architecture)
+        )
         for stage, template in stage_agent_labels.items()
     }
 
     # Build the jenkins-config.json output — pipeline-config.json is not touched
-    build_node_label = resolved.get('02-build', '')
-    additional_node_labels = pipeline_config['buildConfig'].get('ADDITIONAL_NODE_LABELS', '')
+    build_node_label = resolved.get("02-build", "")
+    additional_node_labels = pipeline_config["buildConfig"].get(
+        "ADDITIONAL_NODE_LABELS", ""
+    )
     if build_node_label and additional_node_labels:
-        build_node_label = build_node_label + '&&' + additional_node_labels
+        build_node_label = build_node_label + "&&" + additional_node_labels
 
     # Pass activeNodeTimeoutMinutes through to jenkins-config.json so the
     # Jenkinsfile can enforce a "no active nodes" timeout at node() allocation.
-    active_node_timeout = jenkins_config.get('activeNodeTimeoutMinutes', 10)
+    active_node_timeout = jenkins_config.get("activeNodeTimeoutMinutes", 10)
 
     jenkins_out = {
-        'stageAgentLabels':         stage_agent_labels,
-        'resolvedStageAgentLabels': resolved,
-        'buildNodeLabel':           build_node_label,
-        'activeNodeTimeoutMinutes': active_node_timeout,
+        "stageAgentLabels": stage_agent_labels,
+        "resolvedStageAgentLabels": resolved,
+        "buildNodeLabel": build_node_label,
+        "activeNodeTimeoutMinutes": active_node_timeout,
     }
 
-    with open(Path(output_path), 'w') as f:
+    with open(Path(output_path), "w") as f:
         json.dump(jenkins_out, f, indent=2)
 
     print(f"✓ Created {output_path}")
@@ -188,7 +201,7 @@ def generateJenkinsConfig(config_repo_path, pipeline_config_path, output_path):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Generate jenkins-config.json from jenkins_job_config.json',
+        description="Generate jenkins-config.json from jenkins_job_config.json",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
@@ -196,24 +209,27 @@ Example:
       --config-repo-path ./config-repo \\
       --pipeline-config  ./pipeline-config.json \\
       --output           ./jenkins-config.json
-        """
+        """,
     )
     parser.add_argument(
-        '--config-repo-path', required=True,
-        help='Path to the config repository root (contains jenkins_job_config.json)'
+        "--config-repo-path",
+        required=True,
+        help="Path to the config repository root (contains jenkins_job_config.json)",
     )
     parser.add_argument(
-        '--pipeline-config', default='./pipeline-config.json',
-        help='Path to the CI-agnostic pipeline-config.json to read (default: ./pipeline-config.json)'
+        "--pipeline-config",
+        default="./pipeline-config.json",
+        help="Path to the CI-agnostic pipeline-config.json to read (default: ./pipeline-config.json)",
     )
     parser.add_argument(
-        '--output', default='./jenkins-config.json',
-        help='Path to write jenkins-config.json (default: ./jenkins-config.json)'
+        "--output",
+        default="./jenkins-config.json",
+        help="Path to write jenkins-config.json (default: ./jenkins-config.json)",
     )
     args = parser.parse_args()
     generateJenkinsConfig(args.config_repo_path, args.pipeline_config, args.output)
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

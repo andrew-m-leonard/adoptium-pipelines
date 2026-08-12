@@ -79,7 +79,9 @@ def find_groovy_configs(source_dir: Path, pattern: str) -> list[Path]:
     return configs
 
 
-def convert_config(converter: Path, input_file: Path, output_file: Path, verbose: bool = False) -> tuple[bool, str]:
+def convert_config(
+    converter: Path, input_file: Path, output_file: Path, verbose: bool = False
+) -> tuple[bool, str]:
     """Convert a single Groovy config to JSON."""
     try:
         # Run the converter
@@ -87,7 +89,7 @@ def convert_config(converter: Path, input_file: Path, output_file: Path, verbose
             ["python3", str(converter), str(input_file), str(output_file)],
             capture_output=True,
             text=True,
-            check=False
+            check=False,
         )
 
         if result.returncode == 0:
@@ -119,46 +121,49 @@ Examples:
 
   # Verbose output with detailed conversion info
   %(prog)s --source ./configs --output ./json --verbose
-        """
+        """,
     )
 
     parser.add_argument(
-        "--source", "-s",
+        "--source",
+        "-s",
         type=Path,
         required=True,
-        help="Source directory containing Groovy configuration files"
+        help="Source directory containing Groovy configuration files",
     )
 
     parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         type=Path,
         required=True,
-        help="Output directory for JSON configuration files"
+        help="Output directory for JSON configuration files",
     )
 
     parser.add_argument(
-        "--pattern", "-p",
+        "--pattern",
+        "-p",
         type=str,
         default="*_pipeline_config.groovy",
-        help="Glob pattern for Groovy config files (default: *_pipeline_config.groovy)"
+        help="Glob pattern for Groovy config files (default: *_pipeline_config.groovy)",
     )
 
     parser.add_argument(
-        "--dry-run", "-n",
+        "--dry-run",
+        "-n",
         action="store_true",
-        help="Show what would be converted without actually converting"
+        help="Show what would be converted without actually converting",
     )
 
     parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Show detailed conversion output"
+        "--verbose", "-v", action="store_true", help="Show detailed conversion output"
     )
 
     parser.add_argument(
-        "--force", "-f",
+        "--force",
+        "-f",
         action="store_true",
-        help="Overwrite existing JSON files without prompting"
+        help="Overwrite existing JSON files without prompting",
     )
 
     args = parser.parse_args()
@@ -193,7 +198,7 @@ Examples:
             print()
             print("Files that would be converted:")
             for config in configs:
-                output_file = args.output / config.with_suffix('.json').name
+                output_file = args.output / config.with_suffix(".json").name
                 print(f"  {config.name} -> {output_file.name}")
             print()
             print(f"Output directory: {args.output}")
@@ -208,16 +213,22 @@ Examples:
         failed_files = []
 
         for i, config in enumerate(configs, 1):
-            output_file = args.output / config.with_suffix('.json').name
+            output_file = args.output / config.with_suffix(".json").name
 
             # Check if output file exists
             if output_file.exists() and not args.force:
-                print(f"[{i}/{len(configs)}] Skipping {config.name} (output exists, use --force to overwrite)")
+                print(
+                    f"[{i}/{len(configs)}] Skipping {config.name} (output exists, use --force to overwrite)"
+                )
                 continue
 
-            print(f"[{i}/{len(configs)}] Converting {config.name}...", end=" ", flush=True)
+            print(
+                f"[{i}/{len(configs)}] Converting {config.name}...", end=" ", flush=True
+            )
 
-            success, message = convert_config(converter, config, output_file, args.verbose)
+            success, message = convert_config(
+                converter, config, output_file, args.verbose
+            )
 
             if success:
                 print("✅")
@@ -270,6 +281,7 @@ Examples:
         print(f"❌ Unexpected error: {e}", file=sys.stderr)
         if args.verbose:
             import traceback
+
             traceback.print_exc()
         return 1
 

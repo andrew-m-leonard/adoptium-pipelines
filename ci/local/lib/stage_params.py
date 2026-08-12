@@ -30,9 +30,12 @@ import shutil
 from pathlib import Path
 
 
-def collect_stage_params(script_dir: Path, vendor_scripts_dir: Path | None,
-                         silent: bool = False,
-                         orchestrated_stages: list[str] | None = None) -> dict:
+def collect_stage_params(
+    script_dir: Path,
+    vendor_scripts_dir: Path | None,
+    silent: bool = False,
+    orchestrated_stages: list[str] | None = None,
+) -> dict:
     """
     Run scripts/lib/collect-stage-params.py and return the parsed output.
 
@@ -46,43 +49,51 @@ def collect_stage_params(script_dir: Path, vendor_scripts_dir: Path | None,
     Returns:
         Dict with keys 'groups' and 'paramNames', or empty structure on failure.
     """
-    collector = script_dir / 'scripts' / 'lib' / 'collect-stage-params.py'
+    collector = script_dir / "scripts" / "lib" / "collect-stage-params.py"
     if not collector.exists():
-        return {'groups': [], 'paramNames': []}
+        return {"groups": [], "paramNames": []}
 
-    stages_dir = script_dir / 'scripts' / 'stages'
-    with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as tmp:
+    stages_dir = script_dir / "scripts" / "stages"
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
         tmp_path = tmp.name
 
     cmd = [
-        sys.executable, str(collector),
-        '--default-stages-dir', str(stages_dir),
-        '--output', tmp_path,
+        sys.executable,
+        str(collector),
+        "--default-stages-dir",
+        str(stages_dir),
+        "--output",
+        tmp_path,
     ]
     if vendor_scripts_dir and vendor_scripts_dir.exists():
-        cmd += ['--vendor-scripts-dir', str(vendor_scripts_dir)]
+        cmd += ["--vendor-scripts-dir", str(vendor_scripts_dir)]
     if orchestrated_stages:
-        cmd += ['--orchestrated-stages', ','.join(orchestrated_stages)]
+        cmd += ["--orchestrated-stages", ",".join(orchestrated_stages)]
 
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        print(f"WARNING: collect-stage-params.py failed — stage params not loaded.\n"
-              f"{result.stderr.strip()}", file=sys.stderr)
-        return {'groups': [], 'paramNames': []}
+        print(
+            f"WARNING: collect-stage-params.py failed — stage params not loaded.\n"
+            f"{result.stderr.strip()}",
+            file=sys.stderr,
+        )
+        return {"groups": [], "paramNames": []}
 
     if not silent and result.stdout.strip():
         print(f"  {result.stdout.strip()}")
 
-    with open(tmp_path, 'r') as f:
+    with open(tmp_path, "r") as f:
         return json.load(f)
 
 
 def param_name_to_cli_flag(name: str) -> str:
     """Convert UPPER_SNAKE_CASE param name to --lower-kebab-case CLI flag."""
-    return '--' + name.lower().replace('_', '-')
+    return "--" + name.lower().replace("_", "-")
 
 
-def parse_extra_args(extra: list[str], collated: dict) -> tuple[dict, list[str], list[str]]:
+def parse_extra_args(
+    extra: list[str], collated: dict
+) -> tuple[dict, list[str], list[str]]:
     """
     Parse a list of raw unknown CLI tokens against the collated stage parameter
     definitions.
@@ -102,24 +113,24 @@ def parse_extra_args(extra: list[str], collated: dict) -> tuple[dict, list[str],
     """
     # Build a lookup: --lower-kebab-case flag → param def dict
     flag_to_param: dict[str, dict] = {}
-    for group in collated.get('groups', []):
-        for p in group.get('parameters', []):
-            flag_to_param[param_name_to_cli_flag(p['name'])] = p
+    for group in collated.get("groups", []):
+        for p in group.get("parameters", []):
+            flag_to_param[param_name_to_cli_flag(p["name"])] = p
 
     stage_params: dict[str, str] = {}
     unrecognised: list[str] = []
-    errors:       list[str] = []
+    errors: list[str] = []
 
     i = 0
     while i < len(extra):
         token = extra[i]
-        if not token.startswith('--'):
+        if not token.startswith("--"):
             i += 1
             continue
 
         # Handle --flag=value and --flag value forms
-        if '=' in token:
-            flag, value = token.split('=', 1)
+        if "=" in token:
+            flag, value = token.split("=", 1)
         else:
             flag = token
             value = None
@@ -132,32 +143,31 @@ def parse_extra_args(extra: list[str], collated: dict) -> tuple[dict, list[str],
 
         # All parameter types (boolean and string) require an explicit value token
         if value is None:
-            if i + 1 < len(extra) and not extra[i + 1].startswith('--'):
+            if i + 1 < len(extra) and not extra[i + 1].startswith("--"):
                 value = extra[i + 1]
                 i += 2
             else:
-                errors.append(
-                    f"  {flag}: missing value (expected {p['type']})"
-                )
+                errors.append(f"  {flag}: missing value (expected {p['type']})")
                 i += 1
                 continue
 
-        if p['type'] == 'boolean':
-            if value.lower() not in ('true', 'false'):
+        if p["type"] == "boolean":
+            if value.lower() not in ("true", "false"):
                 errors.append(
                     f"  {flag}: invalid value {value!r} — boolean must be 'true' or 'false'"
                 )
                 i += 1
                 continue
-            stage_params[p['name']] = value.lower()
+            stage_params[p["name"]] = value.lower()
         else:
-            stage_params[p['name']] = value
+            stage_params[p["name"]] = value
 
     return stage_params, unrecognised, errors
 
 
-def build_stage_params_help(script_dir: Path, argv: list[str],
-                             local_stages: list[str]) -> str:
+def build_stage_params_help(
+    script_dir: Path, argv: list[str], local_stages: list[str]
+) -> str:
     """
     Build the stage parameters section for --help output.
 
@@ -176,64 +186,82 @@ def build_stage_params_help(script_dir: Path, argv: list[str],
         --help is not in argv or no params are found.
     """
     # Only do any work when --help or -h is actually requested
-    if '--help' not in argv and '-h' not in argv:
-        return ''
+    if "--help" not in argv and "-h" not in argv:
+        return ""
 
     # Extract --config-repo-url and --config-repo-branch from raw argv
-    config_repo_url    = None
-    config_repo_branch = 'main'
+    config_repo_url = None
+    config_repo_branch = "main"
     for i, tok in enumerate(argv):
-        if tok == '--config-repo-url' and i + 1 < len(argv):
+        if tok == "--config-repo-url" and i + 1 < len(argv):
             config_repo_url = argv[i + 1]
-        elif tok.startswith('--config-repo-url='):
-            config_repo_url = tok.split('=', 1)[1]
-        elif tok == '--config-repo-branch' and i + 1 < len(argv):
+        elif tok.startswith("--config-repo-url="):
+            config_repo_url = tok.split("=", 1)[1]
+        elif tok == "--config-repo-branch" and i + 1 < len(argv):
             config_repo_branch = argv[i + 1]
-        elif tok.startswith('--config-repo-branch='):
-            config_repo_branch = tok.split('=', 1)[1]
+        elif tok.startswith("--config-repo-branch="):
+            config_repo_branch = tok.split("=", 1)[1]
 
     # Also check --workspace so we can reuse an already-cloned config repo
-    workspace = Path('~/openjdk-build').expanduser()
+    workspace = Path("~/openjdk-build").expanduser()
     for i, tok in enumerate(argv):
-        if tok == '--workspace' and i + 1 < len(argv):
+        if tok == "--workspace" and i + 1 < len(argv):
             workspace = Path(argv[i + 1]).expanduser()
-        elif tok.startswith('--workspace='):
-            workspace = Path(tok.split('=', 1)[1]).expanduser()
+        elif tok.startswith("--workspace="):
+            workspace = Path(tok.split("=", 1)[1]).expanduser()
 
     vendor_scripts_dir = None
-    tmp_dir            = None
+    tmp_dir = None
 
     if config_repo_url:
         # Reuse the already-cloned repo in the workspace only when its remote
         # origin URL matches the requested --config-repo-url exactly.
-        existing = workspace / 'config-repo'
-        reused   = False
+        existing = workspace / "config-repo"
+        reused = False
         if existing.exists():
             try:
                 result = subprocess.run(
-                    ['git', '-C', str(existing), 'remote', 'get-url', 'origin'],
-                    capture_output=True, text=True, check=True
+                    ["git", "-C", str(existing), "remote", "get-url", "origin"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
                 )
                 existing_url = result.stdout.strip()
             except Exception:
-                existing_url = ''
+                existing_url = ""
             if existing_url == config_repo_url:
                 # URL matches — fetch latest so we always collate against
                 # up-to-date vendor params.
                 try:
                     subprocess.run(
-                        ['git', '-C', str(existing), 'fetch', '--depth', '1',
-                         'origin', config_repo_branch],
-                        check=True, capture_output=True
+                        [
+                            "git",
+                            "-C",
+                            str(existing),
+                            "fetch",
+                            "--depth",
+                            "1",
+                            "origin",
+                            config_repo_branch,
+                        ],
+                        check=True,
+                        capture_output=True,
                     )
                     subprocess.run(
-                        ['git', '-C', str(existing), 'reset', '--hard',
-                         f'origin/{config_repo_branch}'],
-                        check=True, capture_output=True
+                        [
+                            "git",
+                            "-C",
+                            str(existing),
+                            "reset",
+                            "--hard",
+                            f"origin/{config_repo_branch}",
+                        ],
+                        check=True,
+                        capture_output=True,
                     )
                 except Exception:
                     pass  # best-effort; stale content is better than no help output
-                candidate = existing / 'vendor-scripts'
+                candidate = existing / "vendor-scripts"
                 if candidate.exists():
                     vendor_scripts_dir = candidate
                 source_note = f"(from existing clone: {existing})"
@@ -246,57 +274,75 @@ def build_stage_params_help(script_dir: Path, argv: list[str],
         if not reused:
             # Clone into a temp dir — cleaned up after help is printed
             try:
-                tmp_dir = Path(tempfile.mkdtemp(prefix='run-pipeline-help-'))
+                tmp_dir = Path(tempfile.mkdtemp(prefix="run-pipeline-help-"))
                 subprocess.run(
-                    ['git', 'clone', '--depth', '1',
-                     '--branch', config_repo_branch,
-                     config_repo_url, str(tmp_dir)],
-                    check=True, capture_output=True
+                    [
+                        "git",
+                        "clone",
+                        "--depth",
+                        "1",
+                        "--branch",
+                        config_repo_branch,
+                        config_repo_url,
+                        str(tmp_dir),
+                    ],
+                    check=True,
+                    capture_output=True,
                 )
-                candidate = tmp_dir / 'vendor-scripts'
+                candidate = tmp_dir / "vendor-scripts"
                 if candidate.exists():
                     vendor_scripts_dir = candidate
                 source_note = f"(cloned from {config_repo_url})"
             except Exception:
-                source_note = f"(clone of {config_repo_url} failed — showing defaults only)"
+                source_note = (
+                    f"(clone of {config_repo_url} failed — showing defaults only)"
+                )
     else:
         source_note = "(defaults only — add --config-repo-url for vendor params)"
 
     try:
-        collated = collect_stage_params(script_dir, vendor_scripts_dir, silent=True,
-                                        orchestrated_stages=local_stages)
+        collated = collect_stage_params(
+            script_dir,
+            vendor_scripts_dir,
+            silent=True,
+            orchestrated_stages=local_stages,
+        )
     except Exception:
-        collated = {'groups': [], 'paramNames': []}
+        collated = {"groups": [], "paramNames": []}
     finally:
         if tmp_dir and tmp_dir.exists():
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
-    if not collated.get('paramNames'):
-        return ''
+    if not collated.get("paramNames"):
+        return ""
 
     lines = [
-        '',
+        "",
         f"Stage parameters {source_note}:",
         "  Pass as --<lower-kebab-case-name> <value>",
         "  Boolean params accept: true | false",
-        '',
+        "",
     ]
 
-    for group in collated.get('groups', []):
-        params = group.get('parameters', [])
+    for group in collated.get("groups", []):
+        params = group.get("parameters", [])
         if not params:
             continue
         # Prefer stageIds list; fall back to scalar stageId
-        stage_ids = group.get('stageIds') or [group.get('stageId', '?')]
-        stage_str = ', '.join(stage_ids)
+        stage_ids = group.get("stageIds") or [group.get("stageId", "?")]
+        stage_str = ", ".join(stage_ids)
         lines.append(f"  [{stage_str}]  {group['name']}")
         for p in params:
-            flag    = param_name_to_cli_flag(p['name'])
-            default = str(p.get('default', '')).lower() if p['type'] == 'boolean' else repr(p.get('default', ''))
-            desc = p.get('description', '').strip()
+            flag = param_name_to_cli_flag(p["name"])
+            default = (
+                str(p.get("default", "")).lower()
+                if p["type"] == "boolean"
+                else repr(p.get("default", ""))
+            )
+            desc = p.get("description", "").strip()
             lines.append(f"    {flag} <{p['type']}>  default: {default}")
             if desc:
                 lines.append(f"      {desc}")
-        lines.append('')
+        lines.append("")
 
-    return '\n'.join(lines)
+    return "\n".join(lines)

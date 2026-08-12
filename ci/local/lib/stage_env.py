@@ -65,36 +65,36 @@ def build_stage_env(
         A copy of os.environ with all standard and config variables applied.
     """
     env = os.environ.copy()
-    env['WORKSPACE']                   = str(stage_workspace)
-    env['PIPELINE_ROOT']               = str(script_dir)
-    env['CONFIG_FILE']                 = str(stage_workspace / 'pipeline-config.json')
-    env['INPUT_ARTIFACTS_DIR']         = str(stage_workspace)
-    env['TARGET_DIR']                  = str(stage_workspace / 'target')
-    env['BUILD_NUMBER']                = build_number
+    env["WORKSPACE"] = str(stage_workspace)
+    env["PIPELINE_ROOT"] = str(script_dir)
+    env["CONFIG_FILE"] = str(stage_workspace / "pipeline-config.json")
+    env["INPUT_ARTIFACTS_DIR"] = str(stage_workspace)
+    env["TARGET_DIR"] = str(stage_workspace / "target")
+    env["BUILD_NUMBER"] = build_number
     # Fixed job-level params that stage scripts read directly
-    env['RELEASE_TYPE']                = release_type.upper()
-    env['CLEAN_WORKSPACE_AFTER_STAGE'] = 'true' if clean_workspace else 'false'
+    env["RELEASE_TYPE"] = release_type.upper()
+    env["CLEAN_WORKSPACE_AFTER_STAGE"] = "true" if clean_workspace else "false"
 
     # Inject CONFIG_* variables from pipeline-config.json so that stage
     # shell scripts can consume them without a jq dependency.
-    config_path = build_artifacts_dir / 'pipeline-config.json'
+    config_path = build_artifacts_dir / "pipeline-config.json"
     if config_path.exists():
-        with open(config_path, 'r') as f:
+        with open(config_path, "r") as f:
             cfg = json.load(f)
 
-        build_cfg = cfg.get('buildConfig', {})
+        build_cfg = cfg.get("buildConfig", {})
         for key, value in build_cfg.items():
-            env[f'CONFIG_{key}'] = str(value) if value is not None else ''
+            env[f"CONFIG_{key}"] = str(value) if value is not None else ""
 
-        repo_defaults = cfg.get('repoDefaults', {})
-        if repo_defaults.get('buildRef'):
-            env['CONFIG_BUILD_REF'] = repo_defaults['buildRef']
-        if repo_defaults.get('buildRepoUrl'):
-            env['CONFIG_BUILD_REPO_URL'] = repo_defaults['buildRepoUrl']
-        if repo_defaults.get('aqaRef'):
-            env['CONFIG_AQA_REF'] = repo_defaults['aqaRef']
-        if repo_defaults.get('aqaRepoUrl'):
-            env['CONFIG_AQA_REPO_URL'] = repo_defaults['aqaRepoUrl']
+        repo_defaults = cfg.get("repoDefaults", {})
+        if repo_defaults.get("buildRef"):
+            env["CONFIG_BUILD_REF"] = repo_defaults["buildRef"]
+        if repo_defaults.get("buildRepoUrl"):
+            env["CONFIG_BUILD_REPO_URL"] = repo_defaults["buildRepoUrl"]
+        if repo_defaults.get("aqaRef"):
+            env["CONFIG_AQA_REF"] = repo_defaults["aqaRef"]
+        if repo_defaults.get("aqaRepoUrl"):
+            env["CONFIG_AQA_REPO_URL"] = repo_defaults["aqaRepoUrl"]
 
     # Inject collated stage params so vendor stage scripts can read them
     # as environment variables.  Stage params always override ambient env.

@@ -56,12 +56,17 @@ class WorkspaceManager:
             config_file: Path to the pipeline configuration JSON file
         """
         self.pipeline_workspace = Path(pipeline_workspace).expanduser().resolve()
-        self.stage_workspace = self.pipeline_workspace / 'stage_workspace'
-        self.build_artifacts_dir = self.pipeline_workspace / 'build_artifacts'
+        self.stage_workspace = self.pipeline_workspace / "stage_workspace"
+        self.build_artifacts_dir = self.pipeline_workspace / "build_artifacts"
         self.config_file = Path(config_file)
 
-    def validate_and_setup(self, is_restarting, clean_requested,
-                           start_from_stage=None, initialize_already_run=False):
+    def validate_and_setup(
+        self,
+        is_restarting,
+        clean_requested,
+        start_from_stage=None,
+        initialize_already_run=False,
+    ):
         """
         Validate workspace state and set up directory structure.
 
@@ -150,7 +155,7 @@ class WorkspaceManager:
                 - 'pre': ALWAYS cleans stage_workspace (critical for restartability)
                 - 'post': Cleans stage_workspace if cleanWorkspaceAfterStage=true
         """
-        if cleanup_type == 'pre':
+        if cleanup_type == "pre":
             # Pre-cleanup: ALWAYS clean stage_workspace
             if self.stage_workspace.exists():
                 print(f"🧹 Pre-cleanup: Cleaning stage workspace...")
@@ -158,24 +163,30 @@ class WorkspaceManager:
             self.stage_workspace.mkdir(parents=True, exist_ok=True)
             print(f"   ✅ Stage workspace cleaned: {self.stage_workspace}")
 
-        elif cleanup_type == 'post':
+        elif cleanup_type == "post":
             # Post-cleanup: Clean if cleanWorkspaceAfterStage=true
             try:
                 # Read config to check cleanWorkspaceAfterStage setting
                 if self.config_file.exists():
-                    with open(self.config_file, 'r') as f:
+                    with open(self.config_file, "r") as f:
                         config = json.load(f)
 
-                    clean_after = config.get('parameters', {}).get('cleanWorkspaceAfterStage', True)
+                    clean_after = config.get("parameters", {}).get(
+                        "cleanWorkspaceAfterStage", True
+                    )
 
                     if clean_after:
                         if self.stage_workspace.exists():
                             print(f"🧹 Post-cleanup: Cleaning stage workspace...")
                             shutil.rmtree(self.stage_workspace)
                             self.stage_workspace.mkdir(parents=True, exist_ok=True)
-                            print(f"   ✅ Stage workspace cleaned: {self.stage_workspace}")
+                            print(
+                                f"   ✅ Stage workspace cleaned: {self.stage_workspace}"
+                            )
                     else:
-                        print(f"ℹ️  Post-cleanup: Skipped (cleanWorkspaceAfterStage=false)")
+                        print(
+                            f"ℹ️  Post-cleanup: Skipped (cleanWorkspaceAfterStage=false)"
+                        )
             except Exception as e:
                 print(f"⚠️  Warning: Post-cleanup failed: {e}")
 
@@ -192,20 +203,30 @@ class WorkspaceManager:
             target_dir: Path to the stage's TARGET_DIR.  Defaults to
                         stage_workspace/target/ when not specified.
         """
-        target = Path(target_dir) if target_dir else self.stage_workspace / 'target'
+        target = Path(target_dir) if target_dir else self.stage_workspace / "target"
         if not target.exists():
-            rel = target.relative_to(self.stage_workspace) if target.is_relative_to(self.stage_workspace) else target
-            print(f"ℹ️  Archive ({stage_name}): {rel} does not exist — nothing to archive")
+            rel = (
+                target.relative_to(self.stage_workspace)
+                if target.is_relative_to(self.stage_workspace)
+                else target
+            )
+            print(
+                f"ℹ️  Archive ({stage_name}): {rel} does not exist — nothing to archive"
+            )
             return
         if not any(target.iterdir()):
-            rel = target.relative_to(self.stage_workspace) if target.is_relative_to(self.stage_workspace) else target
+            rel = (
+                target.relative_to(self.stage_workspace)
+                if target.is_relative_to(self.stage_workspace)
+                else target
+            )
             print(f"ℹ️  Archive ({stage_name}): {rel} is empty — nothing to archive")
             return
 
         self.build_artifacts_dir.mkdir(parents=True, exist_ok=True)
 
         archived = 0
-        for src in target.rglob('*'):
+        for src in target.rglob("*"):
             if src.is_file():
                 rel = src.relative_to(target)
                 dst = self.build_artifacts_dir / rel
@@ -213,9 +234,11 @@ class WorkspaceManager:
                 shutil.copy2(src, dst)
                 archived += 1
 
-        print(f"✅ Archive ({stage_name}): {archived} file(s) → {self.build_artifacts_dir}")
+        print(
+            f"✅ Archive ({stage_name}): {archived} file(s) → {self.build_artifacts_dir}"
+        )
 
-    def archive_file(self, src_path, stage_name=''):
+    def archive_file(self, src_path, stage_name=""):
         """
         Archive a single file directly into build_artifacts/.
 
@@ -257,12 +280,12 @@ class WorkspaceManager:
             return True
         # If pattern contains '**', expand it into both '*' (one level) and
         # '' (zero levels, i.e. collapse the separator too) and retry.
-        if '**' in pat:
-            for replacement in ('*', ''):
-                expanded = pat.replace('**/', replacement)
-                if replacement == '':
+        if "**" in pat:
+            for replacement in ("*", ""):
+                expanded = pat.replace("**/", replacement)
+                if replacement == "":
                     # Collapsed form: 'metadata/**/*' → 'metadata/*'  — avoid double-slash
-                    expanded = expanded.replace('//', '/')
+                    expanded = expanded.replace("//", "/")
                 if fnmatch.fnmatch(rel, expanded) or fnmatch.fnmatch(name, expanded):
                     return True
         return False
@@ -282,19 +305,21 @@ class WorkspaceManager:
                              If None or empty, all files are copied.
         """
         if not self.build_artifacts_dir.exists():
-            print(f"ℹ️  Restore ({stage_name}): build_artifacts/ does not exist yet — nothing to restore")
+            print(
+                f"ℹ️  Restore ({stage_name}): build_artifacts/ does not exist yet — nothing to restore"
+            )
             return
 
         # Build list of glob patterns
         if artifact_filter:
-            patterns = [p.strip() for p in artifact_filter.split(',') if p.strip()]
+            patterns = [p.strip() for p in artifact_filter.split(",") if p.strip()]
         else:
-            patterns = ['**/*']
+            patterns = ["**/*"]
 
         self.stage_workspace.mkdir(parents=True, exist_ok=True)
 
         restored = 0
-        for src in self.build_artifacts_dir.rglob('*'):
+        for src in self.build_artifacts_dir.rglob("*"):
             if not src.is_file():
                 continue
             rel = str(src.relative_to(self.build_artifacts_dir))
@@ -304,6 +329,9 @@ class WorkspaceManager:
                 shutil.copy2(src, dst)
                 restored += 1
 
-        print(f"✅ Restore ({stage_name}): {restored} file(s) from {self.build_artifacts_dir} → {self.stage_workspace}")
+        print(
+            f"✅ Restore ({stage_name}): {restored} file(s) from {self.build_artifacts_dir} → {self.stage_workspace}"
+        )
+
 
 # Made with Bob

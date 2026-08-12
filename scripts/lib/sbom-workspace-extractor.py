@@ -31,7 +31,6 @@ import argparse
 import json
 import sys
 
-
 # The SBOM property name defined by the Adoptium build pipeline
 _PROPERTY_NAME = "Build Workspace Directory"
 
@@ -47,13 +46,17 @@ class SbomWorkspaceExtractor(object):
             with open(self._sbom_path) as fh:
                 return json.load(fh)
         except (IOError, OSError) as exc:
-            print("ERROR: cannot open SBOM file '{0}': {1}".format(self._sbom_path, exc),
-                  file=sys.stderr)
+            print(
+                "ERROR: cannot open SBOM file '{0}': {1}".format(self._sbom_path, exc),
+                file=sys.stderr,
+            )
             sys.exit(1)
         except ValueError as exc:
             # json.JSONDecodeError is a subclass of ValueError; both Py2 and Py3 raise ValueError
-            print("ERROR: invalid JSON in '{0}': {1}".format(self._sbom_path, exc),
-                  file=sys.stderr)
+            print(
+                "ERROR: invalid JSON in '{0}': {1}".format(self._sbom_path, exc),
+                file=sys.stderr,
+            )
             sys.exit(1)
 
     def extract(self):

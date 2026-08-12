@@ -49,7 +49,7 @@ from pathlib import Path
 class StageResolver:
     """Resolves and executes stage scripts with vendor-override support."""
 
-    EXTENSIONS = ['.sh', '.py']
+    EXTENSIONS = [".sh", ".py"]
 
     def __init__(self, pipeline_root: Path, config_repo_root: Path | None):
         """
@@ -70,12 +70,12 @@ class StageResolver:
         """
         search_roots = []
         if self.config_repo_root and self.config_repo_root.exists():
-            search_roots.append(self.config_repo_root / 'vendor-scripts')
-        search_roots.append(self.pipeline_root / 'scripts' / 'stages')
+            search_roots.append(self.config_repo_root / "vendor-scripts")
+        search_roots.append(self.pipeline_root / "scripts" / "stages")
 
         for root in search_roots:
             for ext in self.EXTENSIONS:
-                candidate = root / f'{stem}{ext}'
+                candidate = root / f"{stem}{ext}"
                 if candidate.exists():
                     return candidate
 
@@ -100,13 +100,13 @@ class StageResolver:
         print(f"▶ Running {script.suffix.lstrip('.')} stage script: {script}")
 
         # Mirror Jenkins runStageScript: ensure TARGET_DIR exists
-        target_dir = env.get('TARGET_DIR')
+        target_dir = env.get("TARGET_DIR")
         if target_dir:
             Path(target_dir).mkdir(parents=True, exist_ok=True)
 
-        if script.suffix == '.sh':
-            cmd = ['bash', str(script)]
-        elif script.suffix == '.py':
+        if script.suffix == ".sh":
+            cmd = ["bash", str(script)]
+        elif script.suffix == ".py":
             cmd = [sys.executable, str(script)]
         else:
             raise ValueError(f"Unsupported script type: {script.suffix}")

@@ -45,16 +45,16 @@ class GroovyParser:
                 continue
 
             # Skip single-line comments
-            if self.content[self.pos:self.pos+2] == '//':
-                while self.pos < len(self.content) and self.content[self.pos] != '\n':
+            if self.content[self.pos : self.pos + 2] == "//":
+                while self.pos < len(self.content) and self.content[self.pos] != "\n":
                     self.pos += 1
                 continue
 
             # Skip multi-line comments
-            if self.content[self.pos:self.pos+2] == '/*':
+            if self.content[self.pos : self.pos + 2] == "/*":
                 self.pos += 2
                 while self.pos < len(self.content) - 1:
-                    if self.content[self.pos:self.pos+2] == '*/':
+                    if self.content[self.pos : self.pos + 2] == "*/":
                         self.pos += 2
                         break
                     self.pos += 1
@@ -64,11 +64,11 @@ class GroovyParser:
 
     def peek(self, length=1) -> str:
         """Peek at next characters without consuming."""
-        return self.content[self.pos:self.pos+length]
+        return self.content[self.pos : self.pos + length]
 
     def consume(self, length=1) -> str:
         """Consume and return next characters."""
-        result = self.content[self.pos:self.pos+length]
+        result = self.content[self.pos : self.pos + length]
         self.pos += length
         return result
 
@@ -80,7 +80,7 @@ class GroovyParser:
         while self.pos < len(self.content):
             char = self.peek()
 
-            if char == '\\':
+            if char == "\\":
                 self.consume()
                 if self.pos < len(self.content):
                     result.append(self.consume())
@@ -90,7 +90,7 @@ class GroovyParser:
             else:
                 result.append(self.consume())
 
-        return ''.join(result)
+        return "".join(result)
 
     def parse_identifier(self) -> str:
         """Parse an identifier (unquoted key or value)."""
@@ -98,12 +98,12 @@ class GroovyParser:
 
         while self.pos < len(self.content):
             char = self.peek()
-            if char.isalnum() or char in '_.-':
+            if char.isalnum() or char in "_.-":
                 result.append(self.consume())
             else:
                 break
 
-        return ''.join(result)
+        return "".join(result)
 
     def parse_value(self) -> Any:
         """Parse a value (string, number, boolean, list, or map)."""
@@ -112,27 +112,27 @@ class GroovyParser:
         char = self.peek()
 
         # String
-        if char in '"\'':
+        if char in "\"'":
             return self.parse_string()
 
         # List or Map
-        if char == '[':
+        if char == "[":
             return self.parse_collection()
 
         # Try to parse as identifier/keyword
         identifier = self.parse_identifier()
 
         # Boolean
-        if identifier == 'true':
+        if identifier == "true":
             return True
-        if identifier == 'false':
+        if identifier == "false":
             return False
-        if identifier == 'null':
+        if identifier == "null":
             return None
 
         # Number
         try:
-            if '.' in identifier:
+            if "." in identifier:
                 return float(identifier)
             return int(identifier)
         except ValueError:
@@ -147,7 +147,7 @@ class GroovyParser:
         self.skip_whitespace()
 
         # Empty collection
-        if self.peek() == ']':
+        if self.peek() == "]":
             self.consume()
             return []
 
@@ -160,16 +160,16 @@ class GroovyParser:
         depth = 0
         scan_pos = self.pos
         while scan_pos < len(self.content) and scan_pos < self.pos + 200:
-            if self.content[scan_pos] in '[{':
+            if self.content[scan_pos] in "[{":
                 depth += 1
-            elif self.content[scan_pos] in ']}':
+            elif self.content[scan_pos] in "]}":
                 if depth == 0:
                     break
                 depth -= 1
-            elif self.content[scan_pos] == ':' and depth == 0:
+            elif self.content[scan_pos] == ":" and depth == 0:
                 is_map = True
                 break
-            elif self.content[scan_pos] == ',' and depth == 0:
+            elif self.content[scan_pos] == "," and depth == 0:
                 break
             scan_pos += 1
 
@@ -187,16 +187,16 @@ class GroovyParser:
         while self.pos < len(self.content):
             self.skip_whitespace()
 
-            if self.peek() == ']':
+            if self.peek() == "]":
                 self.consume()
                 break
 
             items.append(self.parse_value())
 
             self.skip_whitespace()
-            if self.peek() == ',':
+            if self.peek() == ",":
                 self.consume()
-            elif self.peek() == ']':
+            elif self.peek() == "]":
                 self.consume()
                 break
 
@@ -209,12 +209,12 @@ class GroovyParser:
         while self.pos < len(self.content):
             self.skip_whitespace()
 
-            if self.peek() == ']':
+            if self.peek() == "]":
                 self.consume()
                 break
 
             # Parse key
-            if self.peek() in '"\'':
+            if self.peek() in "\"'":
                 key = self.parse_string()
             else:
                 key = self.parse_identifier()
@@ -222,7 +222,7 @@ class GroovyParser:
             self.skip_whitespace()
 
             # Expect ':'
-            if self.peek() != ':':
+            if self.peek() != ":":
                 break
             self.consume()
 
@@ -235,9 +235,9 @@ class GroovyParser:
             self.skip_whitespace()
 
             # Check for comma or end
-            if self.peek() == ',':
+            if self.peek() == ",":
                 self.consume()
-            elif self.peek() == ']':
+            elif self.peek() == "]":
                 self.consume()
                 break
 
@@ -246,7 +246,7 @@ class GroovyParser:
     def parse_build_configurations(self) -> Dict:
         """Parse the buildConfigurations map from Groovy file."""
         # Find buildConfigurations = [
-        pattern = r'buildConfigurations\s*=\s*\['
+        pattern = r"buildConfigurations\s*=\s*\["
         match = re.search(pattern, self.content)
 
         if not match:
@@ -259,7 +259,7 @@ class GroovyParser:
 
 def compact_test_arrays(json_str: str) -> str:
     """Compact test arrays to single lines for readability."""
-    lines = json_str.split('\n')
+    lines = json_str.split("\n")
     result = []
     i = 0
 
@@ -275,7 +275,7 @@ def compact_test_arrays(json_str: str) -> str:
             # Collect elements until we find the closing bracket
             while i < len(lines):
                 array_lines.append(lines[i])
-                if lines[i].strip() == ']' or lines[i].strip() == '],':
+                if lines[i].strip() == "]" or lines[i].strip() == "],":
                     break
                 i += 1
 
@@ -297,11 +297,11 @@ def compact_test_arrays(json_str: str) -> str:
 
                 # Format as single line
                 if test_names:
-                    formatted = ' ' * indent + f'"{test_type}": ['
-                    formatted += ', '.join(f'"{name}"' for name in test_names)
-                    formatted += ']'
-                    if closing.endswith(','):
-                        formatted += ','
+                    formatted = " " * indent + f'"{test_type}": ['
+                    formatted += ", ".join(f'"{name}"' for name in test_names)
+                    formatted += "]"
+                    if closing.endswith(","):
+                        formatted += ","
                     result.append(formatted)
                 else:
                     # Empty array
@@ -313,7 +313,7 @@ def compact_test_arrays(json_str: str) -> str:
 
         i += 1
 
-    return '\n'.join(result)
+    return "\n".join(result)
 
 
 def convert_groovy_to_json(input_file: Path, output_file: Path):
@@ -322,12 +322,12 @@ def convert_groovy_to_json(input_file: Path, output_file: Path):
     print(f"Converting {input_file} to {output_file}...")
 
     # Read Groovy file
-    with open(input_file, 'r') as f:
+    with open(input_file, "r") as f:
         content = f.read()
 
     # Extract version from filename
-    version_match = re.search(r'(jdk\d+u?)_pipeline_config', input_file.name)
-    version = version_match.group(1) if version_match else 'unknown'
+    version_match = re.search(r"(jdk\d+u?)_pipeline_config", input_file.name)
+    version = version_match.group(1) if version_match else "unknown"
 
     # Parse build configurations
     parser = GroovyParser(content)
@@ -341,7 +341,7 @@ def convert_groovy_to_json(input_file: Path, output_file: Path):
     config = {
         "version": version,
         "buildConfigurations": build_configs,
-        "targetConfigurations": list(build_configs.keys())
+        "targetConfigurations": list(build_configs.keys()),
     }
 
     # Write JSON file with standard formatting
@@ -352,7 +352,7 @@ def convert_groovy_to_json(input_file: Path, output_file: Path):
 
     # Add blank lines before each platform section for readability
     # Pattern: find "platformName": { and add a blank line before it
-    lines = json_str.split('\n')
+    lines = json_str.split("\n")
     formatted_lines = []
 
     for i, line in enumerate(lines):
@@ -361,12 +361,12 @@ def convert_groovy_to_json(input_file: Path, output_file: Path):
         if re.match(r'    "[^"]+": \{', line) and i > 0:
             # Add blank line before platform section (except first one)
             if formatted_lines and formatted_lines[-1].strip():
-                formatted_lines.append('')
+                formatted_lines.append("")
         formatted_lines.append(line)
 
     # Write formatted JSON
-    with open(output_file, 'w') as f:
-        f.write('\n'.join(formatted_lines))
+    with open(output_file, "w") as f:
+        f.write("\n".join(formatted_lines))
 
     print(f"✅ Successfully converted to {output_file}")
     print(f"   Version: {version}")
@@ -384,10 +384,14 @@ def convert_groovy_to_json(input_file: Path, output_file: Path):
 
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python3 groovy-pipeline-config-to-json.py <input.groovy> <output.json>")
+        print(
+            "Usage: python3 groovy-pipeline-config-to-json.py <input.groovy> <output.json>"
+        )
         print("")
         print("Example:")
-        print("  python3 groovy-pipeline-config-to-json.py jdk21u_pipeline_config.groovy jdk21u_pipeline_config.json")
+        print(
+            "  python3 groovy-pipeline-config-to-json.py jdk21u_pipeline_config.groovy jdk21u_pipeline_config.json"
+        )
         sys.exit(1)
 
     input_file = Path(sys.argv[1])
@@ -403,6 +407,7 @@ def main():
     except Exception as e:
         print(f"Error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

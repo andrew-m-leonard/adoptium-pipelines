@@ -25,8 +25,9 @@ import subprocess
 from pathlib import Path
 
 
-def sync_config_repo(workspace: Path, config_repo_url: str,
-                     config_repo_branch: str) -> Path:
+def sync_config_repo(
+    workspace: Path, config_repo_url: str, config_repo_branch: str
+) -> Path:
     """
     Ensure the configuration repository is cloned and up-to-date.
 
@@ -51,14 +52,16 @@ def sync_config_repo(workspace: Path, config_repo_url: str,
     Raises:
         RuntimeError: On git errors or URL mismatch.
     """
-    config_repo_dir = workspace / 'config-repo'
+    config_repo_dir = workspace / "config-repo"
 
     if config_repo_dir.exists():
         # Verify the existing clone's remote origin matches the requested URL.
         try:
             url_result = subprocess.run(
-                ['git', '-C', str(config_repo_dir), 'remote', 'get-url', 'origin'],
-                capture_output=True, text=True, check=True
+                ["git", "-C", str(config_repo_dir), "remote", "get-url", "origin"],
+                capture_output=True,
+                text=True,
+                check=True,
             )
             existing_url = url_result.stdout.strip()
         except subprocess.CalledProcessError as e:
@@ -83,32 +86,50 @@ def sync_config_repo(workspace: Path, config_repo_url: str,
         print(f"   Fetching latest from origin/{config_repo_branch}...")
         try:
             subprocess.run(
-                ['git', '-C', str(config_repo_dir), 'fetch', '--depth', '1',
-                 'origin', config_repo_branch],
-                check=True
+                [
+                    "git",
+                    "-C",
+                    str(config_repo_dir),
+                    "fetch",
+                    "--depth",
+                    "1",
+                    "origin",
+                    config_repo_branch,
+                ],
+                check=True,
             )
             subprocess.run(
-                ['git', '-C', str(config_repo_dir), 'reset', '--hard',
-                 f'origin/{config_repo_branch}'],
-                check=True
+                [
+                    "git",
+                    "-C",
+                    str(config_repo_dir),
+                    "reset",
+                    "--hard",
+                    f"origin/{config_repo_branch}",
+                ],
+                check=True,
             )
             print("✅ Configuration repository updated to latest")
         except subprocess.CalledProcessError as e:
-            raise RuntimeError(
-                f"Failed to update config-repo from remote: {e}"
-            ) from e
+            raise RuntimeError(f"Failed to update config-repo from remote: {e}") from e
 
     else:
         print(f"📥 Cloning configuration repository...")
         print(f"   URL: {config_repo_url}")
         print(f"   Branch: {config_repo_branch}")
-        subprocess.run([
-            'git', 'clone',
-            '--branch', config_repo_branch,
-            '--depth', '1',
-            config_repo_url,
-            str(config_repo_dir)
-        ], check=True)
+        subprocess.run(
+            [
+                "git",
+                "clone",
+                "--branch",
+                config_repo_branch,
+                "--depth",
+                "1",
+                config_repo_url,
+                str(config_repo_dir),
+            ],
+            check=True,
+        )
         print("✅ Configuration repository cloned")
 
     return config_repo_dir
@@ -124,17 +145,21 @@ def load_adoptium_pipeline_config(config_repo_dir: Path) -> dict:
     Returns:
         Parsed JSON dict, or an empty dict if the file does not exist.
     """
-    cfg_path = config_repo_dir / 'adoptium_pipeline_config.json'
+    cfg_path = config_repo_dir / "adoptium_pipeline_config.json"
     if not cfg_path.exists():
-        print("ℹ️  adoptium_pipeline_config.json not found in config repo — using defaults")
+        print(
+            "ℹ️  adoptium_pipeline_config.json not found in config repo — using defaults"
+        )
         return {}
 
-    with open(cfg_path, 'r') as f:
+    with open(cfg_path, "r") as f:
         cfg = json.load(f)
 
     print("✅ Loaded adoptium_pipeline_config.json")
     print(f"   Default variant: {cfg.get('defaultVariant', 'temurin')}")
-    active = [v['version'] for v in cfg.get('activeJdkVersions', []) if v.get('enabled')]
+    active = [
+        v["version"] for v in cfg.get("activeJdkVersions", []) if v.get("enabled")
+    ]
     if active:
         print(f"   Active JDK versions: {', '.join(active)}")
     return cfg
