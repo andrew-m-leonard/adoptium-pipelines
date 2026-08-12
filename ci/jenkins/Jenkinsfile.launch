@@ -262,7 +262,7 @@ pipeline {
                     List available = env.AVAILABLE_PLATFORMS.split(',') as List
                     List selected  = (params.PLATFORMS == 'all')
                         ? available
-                        : params.PLATFORMS.split(',')*.trim()
+                        : params.PLATFORMS.split(',').collect { it.trim() }
 
                     List invalid = selected.findAll { String p -> !available.contains(p) }
                     if (invalid) {
