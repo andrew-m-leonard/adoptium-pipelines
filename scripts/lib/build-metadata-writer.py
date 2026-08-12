@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 ################################################################################
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,7 +39,10 @@ The following fields are read from environment variables (set by the pipeline):
     CONFIG_VARIANT
 """
 
+from __future__ import print_function
+
 import argparse
+import io
 import json
 import os
 import sys
@@ -91,7 +94,7 @@ class BuildMetadataWriter(object):
     def write(self):
         metadata = self._collect()
         try:
-            with open(self._output, "w", encoding="utf-8") as fh:
+            with io.open(self._output, "w", encoding="utf-8") as fh:
                 json.dump(metadata, fh, indent=2)
                 fh.write("\n")
         except (IOError, OSError) as exc:

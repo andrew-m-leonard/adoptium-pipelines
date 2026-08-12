@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 ################################################################################
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,10 @@ Usage:
     value=$(python sbom-workspace-extractor.py --sbom /path/to/sbom.json)
 """
 
+from __future__ import print_function
+
 import argparse
+import io
 import json
 import sys
 
@@ -41,7 +44,7 @@ class SbomWorkspaceExtractor(object):
 
     def _load(self):
         try:
-            with open(self._sbom_path, encoding="utf-8") as fh:
+            with io.open(self._sbom_path, encoding="utf-8") as fh:
                 return json.load(fh)
         except (IOError, OSError) as exc:
             print(
