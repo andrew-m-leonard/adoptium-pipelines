@@ -62,7 +62,7 @@ main() {
 	local build_args="${CONFIG_BUILD_ARGS:-}${EXTRA_BUILD_ARGS:+ ${EXTRA_BUILD_ARGS}}"
 	local configure_args="${CONFIG_CONFIGURE_ARGS:-}${EXTRA_CONFIGURE_ARGS:+ ${EXTRA_CONFIGURE_ARGS}}"
 	local make_args="${EXTRA_MAKE_OPTIONS:-}"
-	local create_sbom="${CREATE_SBOM:-false}"
+	local create_sbom="${CREATE_SBOM:-true}"
 	local scm_ref="${SCM_REF:-}"
 	# BUILD_REF stage param takes precedence; fall back to the repo default
 	# from pipeline-config.json (CONFIG_BUILD_REF), then hard-coded 'master'.

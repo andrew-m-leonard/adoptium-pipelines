@@ -112,10 +112,13 @@ def parse_extra_args(
                            tokens (missing value, wrong boolean value)
     """
     # Build a lookup: --lower-kebab-case flag → param def dict
+    # Also collect all param defs so we can seed defaults afterwards.
     flag_to_param: dict[str, dict] = {}
+    all_params: list[dict] = []
     for group in collated.get("groups", []):
         for p in group.get("parameters", []):
             flag_to_param[param_name_to_cli_flag(p["name"])] = p
+            all_params.append(p)
 
     stage_params: dict[str, str] = {}
     unrecognised: list[str] = []
@@ -161,6 +164,15 @@ def parse_extra_args(
             stage_params[p["name"]] = value.lower()
         else:
             stage_params[p["name"]] = value
+
+    # Seed defaults for any param not explicitly provided on the CLI.
+    for p in all_params:
+        if p["name"] not in stage_params and "default" in p:
+            default = p["default"]
+            if p["type"] == "boolean":
+                stage_params[p["name"]] = "true" if default else "false"
+            else:
+                stage_params[p["name"]] = str(default)
 
     return stage_params, unrecognised, errors
 
