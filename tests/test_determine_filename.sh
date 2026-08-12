@@ -105,10 +105,10 @@ export ARCHITECTURE="x64"
 export TARGET_OS="linux"
 export VARIANT="temurin"
 if determine_filename 2>/dev/null; then
-    echo "ERROR: Should have failed with missing JAVA_TO_BUILD"
-    exit 1
+	echo "ERROR: Should have failed with missing JAVA_TO_BUILD"
+	exit 1
 else
-    echo "✓ Correctly failed with missing required variable"
+	echo "✓ Correctly failed with missing required variable"
 fi
 echo ""
 

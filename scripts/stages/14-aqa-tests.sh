@@ -29,7 +29,8 @@ source "${SCRIPT_DIR}/../lib/logging-utils.sh"
 
 # AQA_REF stage param takes precedence; fall back to CONFIG_AQA_REF then 'master'.
 aqa_ref="${AQA_REF:-${CONFIG_AQA_REF:-master}}"
-aqa_ref_source="default"; [[ -n "${AQA_REF:-}" ]] && aqa_ref_source="param"
+aqa_ref_source="default"
+[[ -n "${AQA_REF:-}" ]] && aqa_ref_source="param"
 aqa_repo_url="${CONFIG_AQA_REPO_URL:-https://github.com/adoptium/aqa-tests.git}"
 
 log_info "Test Configuration:"

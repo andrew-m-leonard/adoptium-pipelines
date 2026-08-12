@@ -44,8 +44,8 @@ require_env_var "CLEANUP_TYPE"
 
 # Validate CLEANUP_TYPE
 if [ "${CLEANUP_TYPE}" != "pre" ] && [ "${CLEANUP_TYPE}" != "post" ]; then
-    log_error "CLEANUP_TYPE must be either 'pre' or 'post', got: ${CLEANUP_TYPE}"
-    exit 1
+	log_error "CLEANUP_TYPE must be either 'pre' or 'post', got: ${CLEANUP_TYPE}"
+	exit 1
 fi
 
 # Determine if cleanup should be performed
@@ -53,26 +53,26 @@ SHOULD_CLEAN="false"
 CLEANUP_LABEL=""
 
 if [ "${CLEANUP_TYPE}" = "pre" ]; then
-    # Pre-cleanup: ALWAYS clean (critical for restartability)
-    SHOULD_CLEAN="true"
-    CLEANUP_LABEL="Pre-stage workspace cleanup"
+	# Pre-cleanup: ALWAYS clean (critical for restartability)
+	SHOULD_CLEAN="true"
+	CLEANUP_LABEL="Pre-stage workspace cleanup"
 elif [ "${CLEANUP_TYPE}" = "post" ]; then
-    # Post-cleanup: Check configuration
-    load_config "${CONFIG_FILE}"
-    CLEAN_AFTER=$(get_config_value ".parameters.cleanWorkspaceAfterStage" "true")
+	# Post-cleanup: Check configuration
+	load_config "${CONFIG_FILE}"
+	CLEAN_AFTER=$(get_config_value ".parameters.cleanWorkspaceAfterStage" "true")
 
-    if [ "${CLEAN_AFTER}" = "true" ]; then
-        SHOULD_CLEAN="true"
-        CLEANUP_LABEL="Post-stage workspace cleanup"
-    else
-        log_info "Post-stage cleanup disabled (cleanWorkspaceAfterStage=false)"
-        exit 0
-    fi
+	if [ "${CLEAN_AFTER}" = "true" ]; then
+		SHOULD_CLEAN="true"
+		CLEANUP_LABEL="Post-stage workspace cleanup"
+	else
+		log_info "Post-stage cleanup disabled (cleanWorkspaceAfterStage=false)"
+		exit 0
+	fi
 fi
 
 if [ "${SHOULD_CLEAN}" = "false" ]; then
-    log_warning "Invalid CLEANUP_TYPE: ${CLEANUP_TYPE}"
-    exit 1
+	log_warning "Invalid CLEANUP_TYPE: ${CLEANUP_TYPE}"
+	exit 1
 fi
 
 # Define workspace directory to clean
@@ -82,12 +82,12 @@ WORKSPACE_DIR="${WORKSPACE}/workspace"
 log_section "${CLEANUP_LABEL}"
 
 if [ -d "${WORKSPACE_DIR}" ]; then
-    log_info "Removing: ${WORKSPACE_DIR}"
-    rm -rf "${WORKSPACE_DIR}"
-    log_success "Workspace cleaned"
+	log_info "Removing: ${WORKSPACE_DIR}"
+	rm -rf "${WORKSPACE_DIR}"
+	log_success "Workspace cleaned"
 else
-    log_info "Workspace directory does not exist: ${WORKSPACE_DIR}"
-    log_info "Nothing to clean"
+	log_info "Workspace directory does not exist: ${WORKSPACE_DIR}"
+	log_info "Nothing to clean"
 fi
 
 # Made with Bob

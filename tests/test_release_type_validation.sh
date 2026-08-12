@@ -14,7 +14,7 @@
 ################################################################################
 # Test script to demonstrate RELEASE_TYPE parameter validation
 
-set +e  # Don't exit on error so we can see all test results
+set +e # Don't exit on error so we can see all test results
 
 echo "=========================================="
 echo "Testing RELEASE_TYPE Parameter Validation"
@@ -24,90 +24,90 @@ echo ""
 # Test 1: Valid value - NIGHTLY
 echo "Test 1: Valid value - NIGHTLY"
 python3 ../scripts/lib/load-json-config.py \
-    --jdk-version jdk21u \
-    --variant temurin \
-    --target-os linux \
-    --architecture x64 \
-    --release-type NIGHTLY \
-    --config-dir ../configurations \
-    --output-dir /tmp/test-output 2>&1 | head -5
+	--jdk-version jdk21u \
+	--variant temurin \
+	--target-os linux \
+	--architecture x64 \
+	--release-type NIGHTLY \
+	--config-dir ../configurations \
+	--output-dir /tmp/test-output 2>&1 | head -5
 echo "Exit code: $?"
 echo ""
 
 # Test 2: Valid value - WEEKLY
 echo "Test 2: Valid value - WEEKLY"
 python3 ../scripts/lib/load-json-config.py \
-    --jdk-version jdk21u \
-    --variant temurin \
-    --target-os linux \
-    --architecture x64 \
-    --release-type WEEKLY \
-    --config-dir ../configurations \
-    --output-dir /tmp/test-output 2>&1 | head -5
+	--jdk-version jdk21u \
+	--variant temurin \
+	--target-os linux \
+	--architecture x64 \
+	--release-type WEEKLY \
+	--config-dir ../configurations \
+	--output-dir /tmp/test-output 2>&1 | head -5
 echo "Exit code: $?"
 echo ""
 
 # Test 3: Valid value - RELEASE
 echo "Test 3: Valid value - RELEASE"
 python3 ../scripts/lib/load-json-config.py \
-    --jdk-version jdk21u \
-    --variant temurin \
-    --target-os linux \
-    --architecture x64 \
-    --release-type RELEASE \
-    --config-dir ../configurations \
-    --output-dir /tmp/test-output 2>&1 | head -5
+	--jdk-version jdk21u \
+	--variant temurin \
+	--target-os linux \
+	--architecture x64 \
+	--release-type RELEASE \
+	--config-dir ../configurations \
+	--output-dir /tmp/test-output 2>&1 | head -5
 echo "Exit code: $?"
 echo ""
 
 # Test 4: Invalid value - lowercase
 echo "Test 4: Invalid value - 'nightly' (lowercase)"
 python3 ../scripts/lib/load-json-config.py \
-    --jdk-version jdk21u \
-    --variant temurin \
-    --target-os linux \
-    --architecture x64 \
-    --release-type nightly \
-    --config-dir ../configurations \
-    --output-dir /tmp/test-output 2>&1
+	--jdk-version jdk21u \
+	--variant temurin \
+	--target-os linux \
+	--architecture x64 \
+	--release-type nightly \
+	--config-dir ../configurations \
+	--output-dir /tmp/test-output 2>&1
 echo "Exit code: $?"
 echo ""
 
 # Test 5: Invalid value - typo
 echo "Test 5: Invalid value - 'RELASE' (typo)"
 python3 ../scripts/lib/load-json-config.py \
-    --jdk-version jdk21u \
-    --variant temurin \
-    --target-os linux \
-    --architecture x64 \
-    --release-type RELASE \
-    --config-dir ../configurations \
-    --output-dir /tmp/test-output 2>&1
+	--jdk-version jdk21u \
+	--variant temurin \
+	--target-os linux \
+	--architecture x64 \
+	--release-type RELASE \
+	--config-dir ../configurations \
+	--output-dir /tmp/test-output 2>&1
 echo "Exit code: $?"
 echo ""
 
 # Test 6: Invalid value - random string
 echo "Test 6: Invalid value - 'FOOBAR'"
 python3 ../scripts/lib/load-json-config.py \
-    --jdk-version jdk21u \
-    --variant temurin \
-    --target-os linux \
-    --architecture x64 \
-    --release-type FOOBAR \
-    --config-dir ../configurations \
-    --output-dir /tmp/test-output 2>&1
+	--jdk-version jdk21u \
+	--variant temurin \
+	--target-os linux \
+	--architecture x64 \
+	--release-type FOOBAR \
+	--config-dir ../configurations \
+	--output-dir /tmp/test-output 2>&1
 echo "Exit code: $?"
 echo ""
 
 # Test 7: No value provided (should use default NIGHTLY)
 echo "Test 7: No --release-type provided (should default to NIGHTLY)"
 python3 ../scripts/lib/load-json-config.py \
-    --jdk-version jdk21u \
-    --variant temurin \
-    --target-os linux \
-    --architecture x64 \
-    --config-dir ../configurations \
-    --output-dir /tmp/test-output 2>&1 | head -5
+	--jdk-version jdk21u \
+	--variant temurin \
+	--target-os linux \
+	--architecture x64 \
+	--config-dir ../configurations \
+	--output-dir /tmp/test-output 2>&1 | head -5
 echo "Exit code: $?"
 echo ""
 
