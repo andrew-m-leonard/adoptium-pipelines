@@ -146,7 +146,7 @@ boolean stageConditionMet(String stageId) {
     return conditions.every { Map cond ->
         // Check job params first (explicit user override), then env
         String actual = params[cond.param]?.toString() ?: env[cond.param] ?: ''
-        String expected = cond.value.toString()
+        String expected = cond.value
         if (expected.startsWith('regex:')) {
             return actual =~ expected.substring('regex:'.length())
         }
