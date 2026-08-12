@@ -336,15 +336,26 @@ println '✓ Launch orchestrator jobs created successfully\n'
 // STEP 6: Create Views
 // ============================================================================
 
-// listView() is created at the path returned by inFolder(), which places it
-// inside the parent folder when pipelineBaseFolder is set.  Jenkins matches
-// the jobs{} regex against names relative to the view's own folder — i.e.
-// relative to Build_openjdk_launchers/ or Build_openjdk/ — so no base-folder
-// prefix is needed in the regex; only the immediate subfolder name is used.
+// listView("a/b/viewName") creates a view named "viewName" inside folder "a/b".
+// The jobs{} regex is matched against job names relative to the view's *parent*
+// folder (i.e. "a/b"), so the prefix must include the immediate subfolder that
+// holds the jobs.
+//
+// Layout when pipelineBaseFolder = "temurin-pipelines":
+//   View path  : temurin-pipelines/Build_openjdk_launchers
+//   Job path   : temurin-pipelines/Build_openjdk_launchers/Build_openjdkNN_launch
+//   Regex base : Build_openjdk_launchers/   (relative to temurin-pipelines)
+//
+// Layout when pipelineBaseFolder is empty (Jenkins root):
+//   View path  : Build_openjdk_launchers
+//   Job path   : Build_openjdk_launchers/Build_openjdkNN_launch
+//   Regex base : Build_openjdk_launchers/   (relative to root — same pattern)
+//
+// In both cases the regex prefix is always just the immediate subfolder name.
 listView(inFolder('Build_openjdk_launchers')) {
     description('Launch orchestrator jobs for coordinating platform builds (Build_openjdk<version>_launch)')
     jobs {
-        regex('Build_openjdk\\d+_launch')
+        regex('Build_openjdk_launchers/Build_openjdk\\d+_launch')
     }
     recurse(true)
     columns {
@@ -361,7 +372,7 @@ listView(inFolder('Build_openjdk_launchers')) {
 listView(inFolder('Build_openjdk')) {
     description('Platform-specific build jobs — AQA-style naming: Build_openjdk<version>_<distro>_<arch>_<os>')
     jobs {
-        regex('Build_openjdk\\d+_[^_]+_[^_]+_[^_]+')
+        regex('Build_openjdk/Build_openjdk\\d+_[^_]+_[^_]+_[^_]+')
     }
     recurse(true)
     columns {
