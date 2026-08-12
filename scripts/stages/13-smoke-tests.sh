@@ -14,7 +14,14 @@
 ################################################################################
 # CI-agnostic Smoke Test Stage Implementation
 #
-# Runs quick validation tests to ensure the JDK build is functional
+# Runs quick validation tests to ensure the JDK build is functional.
+# Smoke tests performed:
+#   1. Java version     — runs `java -version` and confirms the binary executes
+#   2. Hello World      — compiles and runs a minimal Java class via javac + java
+#   3. System properties — runs `java -XshowSettings:properties -version` and
+#                          checks output contains java.version, java.home, or os.name
+#   4. Class loading    — invokes `java -cp <jdk_home>/lib -version` to exercise
+#                         the class-loader path
 #
 # Required Environment Variables:
 #   WORKSPACE     - Stage workspace directory
