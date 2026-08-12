@@ -53,7 +53,7 @@
         {
           "name": "CREATE_SBOM",
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Generate a Software Bill of Materials (SBOM) during the build stage, and run the SBOM sign and validate-SBOM stages."
         }
       ]
