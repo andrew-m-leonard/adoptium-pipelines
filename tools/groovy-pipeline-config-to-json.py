@@ -243,7 +243,7 @@ class GroovyParser:
 
         return result
 
-    def parse_build_configurations(self) -> Dict:
+    def parse_build_configurations(self) -> Union[List, Dict]:
         """Parse the buildConfigurations map from Groovy file."""
         # Find buildConfigurations = [
         pattern = r"buildConfigurations\s*=\s*\["
@@ -353,7 +353,7 @@ def convert_groovy_to_json(input_file: Path, output_file: Path):
     # Add blank lines before each platform section for readability
     # Pattern: find "platformName": { and add a blank line before it
     lines = json_str.split("\n")
-    formatted_lines = []
+    formatted_lines: list[str] = []
 
     for i, line in enumerate(lines):
         # Check if this line starts a platform configuration

@@ -611,7 +611,7 @@ def collect(
         merged_groups = _merge_stage(default_data, vendor_data, stem)
 
         for grp in merged_groups:
-            clean_params = []
+            clean_params: list[dict] = []
             for p in grp["parameters"]:
                 source_label = f"{stem}/{grp['name']}/{p['name']}"
                 if p["name"] in all_param_names:
