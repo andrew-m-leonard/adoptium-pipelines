@@ -78,7 +78,7 @@ Build stage (and every subsequent stage)
 
 ### Jenkins-specific notes
 
-- `WORKSPACE` is cleaned and **fully reconstructed** on every stage allocation (including `checkout scm` + config-repo sparse-checkout). Stages may run on different physical agents.
+- `WORKSPACE` is cleaned and **fully reconstructed** on every stage allocation (including `checkout scm` + config-repository sparse-checkout). Stages may run on different physical agents.
 - `INPUT_ARTIFACTS_DIR` equals `WORKSPACE`. Artifacts copied in by `copyArtifacts` land at the workspace root. Stage scripts must not assume it is the same directory as `TARGET_DIR`.
 - `TARGET_DIR` is a **per-stage output sub-directory** of `WORKSPACE`. After archiving, it can be discarded.
 - Artifacts **never** touch the local filesystem between stages — they travel exclusively via `archiveArtifacts` → Jenkins artifact store → `copyArtifacts`.
@@ -286,7 +286,7 @@ artifacts from previous stages. Remove --clean-workspace to continue.
 | "Archive" operation | `archiveArtifacts artifacts: "TARGET_DIR/**/*"` | `workspace_mgr.archive_stage_outputs()` |
 | "Restore" operation | `copyArtifacts(filter, target: '.')` into `WORKSPACE` root | `workspace_mgr.restore_stage_inputs(filter)` |
 | Ephemeral area cleaned | `cleanWs()` wipes entire `WORKSPACE` | `stage_workspace/` wiped by `WorkspaceManager` |
-| config-repo checkout | Sparse-checkout on **every stage** | `git clone` **once** at Initialize |
+| config-repository checkout | Sparse-checkout on **every stage** | `git clone` **once** at Initialize |
 | `scripts/` availability | Re-checked-out via `checkout scm` on every stage | Permanent on disk (runner's own directory) |
 | Pre-stage cleanup scope | Entire `WORKSPACE` (checked-out files removed) | Only `stage_workspace/` (`build_artifacts/` and `config-repo/` untouched) |
 | Post-stage cleanup | `cleanWs()` in `finalizeStage()` if `CLEAN_WORKSPACE_AFTER_STAGE=true` | `shutil.rmtree(stage_workspace)` if `cleanWorkspaceAfterStage=true` |
@@ -326,7 +326,7 @@ mkdir -p "${scratch}" "${output_dir}"
 
 ### Stage script can't find `pipeline-config.json`
 
-On Jenkins, `CONFIG_FILE` is set to `${INPUT_ARTIFACTS_DIR}/pipeline-config.json` by `PipelineHelper.initializeStage()`. Locally, it is set to `${WORKSPACE}/pipeline-config.json` (restored from `build_artifacts/` by `restore_stage_inputs()`). In both cases, `CONFIG_FILE` is inside or co-located with `INPUT_ARTIFACTS_DIR` — never assume it is at the pipeline root.
+On Jenkins, `CONFIG_FILE` is set to `${INPUT_ARTIFACTS_DIR}/pipeline-config.json` by `PipelineHelper.initializeStage()`. Locally, it is set to `${WORKSPACE}/pipeline-config.json` (restored from `build_artifacts/` by `restore_stage_inputs()`). In both cases, `CONFIG_FILE` is inside or colocated with `INPUT_ARTIFACTS_DIR` — never assume it is at the pipeline root.
 
 ### Stage outputs not found by next stage (Jenkins)
 

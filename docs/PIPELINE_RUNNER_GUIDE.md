@@ -14,13 +14,13 @@ python3 ci/local/run-pipeline.py \
     --config-repo-url https://github.com/adoptium/ci-temurin-config.git
 ```
 
-`--config-repo-url` is required. It points to the config repo that provides build configuration, variant defaults, and any vendor-specific stage overrides.
+`--config-repo-url` is required. It points to the config repository that provides build configuration, variant defaults, and any vendor-specific stage overrides.
 
 ## What It Does
 
 The pipeline runner orchestrates the locally-executable stages in sequence:
 
-1. **Initialize** — clones the config repo; generates `pipeline-config.json`; archives it to `build_artifacts/`
+1. **Initialize** — clones the config repository; generates `pipeline-config.json`; archives it to `build_artifacts/`
 1. **Build** — clones `temurin-build`; runs `make-adopt-build-farm.sh`; archives JDK tarballs to `build_artifacts/`
 1. **Validate SBOM** — validates SBOM files (gated: runs only when `CREATE_SBOM=true`)
 1. **Smoke Tests** — extracts JDK and runs basic checks (gated: runs only when `RUN_TESTS=true`)
@@ -42,17 +42,17 @@ Stage gates are driven by stage parameters loaded dynamically from `scripts/stag
 | `--jdk-version` | JDK version to build | `jdk<N>` — e.g. `jdk21`, `jdk17`, `jdk8` |
 | `--target-os` | Target OS | `mac`, `linux`, `windows`, `aix` |
 | `--architecture` | Target architecture | `aarch64`, `x64`, `x32`, `ppc64`, `s390x` |
-| `--config-repo-url` | URL of the config repo containing `configurations/`, `vendor-scripts/`, `adoptium_pipeline_config.json` | Any git-cloneable URL |
+| `--config-repo-url` | URL of the config repository containing `configurations/`, `vendor-scripts/`, `adoptium_pipeline_config.json` | Any git-cloneable URL |
 
 Note: `--jdk-version` must match the pattern `jdk` followed by digits only (e.g. `jdk21`). Suffixes like `jdk21u` are not accepted.
 
-### Configuration repo
+### Configuration repository
 
 | Parameter | Description | Default |
 |---|---|---|
 | `--config-repo-branch` | Branch to clone | `main` |
 
-The config repo provides: build/AQA repo URLs and branches, the default variant, and active JDK version list.
+The config repository provides: build/AQA repository URLs and branches, the default variant, and active JDK version list.
 
 ### Release type
 
@@ -99,7 +99,7 @@ Stage enable/disable is controlled via **stage parameters**, not dedicated CLI f
 
 ## Stage Parameters
 
-Stage-specific parameters are loaded dynamically from `scripts/stages/*.params.json` (and any `vendor-scripts/*.params.json` overrides in the checked-out config repo). This ensures the local runner always presents the same parameter surface as the Jenkins jobs.
+Stage-specific parameters are loaded dynamically from `scripts/stages/*.params.json` (and any `vendor-scripts/*.params.json` overrides in the checked-out config repository). This ensures the local runner always presents the same parameter surface as the Jenkins jobs.
 
 Pass stage parameters as `--<lower-kebab-case-name> <value>` after all fixed arguments. Both boolean and string parameters require an explicit value token:
 
@@ -110,7 +110,7 @@ Pass stage parameters as `--<lower-kebab-case-name> <value>` after all fixed arg
 --extra-build-args "--enable-dtrace"
 ```
 
-Run `--help` to see all available stage parameters for a given config repo:
+Run `--help` to see all available stage parameters for a given config repository:
 
 ```bash
 python3 ci/local/run-pipeline.py \
@@ -121,7 +121,7 @@ python3 ci/local/run-pipeline.py \
 
 ### Common stage parameters
 
-These are defined in the default `scripts/stages/*.params.json` files and apply to all builds unless overridden by a vendor config repo:
+These are defined in the default `scripts/stages/*.params.json` files and apply to all builds unless overridden by a vendor config repository:
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -286,7 +286,7 @@ python3 ci/local/run-pipeline.py \
     --openj9-branch my-feature-branch
 ```
 
-Vendor-specific parameters (like `--openj9-repo`) are declared in the vendor config repo's `vendor-scripts/*.params.json` files and are automatically recognised after the config repo is cloned.
+Vendor-specific parameters (like `--openj9-repository`) are declared in the vendor config repository's `vendor-scripts/*.params.json` files and are automatically recognised after the config repository is cloned.
 
 ---
 
@@ -353,12 +353,12 @@ The workspace was created by an older version of the local runner (which used `a
    --no-tests
 ```
 
-Dedicated `--no-*` flags no longer exist. Stage gates are now controlled via stage parameters: use `--run-tests false`, `--enable-installers false`, `--sign-artifacts false`, etc. Run with `--help` to see all available parameters for the current config repo.
+Dedicated `--no-*` flags no longer exist. Stage gates are now controlled via stage parameters: use `--run-tests false`, `--enable-installers false`, `--sign-artifacts false`, etc. Run with `--help` to see all available parameters for the current config repository.
 
 ### Initialize fails — configuration not found
 
 - Verify `--config-repo-url` points to a reachable repository
-- Confirm the repo contains `configurations/` and `adoptium_pipeline_config.json`
+- Confirm the repository contains `configurations/` and `adoptium_pipeline_config.json`
 - Check that `configFilePrefix` in `adoptium_pipeline_config.json` matches the actual config directory name
 - Use `tools/` to convert legacy Groovy configs if migrating
 
@@ -382,7 +382,7 @@ chmod +x scripts/stages/*.sh scripts/lib/*.sh
 ## See Also
 
 - [WORKSPACE_ARTIFACTS_ARCHITECTURE.md](./WORKSPACE_ARTIFACTS_ARCHITECTURE.md) — workspace layout, archive/restore semantics, validation rules
-- [CODE_CONFIG_SEPARATION.md](./CODE_CONFIG_SEPARATION.md) — config repo structure and `pipeline-config.json` schema
+- [CODE_CONFIG_SEPARATION.md](./CODE_CONFIG_SEPARATION.md) — config repository structure and `pipeline-config.json` schema
 - [REPRO_COMPARE_INTEGRATION.md](./REPRO_COMPARE_INTEGRATION.md) — reproducible build comparison details
 - [CI_AGNOSTIC_ARCHITECTURE.md](./CI_AGNOSTIC_ARCHITECTURE.md) — overall pipeline architecture
 - [`ci/local/README.md`](../ci/local/README.md) — local runner module README

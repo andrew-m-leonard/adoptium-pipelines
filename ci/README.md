@@ -37,7 +37,7 @@ Single-platform build pipeline. Loaded by every `jdk${version}-${platform}-build
 
 ### Jenkinsfile.launch
 
-Multi-platform launch pipeline. Loaded by `jdk${version}-launch-build-pipelines` jobs. Reads the config repo, determines which platforms to build, optionally regenerates platform build jobs via Job DSL, then triggers all selected platform builds in parallel.
+Multi-platform launch pipeline. Loaded by `jdk${version}-launch-build-pipelines` jobs. Reads the config repository, determines which platforms to build, optionally regenerates platform build jobs via Job DSL, then triggers all selected platform builds in parallel.
 
 **Script path**: `ci/jenkins/Jenkinsfile.launch`
 

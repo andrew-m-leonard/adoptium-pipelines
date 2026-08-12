@@ -249,7 +249,7 @@ Should produce:
 
 Verify this is correct in the output — if not, edit the JSON manually.
 
-### Version file name mismatch
+### Version filename mismatch
 
 ```text
 Error: Config file not found: configurations/jdk21u_pipeline_config.json
@@ -262,5 +262,5 @@ The pipeline expects filenames **without** the `u` suffix. Ensure you used `migr
 ## Related Documentation
 
 - [CONFIG_SCHEMA.md](../docs/CONFIG_SCHEMA.md) — full schema reference for `adoptium_pipeline_config.json`, `jenkins_job_config.json`, and `configurations/jdkNN_pipeline_config.json`
-- [CODE_CONFIG_SEPARATION.md](../docs/CODE_CONFIG_SEPARATION.md) — config repo structure and how the pipeline loads configuration
+- [CODE_CONFIG_SEPARATION.md](../docs/CODE_CONFIG_SEPARATION.md) — config repository structure and how the pipeline loads configuration
 - [JOB_DSL_AUTOMATION.md](../docs/JOB_DSL_AUTOMATION.md) — how `jenkins_job_config.json` is consumed by the seed job

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Adoptium CI Pipelines architecture maintains a strict separation between **pipeline code** (this repository) and **pipeline configuration** (a separate config repository such as `ci-temurin-config`). The pipeline code never contains build-specific settings; all such data lives in the config repo.
+The Adoptium CI Pipelines architecture maintains a strict separation between **pipeline code** (this repository) and **pipeline configuration** (a separate config repository such as `ci-temurin-config`). The pipeline code never contains build-specific settings; all such data lives in the config repository.
 
 This separation enables:
 
@@ -15,7 +15,7 @@ This separation enables:
 
 ## Config Repository Structure
 
-The config repo is the single source of all externalized settings. It must contain:
+The config repository is the single source of all externalized settings. It must contain:
 
 ```text
 <config-repo>/
@@ -38,7 +38,7 @@ The config repo is the single source of all externalized settings. It must conta
 
 ### 1. `adoptium_pipeline_config.json` — CI-agnostic pipeline defaults
 
-**Location**: root of the config repo  
+**Location**: root of the config repository  
 **Consumed by**: seed job, launch pipeline (`Jenkinsfile.launch`), build pipeline (`ConfigHelper.groovy`), local runner (`run-pipeline.py`)
 
 This is the top-level config file that glues everything together. It tells the system:
@@ -82,13 +82,13 @@ This is the top-level config file that glues everything together. It tells the s
 | Seed job (`seed_job_dsl.groovy`) | Fetched directly from `raw.githubusercontent.com` via HTTP during seed job execution |
 | Build pipeline (`ConfigHelper.groovy`) | Read from `./config-repo/adoptium_pipeline_config.json` after Git sparse-checkout |
 | Local runner (`run-pipeline.py`) | Read from `<workspace>/config-repo/adoptium_pipeline_config.json` after `git clone` |
-| CLI tool (`load-adoptium-pipeline-config-json.py`) | Either local path (`--config-repo-dir`) or fetched from remote (`--config-repo-url`) |
+| Command-line tool (`load-adoptium-pipeline-config-json.py`) | Either local path (`--config-repo-dir`) or fetched from remote (`--config-repo-url`) |
 
 ---
 
 ### 2. `jenkins_job_config.json` — Jenkins-specific job and agent settings
 
-**Location**: root of the config repo  
+**Location**: root of the config repository  
 **Consumed by**: seed job (`seed_job_dsl.groovy`) at job-creation time, and by `ConfigHelper.generateJenkinsConfig()` at build runtime (via `ci/jenkins/lib/load-jenkins-json-config.py`)
 
 Contains two distinct groups of settings:
@@ -153,7 +153,7 @@ Contains two distinct groups of settings:
 
 ### 3. `configurations/jdkNN_pipeline_config.json` — Per-version platform build settings
 
-**Location**: `configurations/` directory of the config repo (path determined by `configFilePrefix` / `configFileSuffix` in `adoptium_pipeline_config.json`)
+**Location**: `configurations/` directory of the config repository (path determined by `configFilePrefix` / `configFileSuffix` in `adoptium_pipeline_config.json`)
 **Consumed by**: `scripts/lib/load-json-config.py` (invoked by `ConfigHelper.groovy` on Jenkins, or `run-pipeline.py` locally)
 
 One file per JDK version. Describes every supported build platform and its platform-specific settings. The filename pattern is `<configFilePrefix><version><configFileSuffix>`, e.g. `configurations/jdk21_pipeline_config.json`.
@@ -314,7 +314,7 @@ The `resolvedStageAgentLabels` map has all `{os}` and `{arch}` placeholders subs
 
 ### 6. `vendor-scripts/` — Optional stage overrides
 
-**Location**: `vendor-scripts/` directory of the config repo  
+**Location**: `vendor-scripts/` directory of the config repository  
 **Consumed by**: `StageScriptRunner.groovy` (Jenkins) and `StageResolver` (local runner)
 
 Vendors can place scripts here to replace any default stage script in `scripts/stages/`. Resolution order (first match wins):
@@ -402,7 +402,7 @@ run-pipeline.py
 
 ## Config vs Parameter Priority
 
-Several values can come from either the config repo or from job parameters. The priority is:
+Several values can come from either the config repository or from job parameters. The priority is:
 
 | Value | Priority 1 (wins) | Priority 2 (fallback) |
 |---|---|---|
@@ -421,20 +421,20 @@ If a required field cannot be resolved from either source, the pipeline fails ea
 
 ### Adoptium official builds
 
-- Config repo: `github.com/adoptium/ci-temurin-config` (public)
+- Config repository: `github.com/adoptium/ci-temurin-config` (public)
 - Pipeline code: `github.com/adoptium/ci-adoptium-pipelines` (public)
 - Job parameter: `CONFIG_REPO_URL=<https://github.com/adoptium/ci-temurin-config.gi>t`
 
 ### Vendor-specific builds
 
-- Config repo: `github.com/acme-corp/openjdk-configs` (private)
+- Config repository: `github.com/acme-corp/openjdk-configs` (private)
 - Pipeline code: `github.com/adoptium/ci-adoptium-pipelines` (public, unmodified)
 - Job parameter: `CONFIG_REPO_URL=<https://github.com/acme-corp/openjdk-configs.gi>t`
-- Jenkins credential configured to access the private repo
+- Jenkins credential configured to access the private repository
 
 ### Testing a config change
 
-Point the job at a feature branch of the config repo:
+Point the job at a feature branch of the config repository:
 
 ```text
 CONFIG_REPO_URL:    https://github.com/adoptium/ci-temurin-config.git
@@ -469,9 +469,9 @@ python3 ci/local/run-pipeline.py \
 - Internal URLs or endpoints
 - Vendor-specific or proprietary settings
 
-Sensitive settings belong in the config repo:
+Sensitive settings belong in the config repository:
 
-- Use a **private** config repo for internal URLs, signing config, etc.
+- Use a **private** config repository for internal URLs, signing config, etc.
 - Store actual secrets in Jenkins credentials, not in JSON files — reference them by credential ID from `jenkins_job_config.json` or pipeline parameters.
 
 ---
@@ -482,8 +482,8 @@ Sensitive settings belong in the config repo:
 
 **Error**: `Configuration file not found: configurations/jdk21u_pipeline_config.json`
 
-1. Check that `CONFIG_REPO_URL` / `CONFIG_REPO_BRANCH` point to the right repo and branch.
-1. Verify the file exists in the config repo under `configurations/`.
+1. Check that `CONFIG_REPO_URL` / `CONFIG_REPO_BRANCH` point to the right repository and branch.
+1. Verify the file exists in the config repository under `configurations/`.
 1. Confirm the filename matches the pattern set by `configFilePrefix` + `<version>` + `configFileSuffix` in `adoptium_pipeline_config.json`.
 
 ### Platform key not found

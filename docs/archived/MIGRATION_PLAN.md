@@ -211,7 +211,7 @@ Rationale:
 
 1. **Build Timestamps**: Different build times
 1. **Log Format**: Different logging structure
-1. **Intermediate Files**: Different temp file names
+1. **Intermediate Files**: Different temp filenames
 1. **Build Duration**: Performance may vary
 
 ### Edge Case Discovery

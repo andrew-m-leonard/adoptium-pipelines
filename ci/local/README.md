@@ -40,7 +40,7 @@ python3 ci/local/run-pipeline.py \
 
 All stage-specific parameters are defined in `scripts/stages/*.params.json` (and vendor
 overrides in `config-repo/vendor-scripts/*.params.json`). They are discovered dynamically
-after the config repo is cloned during the Initialize stage.
+after the config repository is cloned during the Initialize stage.
 
 Pass them as `--<lower-kebab-case-name> <value>`:
 
@@ -80,8 +80,8 @@ These are pipeline-level controls, not stage params:
 
 ### Configuration repository
 
-- `--config-repo-url` — Config repo URL (default: `https://github.com/adoptium/ci-temurin-config.git`)
-- `--config-repo-branch` — Config repo branch (default: `main`)
+- `--config-repo-url` — Config repository URL (default: `https://github.com/adoptium/ci-temurin-config.git`)
+- `--config-repo-branch` — Config repository branch (default: `main`)
 
 ## Architecture
 
@@ -139,8 +139,8 @@ the orchestrator injects them via `_stage_env()` before each stage script runs.
 
 1. **Phase 1** — argparse fixed options only; extra tokens captured as raw list
 1. **Phase 2** — pre-parse extra tokens against *default* `scripts/stages/*.params.json`
-   (no config repo yet); inject into runner so `stage_initialize()` can use them;
-   clone config repo and run Initialize
+   (no config repository yet); inject into runner so `stage_initialize()` can use them;
+   clone config repository and run Initialize
 1. **Phase 3** — full collation with `config-repo/vendor-scripts/*.params.json`;
    re-parse extra tokens against complete set; inject final stage params; run remaining stages
 

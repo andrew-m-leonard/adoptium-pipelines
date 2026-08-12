@@ -54,7 +54,7 @@ archiveArtifacts artifacts: "${env.TARGET_DIR.replace(env.WORKSPACE + '/', '')}/
 
 - The `archiveArtifacts` pattern is dynamically derived from `TARGET_DIR`
 - Strips workspace prefix to get relative path: `workspace/target/**/*`
-- All build outputs (tar.gz, zip, JSON, SBOM files) are in this directory
+- All build outputs (tar.gz, ZIP, JSON, SBOM files) are in this directory
 
 **Script Reference:** [`scripts/stages/02-build.sh`](../scripts/stages/02-build.sh)
 

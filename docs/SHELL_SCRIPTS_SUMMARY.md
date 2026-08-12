@@ -301,7 +301,7 @@ Exit codes: `0` = 100% reproducible, non-zero = differences found (pipeline fail
 
 ## Vendor Override Pattern
 
-Any `STUB` stage (and any `REAL` stage) can be overridden by placing a replacement script in the config repo:
+Any `STUB` stage (and any `REAL` stage) can be overridden by placing a replacement script in the config repository:
 
 ```text
 config-repo/

@@ -89,7 +89,7 @@ Controls whether this stage is active.
 - `false` — stage is active; its parameters are included in the collated output and appear in the Jenkins job UI.
 - `true` — stage is entirely skipped; **no parameters are emitted** for it, so the stage gate booleans do not appear in the UI. In Jenkins, the stage shows as a grey "Skipped" pill. In the local runner, the stage is silently bypassed.
 
-**Convention:** any stage added to the core pipeline repo that is not intended for all vendors should ship with `"stageDisabled": true`. Vendors re-enable it by providing a `vendor-scripts/NN-stem.params.json` override with `"stageDisabled": false`.
+**Convention:** any stage added to the core pipeline repository that is not intended for all vendors should ship with `"stageDisabled": true`. Vendors re-enable it by providing a `vendor-scripts/NN-stem.params.json` override with `"stageDisabled": false`.
 
 A vendor can also disable a core stage (e.g. `16-publish`) by supplying a `vendor-scripts/16-publish.params.json` with `"stageDisabled": true`.
 

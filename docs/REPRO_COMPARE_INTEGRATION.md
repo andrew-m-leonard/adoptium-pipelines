@@ -4,7 +4,7 @@
 
 This document describes the reproducible build comparison capability in the CI Adoptium Pipelines. The system validates build reproducibility by comparing locally built JDKs against production binaries.
 
-**Key Principle**: The comparison logic is **CI-agnostic** — the stage contract (`scripts/stages/20-reproducible-compare.sh`) defines the interface; the vendor-specific implementation (comparison tooling, binary source, acceptance criteria) lives in the config repo.
+**Key Principle**: The comparison logic is **CI-agnostic** — the stage contract (`scripts/stages/20-reproducible-compare.sh`) defines the interface; the vendor-specific implementation (comparison tooling, binary source, acceptance criteria) lives in the config repository.
 
 **Temurin implementation**: `ci-temurin-config/vendor-scripts/20-reproducible-compare.sh` — downloads from `api.adoptium.net` and delegates to `temurin-build/tooling/reproducible/repro_compare.sh`.
 

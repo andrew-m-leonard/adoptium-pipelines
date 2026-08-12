@@ -32,7 +32,7 @@ This directory contains reference documentation for the Adoptium CI pipeline inf
 
 - **[CONFIG_SCHEMA.md](./CONFIG_SCHEMA.md)** — Full schema reference for `adoptium_pipeline_config.json`, `jenkins_job_config.json`, and `configurations/jdkNN_pipeline_config.json`
 - **[LABEL_SCHEMA.md](./LABEL_SCHEMA.md)** — Jenkins node label schema reference: `ci.role.*`, `sw.os.*`, `hw.arch.*`, `sw.tool.*` conventions; platform key mapping; `additionalNodeLabels` migration rules
-- **[CODE_CONFIG_SEPARATION.md](./CODE_CONFIG_SEPARATION.md)** — Config repo layout, vendor-scripts resolution, config flow through the pipeline
+- **[CODE_CONFIG_SEPARATION.md](./CODE_CONFIG_SEPARATION.md)** — Config repository layout, vendor-scripts resolution, config flow through the pipeline
 
 ## Jenkins Integration
 

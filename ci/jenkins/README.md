@@ -19,7 +19,7 @@ Single-platform build pipeline. Every `Build_openjdk<version>_<distro>_<arch>_<o
 
 Multi-platform launch pipeline. Jobs named `Build_openjdk<version>_launch` (in `Build_openjdk_launchers/`) use this file. It:
 
-1. Reads `jdk${version}_pipeline_config.json` from the config repo to discover available platforms
+1. Reads `jdk${version}_pipeline_config.json` from the config repository to discover available platforms
 1. Determines which platforms to build (all, or a subset from the `PLATFORMS` parameter)
 1. Optionally regenerates platform build jobs via Job DSL (on first run or when `REGENERATE_JOBS=true`)
 1. Triggers all selected platform build jobs in parallel, passing a shared `GROUP_UID`
@@ -37,7 +37,7 @@ Shared Groovy helpers loaded with `load()` at the start of each stage. These are
 
 #### PipelineHelper.groovy
 
-- `initializeStage(stageName, prerequisites, artifactFilter, inputArtifactsDir)` — cleans workspace, checks out this repo, sparse-clones the config repo, calls `BuildUidHelper.initializeBuildContext()`, validates prerequisites, copies required artifacts from the current build
+- `initializeStage(stageName, prerequisites, artifactFilter, inputArtifactsDir)` — cleans workspace, checks out this repository, sparse-clones the config repository, calls `BuildUidHelper.initializeBuildContext()`, validates prerequisites, copies required artifacts from the current build
 - `finalizeStage(stageName)` — optional post-stage workspace cleanup, logs completion
 - `executeStageWithTracking(stageName, body)` — wraps a stage body closure; records SUCCESS/FAILURE/ABORTED in `BUILD_STAGE_RESULTS`
 - `ensureBuildDescriptionSet(config)` — sets build display name and description from config + `BUILD_UID`
@@ -64,15 +64,15 @@ Job DSL scripts that create and maintain all Jenkins jobs from code — no manua
 Bootstrap script. Run once from a Freestyle "seed job" to create all other jobs:
 
 - Creates `Build_openjdk_launchers/Build_openjdk<version>_launch` jobs for each active JDK version
-- Reads the config repo to discover active JDK versions and their platform lists
-- Configures log rotation, parameters, and SCM from the config repo's `jenkins_job_config.json`
+- Reads the config repository to discover active JDK versions and their platform lists
+- Configures log rotation, parameters, and SCM from the config repository's `jenkins_job_config.json`
 - Creates the `Build_openjdk_launchers/` and `Build_openjdk/` top-level folders
 
 #### openjdk_build_pipeline_job_dsl.groovy
 
 Called by the launch pipeline (via `jobDsl()` step) to create or update a single platform build job:
 
-- Fetches `jdk${version}_pipeline_config.json` from the config repo to extract `arch`, `os`, and `variant` for the platform
+- Fetches `jdk${version}_pipeline_config.json` from the config repository to extract `arch`, `os`, and `variant` for the platform
 - Creates `Build_openjdk/Build_openjdk<version>_<distro>_<arch>_<os>` following the AQA-style naming convention
 - Configures all pipeline parameters with defaults from `jenkins_job_config.json`
 - Sets `disableResume()`, `disableConcurrentBuilds()`, and `CopyArtifactPermissionProperty`
@@ -114,8 +114,8 @@ Parameters are defined by the Job DSL seed job (from `jenkins_job_config.json`) 
 | `CONFIG_REPO_BRANCH` | String | Configuration repository branch |
 | `RELEASE_TYPE` | Choice | `NIGHTLY` / `WEEKLY` / `RELEASE` |
 | `SCM_REF` | String | OpenJDK source tag/branch (required for reproducible compare) |
-| `BUILD_REF` | String | temurin-build branch (empty = use config repo default) |
-| `AQA_REF` | String | aqa-tests branch (empty = use config repo default) |
+| `BUILD_REF` | String | temurin-build branch (empty = use config repository default) |
+| `AQA_REF` | String | aqa-tests branch (empty = use config repository default) |
 | `GROUP_UID` | String | Shared identifier linking all platforms from one launch run |
 | `RUN_TESTS` | Boolean | Enable smoke/AQA/TCK test stages |
 | `SIGN_ARTIFACTS` | Boolean | Enable signing stages |
@@ -130,7 +130,7 @@ Parameters are defined by the Job DSL seed job (from `jenkins_job_config.json`) 
 Each stage:
 
 1. Calls `cleanWs()` to start clean
-1. Checks out this repo and the config repo
+1. Checks out this repository and the config repository
 1. Calls `BuildUidHelper.initializeBuildContext()` — generates or **reuses** `BUILD_UID` from the previous run
 1. Calls `validatePrerequisites()` — verifies required earlier stages passed (via `BUILD_STAGE_RESULTS` env var)
 1. Calls `copyArtifacts` to pull in artifacts from earlier stages of the **same build number**
@@ -141,7 +141,7 @@ On "Restart from Stage", Jenkins preserves all env vars from the previous run in
 
 ## Configuration Repository
 
-Expected structure of the config repo (e.g. `ci-temurin-config`):
+Expected structure of the config repository (e.g. `ci-temurin-config`):
 
 ```text
 <config-repo>/
@@ -169,7 +169,7 @@ Optionally, vendor-specific stage overrides:
 | `MissingPropertyException: No such property: buildUidHelper` | Binding entry not initialised | Ensure `buildUidHelper = null` (no `def`) at top of PipelineHelper |
 | `ClassCastException: WorkflowScript cannot be cast to DSL` | `init(this)` pattern used — `this` inside a free function is `WorkflowScript`, not the DSL | Lib files must call steps directly (no `steps.` prefix, no `init()`) |
 | `BUILD_STAGE_RESULTS is empty` on non-Initialize stage | Triggered via "Rebuild" instead of "Restart from Stage" | Use "Restart from Stage", or trigger a fresh build |
-| `Configuration file not found` | `CONFIG_REPO_URL` or `CONFIG_REPO_BRANCH` wrong | Verify parameters; check config repo structure |
+| `Configuration file not found` | `CONFIG_REPO_URL` or `CONFIG_REPO_BRANCH` wrong | Verify parameters; check config repository structure |
 | `Artifact not found` on stage restart | Prerequisite stage artifacts not archived | Ensure prerequisite stages ran and `archiveArtifacts` succeeded |
 
 ## Related Documentation

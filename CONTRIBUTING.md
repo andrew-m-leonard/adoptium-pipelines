@@ -184,7 +184,7 @@ python3 run-pipeline.py \
 ### Types
 
 - **feat**: New feature
-- **fix**: Bug fix
+- **fix**: bugfix
 - **docs**: Documentation only
 - **style**: Code style changes (formatting, no logic change)
 - **refactor**: Code refactoring (no feature change)

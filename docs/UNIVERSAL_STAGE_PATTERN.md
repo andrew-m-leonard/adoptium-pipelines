@@ -104,7 +104,7 @@ Every stage that introduces new parameters or has runtime gate conditions needs 
 }
 ```
 
-**`stageDisabled` convention:** stages added to the core repo that are not intended for all vendors should ship with `"stageDisabled": true`. Vendors re-enable them via a `vendor-scripts/NN-stem.params.json` override with `"stageDisabled": false`.
+**`stageDisabled` convention:** stages added to the core repository that are not intended for all vendors should ship with `"stageDisabled": true`. Vendors re-enable them via a `vendor-scripts/NN-stem.params.json` override with `"stageDisabled": false`.
 
 **Gate-only file:** if the stage has no new parameters but should only run when certain conditions are met, omit `parameterGroups` and provide only `stageCondition`:
 
@@ -157,7 +157,7 @@ mkdir -p "${TARGET_DIR}"
 
 ## Vendor Override
 
-The `StageScriptRunner` checks `config-repo/vendor-scripts/<stem>.sh` before `scripts/stages/<stem>.sh`. A vendor script placed in the config repo replaces the default implementation entirely — it should follow the same interface contract so the surrounding Jenkins/local infrastructure continues to work.
+The `StageScriptRunner` checks `config-repo/vendor-scripts/<stem>.sh` before `scripts/stages/<stem>.sh`. A vendor script placed in the config repository replaces the default implementation entirely — it should follow the same interface contract so the surrounding Jenkins/local infrastructure continues to work.
 
 ## Adding the Stage to Jenkins
 

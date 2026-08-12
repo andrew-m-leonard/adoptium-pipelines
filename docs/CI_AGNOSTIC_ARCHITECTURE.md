@@ -44,7 +44,7 @@ The solution is a **CI-agnostic architecture** that separates orchestration from
 - **Purpose**: Actual build / sign / test logic
 - **Language**: Portable Bash scripts (`scripts/stages/`)
 - **Key property**: same scripts run identically in Jenkins, locally, or any other CI platform
-- **Vendor override**: the config repo can supply `vendor-scripts/<stem>.sh` to replace any default stage script — the orchestration layer tries the vendor script first before falling back to `scripts/stages/`
+- **Vendor override**: the config repository can supply `vendor-scripts/<stem>.sh` to replace any default stage script — the orchestration layer tries the vendor script first before falling back to `scripts/stages/`
 
 ### Layer 3: Build Tools (Already CI-Agnostic)
 
@@ -292,7 +292,7 @@ ci-adoptium-pipelines/
 └── docs/
 ```
 
-### ci-temurin-config (Vendor Configuration — Separate Repo)
+### ci-temurin-config (Vendor Configuration — Separate repository)
 
 ```text
 ci-temurin-config/
@@ -310,7 +310,7 @@ ci-temurin-config/
     └── ...
 ```
 
-**Key separation**: pipeline *code* (ci-adoptium-pipelines) is vendor-agnostic. Vendor-specific configuration *and* any vendor-specific stage overrides live in the config repo, cloned at runtime.
+**Key separation**: pipeline *code* (ci-adoptium-pipelines) is vendor-agnostic. Vendor-specific configuration *and* any vendor-specific stage overrides live in the config repository, cloned at runtime.
 
 ## Shared Utilities (`scripts/lib/`)
 
@@ -365,7 +365,7 @@ Any stage script can be run directly on a developer machine by setting the requi
 
 ### 3. Vendor Customisation Without Forking
 
-Vendors place override scripts in `vendor-scripts/` in their config repo. `StageScriptRunner` picks these up automatically. The pipeline code repository needs no modification.
+Vendors place override scripts in `vendor-scripts/` in their config repository. `StageScriptRunner` picks these up automatically. The pipeline code repository needs no modification.
 
 ### 4. Maintainability
 

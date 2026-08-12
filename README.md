@@ -6,7 +6,7 @@ A modular, CI-agnostic build pipeline for Eclipse Adoptium OpenJDK builds.
 
 ## Overview
 
-This repository contains the pipeline code for building, signing, testing, and publishing Eclipse Adoptium OpenJDK binaries. The architecture separates pipeline _code_ (this repo) from vendor _configuration_ (a separate config repo such as [ci-temurin-config](https://github.com/adoptium/ci-temurin-config)), so the same scripts can drive builds across multiple CI platforms and vendor configurations without modification.
+This repository contains the pipeline code for building, signing, testing, and publishing Eclipse Adoptium OpenJDK binaries. The architecture separates pipeline _code_ (this repository) from vendor _configuration_ (a separate config repository such as [ci-temurin-config](https://github.com/adoptium/ci-temurin-config)), so the same scripts can drive builds across multiple CI platforms and vendor configurations without modification.
 
 Key properties:
 
@@ -99,7 +99,7 @@ seed-job (Freestyle)
             └─ ...
 ```
 
-**Launch pipeline** (`Jenkinsfile.launch`) — fetches the config repo, determines which platforms to build, optionally regenerates platform jobs via Job DSL, then triggers all selected platform builds in parallel.
+**Launch pipeline** (`Jenkinsfile.launch`) — fetches the config repository, determines which platforms to build, optionally regenerates platform jobs via Job DSL, then triggers all selected platform builds in parallel.
 
 **Build pipeline** (`Jenkinsfile.declarative`) — runs the full single-platform pipeline from Initialize through Publish. Loads shared Groovy helpers from `ci/jenkins/lib/` after checkout. Supports "Restart from Stage" natively.
 
@@ -110,7 +110,7 @@ Each lib file is a plain CPS script loaded with `load()` — it calls pipeline s
 | File | Responsibility |
 |---|---|
 | [`BuildUidHelper.groovy`](ci/jenkins/lib/BuildUidHelper.groovy) | Generates/reuses `BUILD_UID` and `GROUP_UID`; serialises per-stage results into `BUILD_STAGE_RESULTS` for prerequisite validation across restarts |
-| [`PipelineHelper.groovy`](ci/jenkins/lib/PipelineHelper.groovy) | `initializeStage()` (cleanWs, checkout, config-repo clone, BUILD_UID init, copyArtifacts); `finalizeStage()`; `executeStageWithTracking()` |
+| [`PipelineHelper.groovy`](ci/jenkins/lib/PipelineHelper.groovy) | `initializeStage()` (cleanWs, checkout, config-repository clone, BUILD_UID init, copyArtifacts); `finalizeStage()`; `executeStageWithTracking()` |
 | [`ConfigHelper.groovy`](ci/jenkins/lib/ConfigHelper.groovy) | Calls `load-json-config.py` to produce `pipeline-config.json`; sets `CONFIG_*` env vars used by `when {}` blocks |
 | [`StageScriptRunner.groovy`](ci/jenkins/lib/StageScriptRunner.groovy) | Resolves and runs a stage script with vendor-override support (tries `config-repo/vendor-scripts/` before `scripts/stages/`) |
 
@@ -130,7 +130,7 @@ For each stage stem (e.g. `02-build`), `StageScriptRunner` searches in order:
 
 Stage execution is controlled by two mechanisms:
 
-- **`stageDisabled`** (in `scripts/stages/NN-stem.params.json`): when `true`, the stage is entirely skipped and its parameters are excluded from the Jenkins job UI. Vendors can override this per stage in their config repo. See [`docs/STAGE_DEFINITION_REFERENCE.md`](docs/STAGE_DEFINITION_REFERENCE.md).
+- **`stageDisabled`** (in `scripts/stages/NN-stem.params.json`): when `true`, the stage is entirely skipped and its parameters are excluded from the Jenkins job UI. Vendors can override this per stage in their config repository. See [`docs/STAGE_DEFINITION_REFERENCE.md`](docs/STAGE_DEFINITION_REFERENCE.md).
 - **`stageCondition`**: a list of `{ param, value }` pairs that must all be satisfied at runtime for the stage to execute. Evaluated by `stageConditionMet()` in `Jenkinsfile.declarative` and `_stage_condition_met()` in `run-pipeline.py`.
 
 | # | Stage | Script | Owns parameter | stageCondition gates on | stageDisabled default |
@@ -152,11 +152,11 @@ Stage execution is controlled by two mechanisms:
 | 16 | Publish Artifacts | `16-publish.sh` | `PUBLISH_ARTIFACTS` | `PUBLISH_ARTIFACTS=true` | false |
 | 20 | Reproducible Compare | `20-reproducible-compare.sh` | `RUN_REPRODUCIBLE_COMPARE` | `RUN_REPRODUCIBLE_COMPARE=true`, `SCM_REF` set | false |
 
-Each stage calls `initializeStage()` which: cleans the workspace, checks out this repo, clones the config repo (sparse), initialises/reuses `BUILD_UID`, validates prerequisites, and copies required artifacts from the current build.
+Each stage calls `initializeStage()` which: cleans the workspace, checks out this repository, clones the config repository (sparse), initialises/reuses `BUILD_UID`, validates prerequisites, and copies required artifacts from the current build.
 
 ## Configuration Repository
 
-The pipeline reads build configuration from a separately maintained config repo supplied via `CONFIG_REPO_URL`. The config repo must contain:
+The pipeline reads build configuration from a separately maintained config repository supplied via `CONFIG_REPO_URL`. The config repository must contain:
 
 ```text
 <config-repo>/
@@ -178,7 +178,7 @@ At runtime, `ConfigHelper` calls `scripts/lib/load-json-config.py` which merges 
 1. Add parameters: `CONFIG_REPO_URL` (String), `CONFIG_REPO_BRANCH` (String)
 1. SCM: Git → this repository
 1. Build step: **Process Job DSLs** → `ci/jenkins/job-dsl/seed/seed_job_dsl.groovy`
-1. Run the seed job with your config repo URL and branch
+1. Run the seed job with your config repository URL and branch
 
 The seed job creates all launch and platform build jobs automatically.
 
@@ -225,7 +225,7 @@ See [`ci/local/README.md`](ci/local/README.md) for full options.
 | Document | Topic |
 |---|---|
 | [`docs/CI_AGNOSTIC_ARCHITECTURE.md`](docs/CI_AGNOSTIC_ARCHITECTURE.md) | 3-layer design, before/after comparison |
-| [`docs/CODE_CONFIG_SEPARATION.md`](docs/CODE_CONFIG_SEPARATION.md) | Pipeline code vs config repo separation |
+| [`docs/CODE_CONFIG_SEPARATION.md`](docs/CODE_CONFIG_SEPARATION.md) | Pipeline code vs config repository separation |
 | [`docs/CONFIGURATION_GUIDE.md`](docs/CONFIGURATION_GUIDE.md) | JSON configuration reference |
 | [`docs/RESTARTABILITY_GUIDE.md`](docs/RESTARTABILITY_GUIDE.md) | Stage restart patterns |
 | [`docs/JENKINS_RESTART_BEHAVIOR.md`](docs/JENKINS_RESTART_BEHAVIOR.md) | BUILD_UID and restart mechanics |

@@ -12,7 +12,7 @@ running the seed job or executing any build.
 |---|---|
 | **Job DSL** | Generates launch and platform build jobs from Groovy DSL scripts |
 | **Pipeline** | Executes `Jenkinsfile.launch` and `Jenkinsfile.declarative` |
-| **Git** | Clones `ci-adoptium-pipelines` and the vendor config repo |
+| **Git** | Clones `ci-adoptium-pipelines` and the vendor config repository |
 | **Workspace Cleanup** (`ws-cleanup`) | `cleanWs()` calls in the pipeline |
 | **Build Timeout** (`build-timeout`) | Enforces the `pipelineTimeoutHours` wall-clock limit on platform build jobs |
 | **Credentials / Git credentials** | Authenticated repository access |

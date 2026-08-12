@@ -1183,7 +1183,7 @@ Create these labels in GitHub:
 - `tooling` - Tool development (cyan)
 - `documentation` - Documentation (yellow)
 - `validation` - Testing/validation (orange)
-- `bugfix` - Bug fix (red)
+- `bugfix` - bugfix (red)
 
 **Platform**:
 

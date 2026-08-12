@@ -23,18 +23,18 @@ implementation to run using a fixed priority chain:
 7. built-in no-op stub                       ← safe fallback (logs and exits 0)
 ```
 
-Vendor scripts live in **the config repo** under `vendor-scripts/`.  
-Default scripts live in **this repo** under `scripts/stages/`.  
+Vendor scripts live in **the config repository** under `vendor-scripts/`.  
+Default scripts live in **this repository** under `scripts/stages/`.  
 The Jenkinsfile never hard-codes a path — it always delegates to the resolver.
 
 ---
 
 ## Stage Script Name Convention
 
-Script file names (stems) are derived from the stage number and a short
+Script filenames (stems) are derived from the stage number and a short
 lower-cased hyphenated description:
 
-| Stage Name             | Script Stem              | Default in this repo           |
+| Stage Name             | Script Stem              | Default in this repository           |
 |------------------------|--------------------------|--------------------------------|
 | Build                  | `02-build`               | Full implementation (`.sh`)    |
 | Internal Sign          | `03-internal-sign`       | No-op stub (`.sh`)             |
@@ -60,7 +60,7 @@ stage to do real work.
 
 ## The `runStageScript()` Helper
 
-One new function in `Jenkinsfile.declarative` replaces all hard-coded
+One new function in `Jenkinsfile.declarative` replaces all hardcoded
 `load 'scripts/stages/...'` and `sh 'bash scripts/stages/...'` calls:
 
 ```groovy
@@ -163,7 +163,7 @@ echo "ℹ️  Internal Sign: no vendor implementation configured — skipping"
 
 ---
 
-## Config Repo Layout for Vendor Overrides
+## Config repository Layout for Vendor Overrides
 
 ```text
 config-repo/                          ← checked out by Initialize stage
@@ -192,7 +192,7 @@ extensions: [
 
 ## How Stages Change in the Jenkinsfile
 
-Before (hard-coded, mixed patterns):
+Before (hardcoded, mixed patterns):
 
 ```groovy
 // groovy stage
@@ -230,7 +230,7 @@ The Jenkinsfile no longer cares what the implementation language is.
 
 To override **Internal Sign** for Temurin (Eclipse CBI codesign service):
 
-1. Create `vendor-scripts/03-internal-sign.sh` in the config repo:
+1. Create `vendor-scripts/03-internal-sign.sh` in the config repository:
 
 ```bash
 #!/bin/bash
@@ -308,7 +308,7 @@ Steps 1–4 mirror the Jenkins resolution order, minus Groovy.
 ### The `StageResolver` Helper Class
 
 `ci/local/stage_resolver.py` encapsulates script resolution and
-parameter-based gating, replacing hard-coded paths in each `stage_*()`
+parameter-based gating, replacing hardcoded paths in each `stage_*()`
 method:
 
 ```python
@@ -369,7 +369,7 @@ class StageResolver:
 
 ### How Stage Methods Change
 
-Before (hard-coded path per stage method):
+Before (hardcoded path per stage method):
 
 ```python
 cmd = [str(self.script_dir / 'scripts' / 'stages' / '02-build.sh')]
@@ -411,11 +411,11 @@ def _make_resolver(self) -> StageResolver:
     return self._resolver
 ```
 
-Because the config repo is cloned during `stage_initialize()`, the resolver
-is (re-)created after that stage completes when the config repo becomes
+Because the config repository is cloned during `stage_initialize()`, the resolver
+is (re-)created after that stage completes when the config repository becomes
 available.
 
-### Config Repo Layout (combined view)
+### Config repository Layout (combined view)
 
 ```text
 config-repo/
@@ -431,7 +431,7 @@ config-repo/
 
 - [x] Extract `StageResolver` class (new file `ci/local/stage_resolver.py`)
 - [x] `StageResolver` reads `pipeline-config.json` parameters to gate stages
-- [x] Replace hard-coded `cmd = [str(self.script_dir / 'scripts' / 'stages' / ...)]`
+- [x] Replace hardcoded `cmd = [str(self.script_dir / 'scripts' / 'stages' / ...)]`
       in each `stage_*()` method with `self._make_resolver().run(stem, env)`
 - [x] Remove CLI-arg-based gating from `PipelineRunner.run()` — delegated to resolver
 - [ ] Document `pipeline-config.json` parameters schema (this file serves as that doc)

@@ -9,8 +9,8 @@ The configuration is split across three file types with clearly separated concer
 
 | File | Location | Purpose |
 |---|---|---|
-| `adoptium_pipeline_config.json` | repo root | CI-agnostic: active versions, build defaults, repository references |
-| `jenkins_job_config.json` | repo root | Jenkins-specific: Jenkinsfile path, timeout, job parameters, log rotation |
+| `adoptium_pipeline_config.json` | repository root | CI-agnostic: active versions, build defaults, repository references |
+| `jenkins_job_config.json` | repository root | Jenkins-specific: Jenkinsfile path, timeout, job parameters, log rotation |
 | `configurations/jdkNN_pipeline_config.json` | `configurations/` | Per-version: platform build matrix |
 
 ---
@@ -47,7 +47,7 @@ repository references that apply regardless of which CI system runs the pipeline
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `activeJdkVersions` | array of objects | ✅ | Ordered list of JDK versions known to this config repo |
+| `activeJdkVersions` | array of objects | ✅ | Ordered list of JDK versions known to this config repository |
 | `activeJdkVersions[].version` | string | ✅ | JDK version identifier, e.g. `"jdk21"`, `"jdk8"` |
 | `activeJdkVersions[].enabled` | boolean | ✅ | Whether this version's pipeline should be active (`true`) or skipped (`false`) |
 | `defaultBuildArgs` | string | ✅ | Default `--build-args` passed to every platform build unless overridden |
@@ -58,7 +58,7 @@ repository references that apply regardless of which CI system runs the pipeline
 | `repository` | object | ✅ | Repository references for pipeline code and build tooling |
 | `repository.url` | string | ✅ | Git URL of the CI pipeline repository |
 | `repository.branch` | string | ✅ | Branch of the CI pipeline repository to check out |
-| `repository.credentialsId` | string | ✅ | Jenkins credentials ID for pipeline repo checkout. Empty string for public repos |
+| `repository.credentialsId` | string | ✅ | Jenkins credentials ID for pipeline repository checkout. Empty string for public repos |
 | `repository.buildRepoUrl` | string | ✅ | Git URL of the temurin-build repository |
 | `repository.buildBranch` | string | ✅ | Branch of the temurin-build repository |
 | `repository.aqaRepoUrl` | string | ✅ | Git URL of the aqa-tests repository |
@@ -121,7 +121,7 @@ Jenkins-specific configuration. Contains two groups: **job-creation settings** (
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `jenkinsfilePath` | string | ✅ | Relative path within the pipeline repo to the Jenkinsfile |
+| `jenkinsfilePath` | string | ✅ | Relative path within the pipeline repository to the Jenkinsfile |
 | `pipelineTimeoutHours` | integer | ☑️ default `8` | Maximum wall-clock hours a platform build pipeline run is allowed before Jenkins aborts it. Applied as a job-level `buildTimeoutWrapper` (Build Timeout plugin) by the Job DSL when the platform build job is created or regenerated. |
 | `activeNodeTimeoutMinutes` | integer | ☑️ default `10` | Minutes to wait for **at least one online agent** matching a stage label before failing. Jenkins queuing (all agents busy) is unaffected — this only fires when **zero** agents matching the label are online. Supports cloud provisioners that take time to spin up a new agent. Exposed as the `CONFIG_ACTIVE_NODE_TIMEOUT` env var at runtime. |
 | `stageAgentLabels` | object | ✅ | Map of **stage ID** → label template. Keys must match stage IDs from `scripts/stages/pipeline-stages.json` (e.g. `"02-build"`, `"13-smoke-tests"`). `{os}` and `{arch}` placeholders are resolved at build runtime to `sw.os.*` / `hw.arch.*` values. The special key `__any__` sets the fallback label for any stage not explicitly listed; also used for launch-pipeline worker stages that require `python3`; defaults to `ci.role.worker` if absent. |
@@ -196,7 +196,7 @@ values. This is noted in the Type column as `string | variant-object`.
 | `dockerImage` | `string \| variant-object` | Docker image used for the build. When a variant-object, each variant key maps to a different image. Omit for bare-metal builds |
 | `dockerArgs` | string | Extra arguments passed to `docker run`, e.g. `"--platform linux/arm/v7"` |
 | `podmanArgs` | string | Extra arguments passed to `podman run` when Podman is used instead of Docker |
-| `dockerFile` | variant-object | Per-variant path to a custom Dockerfile, relative to the build repo root. Only present when a non-default image build is required |
+| `dockerFile` | variant-object | Per-variant path to a custom Dockerfile, relative to the build repository root. Only present when a non-default image build is required |
 | `dockerRegistry` | string | Registry URL used to pull the `dockerImage`, e.g. `"<https://adoptium.azurecr.io>"` |
 | `dockerCredential` | string | Jenkins credentials ID used to authenticate with `dockerRegistry` |
 | `crossCompile` | string | Host architecture used as the cross-compilation toolchain host. E.g. `"aarch64"` when building arm32, `"x64"` when cross-compiling aarch64 Windows, `"qemustatic"` for RISC-V via QEMU |
