@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ################################################################################
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,8 +38,6 @@ The following fields are read from environment variables (set by the pipeline):
     CONFIG_ARCHITECTURE
     CONFIG_VARIANT
 """
-
-from __future__ import print_function
 
 import argparse
 import json

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ################################################################################
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,8 +24,6 @@ file, invalid JSON).
 Usage:
     value=$(python sbom-workspace-extractor.py --sbom /path/to/sbom.json)
 """
-
-from __future__ import print_function
 
 import argparse
 import json
