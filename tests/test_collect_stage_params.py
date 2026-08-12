@@ -36,6 +36,7 @@ Covers:
     - PRIORITY_GROUPS ordering: non-priority groups follow in discovery order
 """
 
+import importlib
 import json
 import sys
 import tempfile
@@ -44,7 +45,6 @@ from pathlib import Path
 
 # Allow importing the module from scripts/lib/
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts" / "lib"))
-import importlib
 
 collect_mod = importlib.import_module("collect-stage-params")
 collect = collect_mod.collect

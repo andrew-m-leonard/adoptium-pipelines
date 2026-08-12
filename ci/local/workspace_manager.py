@@ -98,18 +98,25 @@ class WorkspaceManager:
             # Restarting: workspace MUST exist and build_artifacts/ must be present
             if not workspace_exists:
                 raise ValueError(
-                    f"ERROR: Cannot restart from stage '{start_from_stage}' - workspace does not exist: {self.pipeline_workspace}\n"
-                    f"\n"
-                    f"When restarting from a stage, the workspace must exist with artifacts from previous stages.\n"
-                    f"Run a full build first (without --start-from-stage) to create the workspace.\n"
+                    f"ERROR: Cannot restart from stage '{start_from_stage}'"
+                    f" - workspace does not exist: {self.pipeline_workspace}\n"
+                    "\n"
+                    "When restarting from a stage, the workspace must exist"
+                    " with artifacts from previous stages.\n"
+                    "Run a full build first (without --start-from-stage)"
+                    " to create the workspace.\n"
                 )
             if not self.build_artifacts_dir.exists():
                 raise ValueError(
-                    f"ERROR: Cannot restart from stage '{start_from_stage}' - build_artifacts/ does not exist: {self.build_artifacts_dir}\n"
-                    f"\n"
-                    f"The build_artifacts/ directory is required for stage restarts — it holds outputs\n"
-                    f"archived by previously completed stages.\n"
-                    f"Run a full build first (without --start-from-stage) to create the workspace.\n"
+                    f"ERROR: Cannot restart from stage '{start_from_stage}'"
+                    " - build_artifacts/ does not exist:"
+                    f" {self.build_artifacts_dir}\n"
+                    "\n"
+                    "The build_artifacts/ directory is required for stage restarts"
+                    " — it holds outputs\n"
+                    "archived by previously completed stages.\n"
+                    "Run a full build first (without --start-from-stage)"
+                    " to create the workspace.\n"
                 )
             print(f"ℹ️  Restarting from stage '{start_from_stage}'")
             print(f"   Using existing workspace: {self.pipeline_workspace}")

@@ -92,14 +92,18 @@ Usage:
     python3 scripts/lib/collect-stage-params.py \\
         --default-stages-dir  scripts/stages \\
         --vendor-scripts-dir  config-repo/vendor-scripts \\
-        --orchestrated-stages 01-initialize,02-build,12-validate-sbom,13-smoke-tests,14-aqa-tests,20-reproducible-compare \\
+        --orchestrated-stages 01-initialize,02-build,12-validate-sbom,\\
+13-smoke-tests,14-aqa-tests,20-reproducible-compare \\
         --output              /tmp/collated-stage-params.json
 
     # Remote vendor files — used by Jenkins Job DSL at job-generation time:
     python3 scripts/lib/collect-stage-params.py \\
         --default-stages-dir  scripts/stages \\
         --vendor-raw-base-url https://raw.githubusercontent.com/myorg/myrepo/main \\
-        --orchestrated-stages 01-initialize,02-build,03-internal-code-sign,04-assemble-images,06-post-build-code-sign,07-installer,08-code-sign-installer,09-sbom-sign,10-digital-artifact-sign,11-verify-signing,12-validate-sbom,13-smoke-tests,14-aqa-tests,15-tck-tests,16-publish,20-reproducible-compare \\
+        --orchestrated-stages 01-initialize,02-build,03-internal-code-sign,\\
+04-assemble-images,06-post-build-code-sign,07-installer,08-code-sign-installer,\\
+09-sbom-sign,10-digital-artifact-sign,11-verify-signing,12-validate-sbom,\\
+13-smoke-tests,14-aqa-tests,15-tck-tests,16-publish,20-reproducible-compare \\
         --output              /tmp/collated-stage-params.json
 """
 
