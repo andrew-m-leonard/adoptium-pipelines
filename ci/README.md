@@ -4,7 +4,7 @@ This directory contains CI-platform-specific orchestration files. All build _log
 
 ## Directory Structure
 
-```
+```text
 ci/
 ├── jenkins/
 │   ├── Jenkinsfile.declarative          # Single-platform build pipeline
@@ -80,9 +80,9 @@ See [`local/README.md`](local/README.md) for full usage.
 ## Adding a New CI Platform
 
 1. Create `ci/<platform-name>/`
-2. Add a pipeline definition that calls the same `scripts/stages/` shell scripts
-3. Pass the same environment variables documented in [docs/STAGE_IO_SPECIFICATION.md](../docs/STAGE_IO_SPECIFICATION.md)
-4. Update this README
+1. Add a pipeline definition that calls the same `scripts/stages/` shell scripts
+1. Pass the same environment variables documented in [docs/STAGE_IO_SPECIFICATION.md](../docs/STAGE_IO_SPECIFICATION.md)
+1. Update this README
 
 ## Related Documentation
 

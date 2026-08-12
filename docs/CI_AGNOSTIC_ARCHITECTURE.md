@@ -13,7 +13,7 @@ The solution is a **CI-agnostic architecture** that separates orchestration from
 
 ## Old Architecture (Before Refactoring)
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │ openjdk_build_pipeline.groovy (Monolithic Groovy Script)    │
 │                                                             │
@@ -54,7 +54,7 @@ The solution is a **CI-agnostic architecture** that separates orchestration from
 
 ## Architecture Diagram
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────┐
 │  Layer 1: CI Orchestration                                    │
 │                                                              │
@@ -126,7 +126,7 @@ Every stage script communicates with the orchestration layer through:
 
 In Jenkins, `initializeStage()` calls `copyArtifacts` to pull artifacts from the current build's archive into `INPUT_ARTIFACTS_DIR` before the stage script runs. The stage writes outputs to `TARGET_DIR`, which is then archived with `archiveArtifacts` for downstream stages.
 
-```
+```text
 Initialize stage
   → archiveArtifacts pipeline-config.json, jenkins-config.json
        ↓
@@ -239,7 +239,7 @@ main "$@"
 
 ### ci-adoptium-pipelines (Pipeline Code)
 
-```
+```text
 ci-adoptium-pipelines/
 ├── ci/
 │   ├── jenkins/
@@ -294,7 +294,7 @@ ci-adoptium-pipelines/
 
 ### ci-temurin-config (Vendor Configuration — Separate Repo)
 
-```
+```text
 ci-temurin-config/
 ├── adoptium_pipeline_config.json           # Pipeline defaults (repo URLs, branches, variant)
 ├── jenkins_job_config.json                 # Job DSL settings + stage agent label templates
@@ -356,18 +356,23 @@ verify_checksums()       # verifies checksums
 ## Benefits of This Architecture
 
 ### 1. CI Portability
+
 Shell scripts run on any CI system. Only the orchestration layer (Layer 1) needs to change when moving to a new CI platform. Stage scripts (Layer 2) remain unchanged.
 
 ### 2. Local Testing
+
 Any stage script can be run directly on a developer machine by setting the required environment variables. No Jenkins required.
 
 ### 3. Vendor Customisation Without Forking
+
 Vendors place override scripts in `vendor-scripts/` in their config repo. `StageScriptRunner` picks these up automatically. The pipeline code repository needs no modification.
 
 ### 4. Maintainability
+
 Clear separation of concerns. Shell scripts are simpler than Groovy. Standard Unix tools (`jq`, `bash`). Each stage script is focused on a single task.
 
 ### 5. Consistency
+
 The same script runs in Jenkins, locally, and in any future CI system. CI-specific bugs are minimised.
 
 ## Summary

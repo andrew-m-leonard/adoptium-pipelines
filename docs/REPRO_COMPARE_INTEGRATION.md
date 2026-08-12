@@ -28,12 +28,13 @@ The stage is controlled by parameters defined in [`scripts/stages/20-reproducibl
 | `SCM_REF` | string (from `02-build.params.json`) | `""` | OpenJDK source tag/ref — must be non-empty for the stage to run |
 
 Both conditions must be satisfied for the stage to execute:
+
 - `RUN_REPRODUCIBLE_COMPARE=true`
 - `SCM_REF` matches `regex:.+` (non-empty)
 
 ### How It Works
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │  1. Clone temurin-build repository                               │
 │     └─ Contains repro_compare.sh tool                           │
@@ -117,17 +118,18 @@ Both must be satisfied; if either is missing the `when {}` block skips the stage
 #### Stage behaviour
 
 1. `initializeStage()` — `cleanWs()`, checkout, `copyArtifacts` (filter: `pipeline-config.json,*.tar.gz,*.zip`)
-2. `env.TARGET_DIR = "${WORKSPACE}/reproducible_compare_output"`
-3. `env.SCM_REF = params.SCM_REF`
-4. `env.RELEASE = (params.RELEASE_TYPE == 'RELEASE') ? 'true' : 'false'`
-5. `stageRunner.run('20-reproducible-compare', config)`
-6. `archiveArtifacts artifacts: '**/*'` from `reproducible_compare_output/`
-7. **Non-zero exit code calls `error()`** — fails the build (does **not** mark UNSTABLE)
-8. `finalizeStage()` — optional `cleanWs()`
+1. `env.TARGET_DIR = "${WORKSPACE}/reproducible_compare_output"`
+1. `env.SCM_REF = params.SCM_REF`
+1. `env.RELEASE = (params.RELEASE_TYPE == 'RELEASE') ? 'true' : 'false'`
+1. `stageRunner.run('20-reproducible-compare', config)`
+1. `archiveArtifacts artifacts: '**/*'` from `reproducible_compare_output/`
+1. **Non-zero exit code calls `error()`** — fails the build (does **not** mark UNSTABLE)
+1. `finalizeStage()` — optional `cleanWs()`
 
 #### Jenkins archived artifact paths
 
 Jenkins archives the contents of `reproducible_compare_output/` flat:
+
 - `comparison-report.txt`
 - `ReproduciblePercent`
 - `reprotest.diff` (when differences found)
@@ -173,7 +175,7 @@ python3 ci/local/run-pipeline.py \
 The stage is orchestrated generically by `PipelineRunner.run()` — there is no dedicated method. The flow is:
 
 1. `_stage_condition_met('20-reproducible-compare')` — checks `RUN_REPRODUCIBLE_COMPARE=true` and `SCM_REF` non-empty; skips silently if either fails
-2. `_run_stage('20-reproducible-compare', 'pipeline-config.json,*.tar.gz,*.zip', extra_env={TARGET_DIR=..., RELEASE=...})`
+1. `_run_stage('20-reproducible-compare', 'pipeline-config.json,*.tar.gz,*.zip', extra_env={TARGET_DIR=..., RELEASE=...})`
    - `cleanup_stage_workspace('pre')` — wipes `stage_workspace/`
    - `restore_stage_inputs(...)` — copies `pipeline-config.json`, tarballs from `build_artifacts/`
    - Builds env: `WORKSPACE`, `CONFIG_FILE`, `INPUT_ARTIFACTS_DIR`, `TARGET_DIR`, `RELEASE`, `SCM_REF` (injected via `_stage_param_values`)
@@ -188,14 +190,14 @@ The stage is orchestrated generically by `PipelineRunner.run()` — there is no 
 The underlying `repro_compare.sh` tool provides:
 
 1. **File Structure Comparison**: Verifies same files exist in both builds
-2. **File Count Validation**: Ensures no missing or extra files
-3. **Binary Comparison**: Byte-by-byte comparison after preprocessing
-4. **Platform-Specific Preprocessing**:
+1. **File Count Validation**: Ensures no missing or extra files
+1. **Binary Comparison**: Byte-by-byte comparison after preprocessing
+1. **Platform-Specific Preprocessing**:
    - Removes build timestamps
    - Removes build IDs and UUIDs
    - Removes absolute paths in debug info
    - Normalises platform-specific metadata
-5. **Detailed Reporting**:
+1. **Detailed Reporting**:
    - `reprotest.diff` — lists differing files
    - `reproducible_evidence.log` — detailed comparison log (in scratch workspace, not archived)
    - `ReproduciblePercent` — percentage match metric (0–100)

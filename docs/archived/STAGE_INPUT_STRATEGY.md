@@ -9,7 +9,8 @@
 When a stage runs, it could be in one of two scenarios:
 
 ### Scenario 1: Normal Sequential Run
-```
+
+```text
 Build stage just ran
   ↓
 Build artifacts are in WORKSPACE
@@ -20,7 +21,8 @@ Should Sign use artifacts from WORKSPACE?
 ```
 
 ### Scenario 2: Restart from Stage
-```
+
+```text
 Build stage ran hours/days ago
   ↓
 User clicks "Restart from Sign"
@@ -33,12 +35,14 @@ Should Sign use artifacts from WORKSPACE? (NO - might be wrong!)
 ## The Danger of Using WORKSPACE
 
 **Problem:** WORKSPACE might contain:
+
 - ❌ Artifacts from a different build number
 - ❌ Artifacts from a different branch
 - ❌ Partial/corrupted artifacts from failed run
 - ❌ Nothing at all (workspace cleaned)
 
 **Example of the problem:**
+
 ```groovy
 stage('Build') {
     steps {
@@ -56,10 +60,11 @@ stage('Sign') {
 ```
 
 **What can go wrong:**
+
 1. Normal run: Works fine (Build just ran)
-2. Restart from Sign: Might sign wrong artifacts or fail
-3. Different node: Workspace is empty
-4. After workspace cleanup: No artifacts
+1. Restart from Sign: Might sign wrong artifacts or fail
+1. Different node: Workspace is empty
+1. After workspace cleanup: No artifacts
 
 ## How to Detect "Restart from Stage"
 
@@ -156,7 +161,7 @@ stage('Sign') {
 
 When you restart from a stage, Jenkins creates a **NEW build number**:
 
-```
+```text
 Original run:
   Build #100: Build → Sign → Installer
   Artifacts archived under build #100
@@ -168,15 +173,16 @@ Restart from Sign:
 ```
 
 **The Solution:**
+
 1. Try `env.BUILD_NUMBER` first (works for normal sequential run)
-2. Fallback to `currentBuild.previousBuild.number` (works for restart)
+1. Fallback to `currentBuild.previousBuild.number` (works for restart)
 
 ### Why This Works
 
 1. **Normal run:** Build stage archived under #100, Sign retrieves from #100 ✅
-2. **Restart:** Build artifacts under #100, Sign (build #101) retrieves from #100 ✅
-3. **Different node:** Archives are on Jenkins master, available everywhere ✅
-4. **Days later:** Archives persist (within retention policy) ✅
+1. **Restart:** Build artifacts under #100, Sign (build #101) retrieves from #100 ✅
+1. **Different node:** Archives are on Jenkins master, available everywhere ✅
+1. **Days later:** Archives persist (within retention policy) ✅
 
 ### The Key Insight
 
@@ -225,6 +231,7 @@ stage('Build') {
 ```
 
 **Key points:**
+
 - ✅ Cleans workspace (fresh start)
 - ✅ Archives all outputs
 - ✅ Archives metadata
@@ -320,6 +327,7 @@ stage('Sign') {
 ```
 
 **Key points:**
+
 - ✅ Cleans workspace (no stale data)
 - ✅ ALWAYS retrieves from archive
 - ✅ Verifies inputs exist
@@ -401,6 +409,7 @@ stage('Installer') {
 ```
 
 **Key points:**
+
 - ✅ Cleans workspace
 - ✅ ALWAYS retrieves from archive
 - ✅ Retrieves metadata chain
@@ -424,10 +433,11 @@ stage('Sign') {
 ```
 
 **Benefits:**
+
 1. **No confusion** - Workspace only contains what you just retrieved
-2. **No stale data** - Previous run artifacts are gone
-3. **Predictable state** - Always start from known clean state
-4. **Easier debugging** - Know exactly what's in workspace
+1. **No stale data** - Previous run artifacts are gone
+1. **Predictable state** - Always start from known clean state
+1. **Easier debugging** - Know exactly what's in workspace
 
 ## The Anti-Pattern: Conditional Logic
 
@@ -455,10 +465,11 @@ stage('Sign') {
 ```
 
 **Problems:**
+
 1. Detection logic is unreliable
-2. Two different code paths (harder to test)
-3. Workspace assumption is dangerous
-4. More complex, more bugs
+1. Two different code paths (harder to test)
+1. Workspace assumption is dangerous
+1. More complex, more bugs
 
 **DO THIS INSTEAD:**
 
@@ -477,10 +488,11 @@ stage('Sign') {
 ```
 
 **Benefits:**
+
 1. One code path (easier to test)
-2. Works for all scenarios
-3. No detection needed
-4. Simpler, more reliable
+1. Works for all scenarios
+1. No detection needed
+1. Simpler, more reliable
 
 ## Performance Considerations
 
@@ -489,12 +501,13 @@ stage('Sign') {
 **Answer:** No, because:
 
 1. **Archives are fast** - Jenkins uses efficient storage
-2. **Reliability > Speed** - JDK builds take hours, archive/retrieve takes seconds
-3. **Debugging value** - Can inspect artifacts between stages
-4. **Restart value** - Can restart from any point
-5. **Audit trail** - Clear record of what was produced
+1. **Reliability > Speed** - JDK builds take hours, archive/retrieve takes seconds
+1. **Debugging value** - Can inspect artifacts between stages
+1. **Restart value** - Can restart from any point
+1. **Audit trail** - Clear record of what was produced
 
 **Example timing:**
+
 - Build JDK: 2 hours
 - Archive artifacts (500MB): 30 seconds
 - Retrieve artifacts: 20 seconds
@@ -634,22 +647,25 @@ stage('Sign') {
 | Days later | ❌ No | ✅ Yes | Workspace cleaned |
 | Debugging | ❌ No | ✅ Yes | Can inspect archives |
 
-**Answer: ALWAYS use archive, NEVER rely on workspace**
+Answer: ALWAYS use archive, NEVER rely on workspace
 
 ## Summary
 
 ### The Question
+
 "Should stages rely on WORKSPACE or archives?"
 
 ### The Answer
-**ALWAYS use archives via copyArtifacts + archiveArtifacts**
+
+ALWAYS use archives via copyArtifacts + archiveArtifacts
 
 ### The Reason
+
 1. Can't reliably detect restart
-2. Workspace state is unpredictable
-3. Stages may run on different nodes
-4. Time may pass between stages
-5. One pattern works for all scenarios
+1. Workspace state is unpredictable
+1. Stages may run on different nodes
+1. Time may pass between stages
+1. One pattern works for all scenarios
 
 ### The Pattern
 
@@ -667,6 +683,7 @@ stage('Any Stage') {
 ```
 
 ### The Benefit
+
 - ✅ Works for normal run
 - ✅ Works for restart
 - ✅ Works across nodes

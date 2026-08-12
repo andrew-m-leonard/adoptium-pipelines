@@ -9,9 +9,9 @@ This document describes the path padding feature implemented in the build stage 
 When building JDK binaries locally using `--compare-build`, the resulting binaries may differ from upstream Adoptium builds due to differences in workspace directory path lengths. This is particularly problematic on macOS where:
 
 1. The Mach-O binary format includes an `LC_UUID` load command
-2. The UUID is calculated based on the binary's content and metadata
-3. Filesystem paths embedded during compilation affect the UUID calculation
-4. Different path lengths result in different UUIDs, even if the code is identical
+1. The UUID is calculated based on the binary's content and metadata
+1. Filesystem paths embedded during compilation affect the UUID calculation
+1. Different path lengths result in different UUIDs, even if the code is identical
 
 ## Solution: Path Padding
 
@@ -20,10 +20,10 @@ The build stage now supports automatic path padding when `compareBuild` is enabl
 ### How It Works
 
 1. **SBOM Download**: When `compareBuild: true`, the build stage downloads the SBOM (Software Bill of Materials) from the Adoptium API for the target version
-2. **Path Extraction**: Extracts the `Build Workspace Directory` property from the SBOM
-3. **Length Calculation**: Compares the upstream workspace path length with the local workspace path
-4. **Padding Application**: If needed, creates a padded subdirectory to match the upstream path length
-5. **Build Execution**: Runs the build in the padded workspace directory
+1. **Path Extraction**: Extracts the `Build Workspace Directory` property from the SBOM
+1. **Length Calculation**: Compares the upstream workspace path length with the local workspace path
+1. **Padding Application**: If needed, creates a padded subdirectory to match the upstream path length
+1. **Build Execution**: Runs the build in the padded workspace directory
 
 ### Path Padding Algorithm
 
@@ -49,17 +49,20 @@ if padding_length > 1:
 ### Example
 
 **Upstream Build:**
+
 - Workspace: `/home/jenkins/workspace/build-scripts/jobs/jdk21u/jdk21u-linux-x64-temurin`
 - Full build path: `/home/jenkins/workspace/build-scripts/jobs/jdk21u/jdk21u-linux-x64-temurin/workspace/build/src`
 - Path length: 95 characters
 
 **Local Build (without padding):**
+
 - Workspace: `/Users/anleonar/workspace/ci-adoptium-pipelines`
 - Full build path: `/Users/anleonar/workspace/ci-adoptium-pipelines/workspace/build/src`
 - Path length: 72 characters
 - **Difference: 23 characters shorter**
 
 **Local Build (with padding):**
+
 - Workspace: `/Users/anleonar/workspace/ci-adoptium-pipelines/PPPPPPPPPPPPPPPPPPPPPP`
 - Full build path: `/Users/anleonar/workspace/ci-adoptium-pipelines/PPPPPPPPPPPPPPPPPPPPPP/workspace/build/src`
 - Path length: 95 characters
@@ -94,10 +97,10 @@ Add the `compareBuild` parameter to your pipeline configuration:
 For path padding to work, the following must be configured:
 
 1. **`compareBuild`**: Set to `true` to enable path padding
-2. **`scmRef`**: The git tag/ref for the build (e.g., `jdk-21.0.2+13`)
-3. **`release`**: Boolean indicating if this is a release build (affects API URL construction)
-4. **`TARGET_OS`**: Operating system (mac, linux, windows, aix)
-5. **`ARCHITECTURE`**: CPU architecture (aarch64, x64, ppc64le, s390x, etc.)
+1. **`scmRef`**: The git tag/ref for the build (e.g., `jdk-21.0.2+13`)
+1. **`release`**: Boolean indicating if this is a release build (affects API URL construction)
+1. **`TARGET_OS`**: Operating system (mac, linux, windows, aix)
+1. **`ARCHITECTURE`**: CPU architecture (aarch64, x64, ppc64le, s390x, etc.)
 
 ## Implementation Details
 
@@ -111,7 +114,7 @@ The path padding implementation is in [`scripts/stages/02-build.sh`](../scripts/
 
 ### Execution Flow
 
-```
+```text
 main()
   ├─ Load configuration
   ├─ Extract compareBuild parameter
@@ -133,17 +136,19 @@ main()
 
 The SBOM is fetched from the Adoptium API using this URL pattern:
 
-```
+```text
 https://api.adoptium.net/v3/binary/version/{version}/{os}/{arch}/sbom/hotspot/normal/eclipse?project=jdk
 ```
 
 Where:
+
 - **`{version}`**: SCM ref with optional `-ea-beta` suffix for EA builds
 - **`{os}`**: Operating system (mac, linux, windows, aix)
 - **`{arch}`**: Architecture (aarch64, x64, ppc64le, s390x, etc.)
 
 Example:
-```
+
+```text
 https://api.adoptium.net/v3/binary/version/jdk-21.0.2+13/mac/aarch64/sbom/hotspot/normal/eclipse?project=jdk
 ```
 
@@ -180,15 +185,15 @@ The path padding logic works across all platforms:
 The implementation includes robust error handling:
 
 1. **SBOM Download Failure**: Logs warning and continues without padding
-2. **Missing BUILD_WORKSPACE_DIRECTORY**: Logs warning and skips padding
-3. **Insufficient Padding Space**: Logs warning if padding cannot be applied
-4. **API Errors**: Gracefully handles API unavailability
+1. **Missing BUILD_WORKSPACE_DIRECTORY**: Logs warning and skips padding
+1. **Insufficient Padding Space**: Logs warning if padding cannot be applied
+1. **API Errors**: Gracefully handles API unavailability
 
 ## Logging
 
 The path padding process provides detailed logging:
 
-```
+```text
 [INFO] Setting up reproducible build path padding
 [INFO] SCM_REF for API: jdk-21.0.2+13
 [INFO] Fetching SBOM from: https://api.adoptium.net/v3/binary/version/...
@@ -230,7 +235,7 @@ To test path padding locally:
    EOF
    ```
 
-2. Run the build stage:
+1. Run the build stage:
    ```bash
    export WORKSPACE=$(pwd)
    export CONFIG_FILE=pipeline-config.json
@@ -240,7 +245,7 @@ To test path padding locally:
    ./scripts/stages/02-build.sh
    ```
 
-3. Verify padding in logs:
+1. Verify padding in logs:
    ```bash
    grep "Padded" build.log
    grep "WORKSPACE updated" build.log
@@ -256,13 +261,13 @@ After building with path padding:
    # Should show padded directory with 'P' characters
    ```
 
-2. **Verify build artifacts**:
+1. **Verify build artifacts**:
    ```bash
    ls -la ${TARGET_DIR}/
    # Should contain JDK artifacts
    ```
 
-3. **Compare with upstream** (macOS):
+1. **Compare with upstream** (macOS):
    ```bash
    # Extract LC_UUID from local build
    otool -l ${TARGET_DIR}/jdk-*/Contents/Home/lib/server/libjvm.dylib | grep uuid
@@ -276,9 +281,9 @@ After building with path padding:
 ## Limitations
 
 1. **Minimum Padding**: Cannot pad if the difference is less than 2 characters
-2. **Longer Local Paths**: Cannot pad if local path is longer than upstream path
-3. **SBOM Availability**: Requires SBOM to be available in Adoptium API
-4. **Network Dependency**: Requires network access to download SBOM
+1. **Longer Local Paths**: Cannot pad if local path is longer than upstream path
+1. **SBOM Availability**: Requires SBOM to be available in Adoptium API
+1. **Network Dependency**: Requires network access to download SBOM
 
 ## Related Documentation
 
@@ -296,6 +301,7 @@ After building with path padding:
 ## Changelog
 
 ### 2026-06-17
+
 - Initial implementation of path padding feature
 - Added `compareBuild` parameter support
 - Integrated SBOM download and parsing

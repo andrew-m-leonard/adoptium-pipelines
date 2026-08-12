@@ -17,7 +17,7 @@ This separation enables:
 
 The config repo is the single source of all externalized settings. It must contain:
 
-```
+```text
 <config-repo>/
 ├── adoptium_pipeline_config.json          # CI-agnostic defaults and repo pointers
 ├── jenkins_job_config.json                # Jenkins-specific job and agent settings
@@ -42,12 +42,14 @@ The config repo is the single source of all externalized settings. It must conta
 **Consumed by**: seed job, launch pipeline (`Jenkinsfile.launch`), build pipeline (`ConfigHelper.groovy`), local runner (`run-pipeline.py`)
 
 This is the top-level config file that glues everything together. It tells the system:
+
 - which JDK versions are active
 - the default build variant and args
 - where to find the per-version config files (prefix/suffix pattern)
 - URLs and branch refs for `temurin-build` and `aqa-tests` repositories
 
 **Example structure**:
+
 ```json
 {
   "defaultVariant": "temurin",
@@ -95,6 +97,7 @@ Contains two distinct groups of settings:
 - **Agent-selection settings** (`stageAgentLabels`) — used at build runtime to resolve which Jenkins node each pipeline stage runs on. Keys are **stage IDs** (from `pipeline-stages.json`), not display labels. The `{os}` and `{arch}` placeholders are substituted with `sw.os.*` / `hw.arch.*` schema label tokens derived from the platform's `os` and `arch` fields. The special key `__any__` provides the fallback label used for any stage whose ID is not explicitly listed.
 
 **Example structure**:
+
 ```json
 {
   "jenkinsfilePath": "ci/jenkins/Jenkinsfile.declarative",
@@ -156,6 +159,7 @@ Contains two distinct groups of settings:
 One file per JDK version. Describes every supported build platform and its platform-specific settings. The filename pattern is `<configFilePrefix><version><configFileSuffix>`, e.g. `configurations/jdk21_pipeline_config.json`.
 
 **Example structure**:
+
 ```json
 {
   "version": "jdk21",
@@ -187,7 +191,7 @@ One file per JDK version. Describes every supported build platform and its platf
 
 The file is located by [`scripts/lib/load-json-config.py`](../scripts/lib/load-json-config.py) which constructs the path as:
 
-```
+```text
 <config-dir>/<jdk-version>_pipeline_config.json
 ```
 
@@ -240,6 +244,7 @@ Fields marked as "string or object" support **variant-specific values**: supply 
 This file is not stored in any repository — it is generated fresh for each build by combining the per-version JSON config with the runtime parameters supplied to the job. It is CI-agnostic: it contains no Jenkins-specific agent labels.
 
 **Structure**:
+
 ```json
 {
   "buildConfig": {
@@ -284,6 +289,7 @@ On Jenkins it is immediately archived as a build artifact so that subsequent sta
 This file is Jenkins-specific and has no equivalent in the local runner. It is archived alongside `pipeline-config.json` as a build artifact.
 
 **Structure**:
+
 ```json
 {
   "stageAgentLabels": {
@@ -331,7 +337,7 @@ Vendors can place scripts here to replace any default stage script in `scripts/s
 
 ### Jenkins path
 
-```
+```text
 Seed Job (seed_job_dsl.groovy)
   │  reads adoptium_pipeline_config.json    ← HTTP from raw.githubusercontent.com
   │  reads jenkins_job_config.json          ← HTTP from raw.githubusercontent.com
@@ -375,7 +381,7 @@ Build Pipeline (Jenkinsfile.declarative)
 
 ### Local runner path
 
-```
+```text
 run-pipeline.py
   │
   ├─ stage_initialize()
@@ -417,20 +423,20 @@ If a required field cannot be resolved from either source, the pipeline fails ea
 
 - Config repo: `github.com/adoptium/ci-temurin-config` (public)
 - Pipeline code: `github.com/adoptium/ci-adoptium-pipelines` (public)
-- Job parameter: `CONFIG_REPO_URL=https://github.com/adoptium/ci-temurin-config.git`
+- Job parameter: `CONFIG_REPO_URL=<https://github.com/adoptium/ci-temurin-config.gi>t`
 
 ### Vendor-specific builds
 
 - Config repo: `github.com/acme-corp/openjdk-configs` (private)
 - Pipeline code: `github.com/adoptium/ci-adoptium-pipelines` (public, unmodified)
-- Job parameter: `CONFIG_REPO_URL=https://github.com/acme-corp/openjdk-configs.git`
+- Job parameter: `CONFIG_REPO_URL=<https://github.com/acme-corp/openjdk-configs.gi>t`
 - Jenkins credential configured to access the private repo
 
 ### Testing a config change
 
 Point the job at a feature branch of the config repo:
 
-```
+```text
 CONFIG_REPO_URL:    https://github.com/adoptium/ci-temurin-config.git
 CONFIG_REPO_BRANCH: feature/jdk25-platforms
 ```
@@ -458,11 +464,13 @@ python3 ci/local/run-pipeline.py \
 ## Security Considerations
 
 `ci-adoptium-pipelines` is a public repository and must **never** contain:
+
 - Credentials, API keys, or tokens
 - Internal URLs or endpoints
 - Vendor-specific or proprietary settings
 
 Sensitive settings belong in the config repo:
+
 - Use a **private** config repo for internal URLs, signing config, etc.
 - Store actual secrets in Jenkins credentials, not in JSON files — reference them by credential ID from `jenkins_job_config.json` or pipeline parameters.
 
@@ -475,16 +483,16 @@ Sensitive settings belong in the config repo:
 **Error**: `Configuration file not found: configurations/jdk21u_pipeline_config.json`
 
 1. Check that `CONFIG_REPO_URL` / `CONFIG_REPO_BRANCH` point to the right repo and branch.
-2. Verify the file exists in the config repo under `configurations/`.
-3. Confirm the filename matches the pattern set by `configFilePrefix` + `<version>` + `configFileSuffix` in `adoptium_pipeline_config.json`.
+1. Verify the file exists in the config repo under `configurations/`.
+1. Confirm the filename matches the pattern set by `configFilePrefix` + `<version>` + `configFileSuffix` in `adoptium_pipeline_config.json`.
 
 ### Platform key not found
 
 **Error**: `Platform 'aarch64_mac' not found in configuration`
 
 1. List available keys: `jq '.buildConfigurations | keys' configurations/jdkNN_pipeline_config.json`
-2. Verify the platform key uses the aqa-aligned `{arch}_{os}` format (e.g. `x86-64_linux`, not `x64Linux`).
-3. Add the missing platform entry to the config file.
+1. Verify the platform key uses the aqa-aligned `{arch}_{os}` format (e.g. `x86-64_linux`, not `x64Linux`).
+1. Add the missing platform entry to the config file.
 
 ### Variant-specific value falls back unexpectedly
 

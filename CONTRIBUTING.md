@@ -5,12 +5,12 @@ Thank you for your interest in contributing to the Adoptium CI Pipelines project
 ## Table of Contents
 
 1. [Code of Conduct](#code-of-conduct)
-2. [Getting Started](#getting-started)
-3. [Development Workflow](#development-workflow)
-4. [Testing Guidelines](#testing-guidelines)
-5. [Commit Guidelines](#commit-guidelines)
-6. [Pull Request Process](#pull-request-process)
-7. [Architecture Guidelines](#architecture-guidelines)
+1. [Getting Started](#getting-started)
+1. [Development Workflow](#development-workflow)
+1. [Testing Guidelines](#testing-guidelines)
+1. [Commit Guidelines](#commit-guidelines)
+1. [Pull Request Process](#pull-request-process)
+1. [Architecture Guidelines](#architecture-guidelines)
 
 ---
 
@@ -51,6 +51,7 @@ chmod +x run-pipeline.py
 See [`LOCAL_TESTING_GUIDE.md`](LOCAL_TESTING_GUIDE.md) for comprehensive local testing instructions.
 
 Quick test:
+
 ```bash
 # Test a single stage
 ./scripts/stages/01-initialize.sh
@@ -115,6 +116,7 @@ Then create a Pull Request on GitHub.
 We follow a multi-level testing strategy:
 
 #### Level 1: Syntax & Linting (Required)
+
 ```bash
 # Check syntax
 bash -n scripts/stages/*.sh
@@ -124,12 +126,14 @@ shellcheck scripts/stages/*.sh scripts/lib/*.sh
 ```
 
 #### Level 2: Unit Tests (Recommended)
+
 ```bash
 # Run BATS tests
 bats tests/
 ```
 
 #### Level 3: Stage Tests (Required for stage changes)
+
 ```bash
 # Test individual stage
 ./scripts/stages/01-initialize.sh
@@ -137,6 +141,7 @@ echo $?  # Should be 0 for success
 ```
 
 #### Level 4: Local Pipeline (Required for major changes)
+
 ```bash
 # Full pipeline test
 python3 run-pipeline.py \
@@ -146,6 +151,7 @@ python3 run-pipeline.py \
 ```
 
 #### Level 5: CI Validation (Automatic)
+
 - Jenkins will run parallel validation
 - Both old and new pipelines execute
 - Outputs compared with `repro_compare.sh`
@@ -167,7 +173,7 @@ python3 run-pipeline.py \
 
 ### Commit Message Format
 
-```
+```text
 <type>(<scope>): <subject>
 
 <body>
@@ -187,7 +193,7 @@ python3 run-pipeline.py \
 
 ### Examples
 
-```
+```text
 feat(stages): add smoke test for Java modules
 
 Add comprehensive smoke tests for Java 9+ module system.
@@ -196,7 +202,7 @@ Tests verify module resolution, exports, and requires.
 Closes #123
 ```
 
-```
+```text
 fix(build): correct JDK home detection on macOS
 
 macOS JDK structure uses Contents/Home subdirectory.
@@ -205,7 +211,7 @@ Updated detection logic to handle both macOS and Linux.
 Fixes #456
 ```
 
-```
+```text
 docs(migration): update timeline to 10-14 weeks
 
 Accelerated migration timeline based on parallel
@@ -230,10 +236,10 @@ platform migrations and reduced validation periods.
 ### Before Submitting
 
 1. ✅ All tests pass locally
-2. ✅ Code follows style guidelines
-3. ✅ Documentation updated (if needed)
-4. ✅ Commit messages follow guidelines
-5. ✅ Branch is up to date with main
+1. ✅ Code follows style guidelines
+1. ✅ Documentation updated (if needed)
+1. ✅ Commit messages follow guidelines
+1. ✅ Branch is up to date with main
 
 ### PR Description Template
 
@@ -268,14 +274,15 @@ Closes #123
 ### Review Process
 
 1. **Automated Checks**: CI runs tests automatically
-2. **Code Review**: At least one maintainer reviews
-3. **Testing**: Parallel validation in Jenkins (for pipeline changes)
-4. **Approval**: Maintainer approves PR
-5. **Merge**: Squash and merge to main
+1. **Code Review**: At least one maintainer reviews
+1. **Testing**: Parallel validation in Jenkins (for pipeline changes)
+1. **Approval**: Maintainer approves PR
+1. **Merge**: Squash and merge to main
 
 ### Review Criteria
 
 Reviewers will check:
+
 - ✅ Code quality and style
 - ✅ Test coverage
 - ✅ Documentation completeness
@@ -291,7 +298,7 @@ Reviewers will check:
 
 All changes must respect the 3-layer architecture:
 
-```
+```text
 Layer 1: Configuration (JSON)
   ↓
 Layer 2: Build Logic (Shell Scripts - 90% CI-agnostic)
@@ -304,6 +311,7 @@ Layer 3: Orchestration (CI-specific - 10%)
 **Location**: `configurations/*.json`
 
 **Guidelines**:
+
 - ✅ Pure data (no logic)
 - ✅ Valid JSON syntax
 - ✅ Follow schema (if defined)
@@ -312,6 +320,7 @@ Layer 3: Orchestration (CI-specific - 10%)
 - ❌ No environment-specific values
 
 **Example**:
+
 ```json
 {
   "version": "jdk21u",
@@ -329,6 +338,7 @@ Layer 3: Orchestration (CI-specific - 10%)
 **Location**: `scripts/stages/*.sh`, `scripts/lib/*.sh`
 
 **Guidelines**:
+
 - ✅ Pure shell scripts (Bash 4.0+)
 - ✅ CI-agnostic (no Jenkins/GitLab/GitHub-specific code)
 - ✅ Clear input/output contracts
@@ -340,6 +350,7 @@ Layer 3: Orchestration (CI-specific - 10%)
 - ❌ No CI-specific APIs
 
 **Stage Script Template**:
+
 ```bash
 #!/bin/bash
 set -euo pipefail
@@ -374,6 +385,7 @@ exit 0
 **Location**: `Jenkinsfile.declarative`, `.gitlab-ci.yml`, etc.
 
 **Guidelines**:
+
 - ✅ Minimal CI-specific code
 - ✅ Call shell scripts (Layer 2)
 - ✅ Handle CI-specific features (notifications, artifacts)
@@ -382,6 +394,7 @@ exit 0
 - ❌ No inline shell snippets
 
 **Jenkinsfile Pattern**:
+
 ```groovy
 stage('Build') {
     steps {
@@ -394,7 +407,7 @@ stage('Build') {
 
 ### File Organization
 
-```
+```text
 ci-adoptium-pipelines/
 ├── configurations/          # Layer 1: Data
 │   └── *.json
@@ -412,22 +425,26 @@ ci-adoptium-pipelines/
 ### Naming Conventions
 
 **Files**:
+
 - Stage scripts: `##-stage-name.sh` (e.g., `01-initialize.sh`)
 - Library scripts: `feature-utils.sh` (e.g., `logging-utils.sh`)
 - Configurations: `jdk##u_pipeline_config.json`
 
 **Variables**:
+
 - Environment: `UPPER_SNAKE_CASE` (e.g., `BUILD_UID`, `TARGET_DIR`)
 - Local: `lower_snake_case` (e.g., `jdk_home`, `config_file`)
 - Constants: `UPPER_SNAKE_CASE` (e.g., `SCRIPT_DIR`)
 
 **Functions**:
+
 - Public: `verb_noun` (e.g., `validate_workspace`, `load_config`)
 - Private: `_verb_noun` (e.g., `_parse_json`, `_check_file`)
 
 ### Code Style
 
 **Shell Scripts**:
+
 ```bash
 # Good
 if [[ -f "${file}" ]]; then
@@ -444,6 +461,7 @@ fi
 ```
 
 **Best Practices**:
+
 - ✅ Use `[[ ]]` instead of `[ ]`
 - ✅ Quote variables: `"${var}"`
 - ✅ Use `$(command)` instead of backticks

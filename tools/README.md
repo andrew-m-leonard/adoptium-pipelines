@@ -6,7 +6,7 @@ Utility tools for migrating legacy Groovy pipeline configurations to the JSON-ba
 
 The three scripts form a chain — the top-level tool calls the middle one, which calls the low-level one:
 
-```
+```text
 migrate-groovy-pipeline-configs.py   ← top-level: run this
   └─ calls batch-convert-groovy-configs.py      ← batch driver
        └─ calls groovy-pipeline-config-to-json.py  ← single-file converter
@@ -21,6 +21,7 @@ migrate-groovy-pipeline-configs.py   ← top-level: run this
 **Purpose**: Top-level migration tool. Converts a directory of legacy `*_pipeline_config.groovy` files to the new JSON architecture, strips the `u` suffix from output filenames, and generates `adoptium_pipeline_config.json` (CI-agnostic) and `jenkins_job_config.json` (Jenkins-specific).
 
 **Usage**:
+
 ```bash
 python3 tools/migrate-groovy-pipeline-configs.py \
     --source ~/workspace/ci-jenkins-pipelines/pipelines/jobs/configurations \
@@ -38,13 +39,15 @@ python3 tools/migrate-groovy-pipeline-configs.py \
 | `--force` / `-f` | Overwrite existing JSON files |
 
 **What it does**:
+
 1. Delegates file conversion to `batch-convert-groovy-configs.py`
-2. Renames output files — strips `u` suffix (`jdk21u_pipeline_config.groovy` → `configurations/jdk21_pipeline_config.json`)
-3. Checks source directory for `jdkNNu.groovy` / `jdkNN.groovy` and reads `disableJob = true` to set `enabled` flags
-4. Generates `adoptium_pipeline_config.json` with `activeJdkVersions`, build defaults, and repository references
-5. Generates `jenkins_job_config.json` with Jenkins-specific pipeline settings
+1. Renames output files — strips `u` suffix (`jdk21u_pipeline_config.groovy` → `configurations/jdk21_pipeline_config.json`)
+1. Checks source directory for `jdkNNu.groovy` / `jdkNN.groovy` and reads `disableJob = true` to set `enabled` flags
+1. Generates `adoptium_pipeline_config.json` with `activeJdkVersions`, build defaults, and repository references
+1. Generates `jenkins_job_config.json` with Jenkins-specific pipeline settings
 
 **Generated `adoptium_pipeline_config.json` structure** (CI-agnostic):
+
 ```json
 {
   "activeJdkVersions": [
@@ -70,6 +73,7 @@ python3 tools/migrate-groovy-pipeline-configs.py \
 ```
 
 **Generated `jenkins_job_config.json` structure** (Jenkins-specific):
+
 ```json
 {
   "jenkinsfilePath": "ci/jenkins/Jenkinsfile.declarative",
@@ -105,6 +109,7 @@ python3 tools/migrate-groovy-pipeline-configs.py \
 Called automatically by `migrate-groovy-pipeline-configs.py`. Can also be run standalone when you only want raw JSON conversion without the `u`-suffix stripping or `jenkins_job_config.json` generation.
 
 **Usage**:
+
 ```bash
 python3 tools/batch-convert-groovy-configs.py \
     --source /path/to/groovy/configs \
@@ -157,7 +162,8 @@ python3 tools/migrate-groovy-pipeline-configs.py \
 ```
 
 Expected output:
-```
+
+```text
 ======================================================================
 Legacy Groovy to New Architecture Converter
 ======================================================================
@@ -194,6 +200,7 @@ jq '.activeJdkVersions' ~/workspace/ci-temurin-config/jenkins_job_config.json
 ```
 
 Pay particular attention to:
+
 - Nested maps and lists (complex Groovy structures may need manual adjustment)
 - Variant-specific values (e.g. `buildArgs: [temurin: '...', hotspot: '...']` → `"buildArgs": {"temurin": "...", "hotspot": "..."}`)
 - `enabled` flags — verify disabled versions are correctly set to `false`
@@ -214,7 +221,7 @@ git push
 
 ### Nested maps not converting correctly
 
-```
+```text
 Error parsing x64Linux: unexpected token
 ```
 
@@ -223,6 +230,7 @@ Manually review the Groovy file for complex nested structures (closures, method 
 ### Variant-specific values
 
 Groovy:
+
 ```groovy
 buildArgs: [
     temurin: '--create-jre-image --create-sbom',
@@ -231,6 +239,7 @@ buildArgs: [
 ```
 
 Should produce:
+
 ```json
 "buildArgs": {
   "temurin": "--create-jre-image --create-sbom",
@@ -242,7 +251,7 @@ Verify this is correct in the output — if not, edit the JSON manually.
 
 ### Version file name mismatch
 
-```
+```text
 Error: Config file not found: configurations/jdk21u_pipeline_config.json
 ```
 

@@ -18,7 +18,7 @@ Key properties:
 
 ## Repository Layout
 
-```
+```text
 ci-adoptium-pipelines/
 │
 ├── ci/
@@ -80,7 +80,7 @@ ci-adoptium-pipelines/
 
 ### Two-Pipeline Model
 
-```
+```text
 seed-job (Freestyle)
   └─ seed_job_dsl.groovy  ← creates/updates all jobs
        │
@@ -119,12 +119,12 @@ Each lib file is a plain CPS script loaded with `load()` — it calls pipeline s
 For each stage stem (e.g. `02-build`), `StageScriptRunner` searches in order:
 
 1. `config-repo/vendor-scripts/02-build.sh`
-2. `config-repo/vendor-scripts/02-build.groovy`
-3. `config-repo/vendor-scripts/02-build.py`
-4. `scripts/stages/02-build.sh` ← default implementation
-5. `scripts/stages/02-build.groovy`
-6. `scripts/stages/02-build.py`
-7. No-op (stage skipped)
+1. `config-repo/vendor-scripts/02-build.groovy`
+1. `config-repo/vendor-scripts/02-build.py`
+1. `scripts/stages/02-build.sh` ← default implementation
+1. `scripts/stages/02-build.groovy`
+1. `scripts/stages/02-build.py`
+1. No-op (stage skipped)
 
 ## Pipeline Stages
 
@@ -158,7 +158,7 @@ Each stage calls `initializeStage()` which: cleans the workspace, checks out thi
 
 The pipeline reads build configuration from a separately maintained config repo supplied via `CONFIG_REPO_URL`. The config repo must contain:
 
-```
+```text
 <config-repo>/
 ├── adoptium_pipeline_config.json      # Pipeline-level defaults (repo URLs, branches)
 ├── jenkins_job_config.json            # Job DSL settings (log rotation, default params)
@@ -175,10 +175,10 @@ At runtime, `ConfigHelper` calls `scripts/lib/load-json-config.py` which merges 
 ### Seed Job Bootstrap
 
 1. Create a Jenkins **Freestyle** job named `seed-job`
-2. Add parameters: `CONFIG_REPO_URL` (String), `CONFIG_REPO_BRANCH` (String)
-3. SCM: Git → this repository
-4. Build step: **Process Job DSLs** → `ci/jenkins/job-dsl/seed/seed_job_dsl.groovy`
-5. Run the seed job with your config repo URL and branch
+1. Add parameters: `CONFIG_REPO_URL` (String), `CONFIG_REPO_BRANCH` (String)
+1. SCM: Git → this repository
+1. Build step: **Process Job DSLs** → `ci/jenkins/job-dsl/seed/seed_job_dsl.groovy`
+1. Run the seed job with your config repo URL and branch
 
 The seed job creates all launch and platform build jobs automatically.
 

@@ -79,9 +79,11 @@ Every `scripts/stages/NN-stem.params.json` file follows this schema:
 ### Top-level fields
 
 #### `stageId` (string, required)
+
 Must exactly match the stem of this file (e.g. `"14-aqa-tests"` for `14-aqa-tests.params.json`). Used by the collator, Job DSL, and local runner to associate metadata with the correct stage.
 
 #### `stageDisabled` (boolean, default `false`)
+
 Controls whether this stage is active.
 
 - `false` — stage is active; its parameters are included in the collated output and appear in the Jenkins job UI.
@@ -92,6 +94,7 @@ Controls whether this stage is active.
 A vendor can also disable a core stage (e.g. `16-publish`) by supplying a `vendor-scripts/16-publish.params.json` with `"stageDisabled": true`.
 
 #### `stageCondition` (array, default `[]`)
+
 A list of runtime conditions that must all be satisfied (AND) for the stage to execute. Each entry is:
 
 ```json
@@ -102,12 +105,14 @@ A list of runtime conditions that must all be satisfied (AND) for the stage to e
 - `value` — the required value. Comparison is string-based (`"true"` == `true`).
 
 `stageCondition` is independent of `stageDisabled`:
+
 - If `stageDisabled: true`, the stage is always skipped regardless of conditions.
 - If `stageDisabled: false` but conditions are not met, the stage is skipped at runtime.
 
 **Gate-only files:** a `params.json` may contain only `stageId`, `stageDisabled`, and `stageCondition` with no `parameterGroups` (e.g. `08-code-sign-installer.params.json`). This is valid — it registers the gate condition without introducing any new parameters.
 
 #### `parameterGroups` (array, optional)
+
 Groups of parameters displayed in the Jenkins Build Parameters UI under a separator heading. May be omitted for gate-only files.
 
 Each group:
@@ -281,10 +286,10 @@ stage('New Stage') {
 In `ci/local/run-pipeline.py`, add to `PipelineRunner.STAGES` and add a call in `run()`:
 
 ```python
-# In STAGES list — add the stage name in execution order:
+# In STAGES list — add the stage name in execution order
 STAGES = ['initialize', 'build', ..., 'new-stage', ...]
 
-# In run() — add the guarded call:
+# In run() — add the guarded call
 if 'new-stage' in self.stages_to_run and self._stage_condition_met('NN-new-stage'):
     self._run_stage('New Stage', 'NN-new-stage',
                     'pipeline-config.json,**/*.tar.gz')

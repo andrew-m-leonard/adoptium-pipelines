@@ -25,7 +25,7 @@ Added automatic workspace path padding to the build stage to ensure reproducible
 
 ## How It Works
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. User enables compareBuild: true in pipeline config      │
 └─────────────────────────────────────────────────────────────┘
@@ -140,15 +140,17 @@ otool -l upstream/jdk-*/Contents/Home/lib/server/libjvm.dylib | grep uuid
 **Purpose**: Orchestrates the entire path padding process
 
 **Steps**:
+
 1. Extract configuration (OS, architecture, release flag)
-2. Construct SBOM API URL
-3. Download SBOM
-4. Extract `BUILD_WORKSPACE_DIRECTORY` property
-5. Calculate padding needed
-6. Create padded directory
-7. Update `WORKSPACE` environment variable
+1. Construct SBOM API URL
+1. Download SBOM
+1. Extract `BUILD_WORKSPACE_DIRECTORY` property
+1. Calculate padding needed
+1. Create padded directory
+1. Update `WORKSPACE` environment variable
 
 **Error Handling**:
+
 - SBOM download failure → Warning logged, continues without padding
 - Missing property → Warning logged, continues without padding
 - Insufficient padding space → Warning logged, continues without padding
@@ -158,6 +160,7 @@ otool -l upstream/jdk-*/Contents/Home/lib/server/libjvm.dylib | grep uuid
 **Purpose**: Calculate and create padded directory path
 
 **Algorithm**:
+
 ```bash
 target_length = length(upstream_workspace_path)
 local_length = length(local_workspace_path + "/workspace/build/src")
@@ -180,17 +183,17 @@ else:
 ## Benefits
 
 1. **Reproducibility**: Ensures byte-for-byte identical builds
-2. **Automation**: No manual intervention required
-3. **Transparency**: Clear logging of all operations
-4. **Robustness**: Graceful handling of edge cases
-5. **Compatibility**: Works across all supported platforms
+1. **Automation**: No manual intervention required
+1. **Transparency**: Clear logging of all operations
+1. **Robustness**: Graceful handling of edge cases
+1. **Compatibility**: Works across all supported platforms
 
 ## Limitations
 
 1. Cannot pad if local path is longer than upstream path
-2. Cannot pad if difference is less than 2 characters
-3. Requires SBOM availability in Adoptium API
-4. Requires network access during build
+1. Cannot pad if difference is less than 2 characters
+1. Requires SBOM availability in Adoptium API
+1. Requires network access during build
 
 ## Related Files
 
@@ -209,10 +212,10 @@ else:
 ## Next Steps
 
 1. Test with various JDK versions (JDK 11, 17, 21, 23)
-2. Test on different platforms (macOS, Linux, Windows)
-3. Verify LC_UUID matching on macOS builds
-4. Document any edge cases discovered during testing
-5. Consider adding metrics/telemetry for padding operations
+1. Test on different platforms (macOS, Linux, Windows)
+1. Verify LC_UUID matching on macOS builds
+1. Document any edge cases discovered during testing
+1. Consider adding metrics/telemetry for padding operations
 
 ## Questions?
 

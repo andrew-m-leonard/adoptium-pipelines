@@ -97,6 +97,7 @@ python-runner.sh <script.py> [args...]
 CLI script. Collates all `scripts/stages/*.params.json` sidecar files (plus optional vendor overrides) into a single structured JSON document consumed by Jenkins Job DSL (at job-creation time) and the local runner (at runtime).
 
 Key behaviour:
+
 - Merges default + vendor params per stage stem; vendor params override defaults with the same name
 - Deduplicates params shared across stages (e.g. `RUN_TESTS` defined in multiple `*.params.json` files)
 - Validates `stageCondition` cross-references — every referenced param name must exist in the final set
@@ -247,10 +248,11 @@ Extracts the built JDK into `WORKSPACE/jdk-test/` and runs four quick checks.
 **Outputs:** `${TARGET_DIR}/java-version.txt`, `hello-compile.txt`, `hello-run.txt`, `system-properties.txt`, `class-loading.txt`, `test-metadata.json`
 
 Tests performed:
+
 1. `java -version` executes successfully
-2. HelloWorld.java compiles and runs (`javac` + `java`)
-3. `-XshowSettings:properties` returns `java.version`, `java.home`, `os.name`
-4. `-cp lib -version` verifies class loading
+1. HelloWorld.java compiles and runs (`javac` + `java`)
+1. `-XshowSettings:properties` returns `java.version`, `java.home`, `os.name`
+1. `-cp lib -version` verifies class loading
 
 Key functions: `find_jdk_artifact`, `extract_jdk`, `run_smoke_tests`, `test_java_version`, `test_hello_world`, `test_system_properties`, `test_class_loading`, `create_test_metadata`
 
@@ -301,7 +303,7 @@ Exit codes: `0` = 100% reproducible, non-zero = differences found (pipeline fail
 
 Any `STUB` stage (and any `REAL` stage) can be overridden by placing a replacement script in the config repo:
 
-```
+```text
 config-repo/
 └── vendor-scripts/
     ├── 06-post-build-code-sign.sh    ← overrides scripts/stages/06-post-build-code-sign.sh
@@ -310,10 +312,11 @@ config-repo/
 ```
 
 Resolution order (first match wins):
+
 1. `config-repo/vendor-scripts/<stem>.sh`
-2. `config-repo/vendor-scripts/<stem>.py`
-3. `scripts/stages/<stem>.sh`
-4. `scripts/stages/<stem>.py`
-5. built-in no-op (logs skip, returns 0)
+1. `config-repo/vendor-scripts/<stem>.py`
+1. `scripts/stages/<stem>.sh`
+1. `scripts/stages/<stem>.py`
+1. built-in no-op (logs skip, returns 0)
 
 See [`ci/jenkins/lib/StageScriptRunner.groovy`](../ci/jenkins/lib/StageScriptRunner.groovy) (Jenkins) and [`ci/local/stage_resolver.py`](../ci/local/stage_resolver.py) (local) for the implementation.

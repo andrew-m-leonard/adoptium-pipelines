@@ -7,10 +7,10 @@
 ## Purpose
 
 1. **Unique build tracking** — each build gets a `BUILD_UID` that is reused on "Restart from Stage"
-2. **Stage result tracking** — every stage outcome is recorded in `BUILD_STAGE_RESULTS` so prerequisites can be validated
-3. **Prerequisite validation** — stages fail fast if required earlier stages did not pass
-4. **Group linking** — `GROUP_UID` links all platform builds from the same launch run together
-5. **Build display** — `BUILD_UID` and `GROUP_UID` are written into the Jenkins build description on every stage
+1. **Stage result tracking** — every stage outcome is recorded in `BUILD_STAGE_RESULTS` so prerequisites can be validated
+1. **Prerequisite validation** — stages fail fast if required earlier stages did not pass
+1. **Group linking** — `GROUP_UID` links all platform builds from the same launch run together
+1. **Build display** — `BUILD_UID` and `GROUP_UID` are written into the Jenkins build description on every stage
 
 ## Components
 
@@ -49,14 +49,14 @@ pipelineHelper.executeStageWithTracking('Smoke Tests') {  // (1)
 ```
 
 1. **`executeStageWithTracking`** — wraps the closure; calls `recordStageResult()` with the appropriate result code on every exit path (including exceptions and aborts)
-2. **`initializeStage`** — cleans workspace, checks out repos, loads `BuildUidHelper` (lazy), calls `initializeBuildContext()`, validates prerequisites, copies artifacts, reads and returns the config map
-3. **`finalizeStage`** — runs `cleanWs()` if `CLEAN_WORKSPACE_AFTER_STAGE=true`; logs `BUILD_UID`
+1. **`initializeStage`** — cleans workspace, checks out repos, loads `BuildUidHelper` (lazy), calls `initializeBuildContext()`, validates prerequisites, copies artifacts, reads and returns the config map
+1. **`finalizeStage`** — runs `cleanWs()` if `CLEAN_WORKSPACE_AFTER_STAGE=true`; logs `BUILD_UID`
 
 ### `initializeBuildContext()` (BuildUidHelper)
 
 Called by `initializeStage()` on every stage allocation:
 
-```
+```text
 BUILD_UID:
   if env.BUILD_UID is empty → generate "build-<yyyyMMdd-HHmmss>-<uuid8>"
   else                       → reuse existing (restart case)
@@ -111,7 +111,7 @@ The restart detection walks backwards through `currentBuild.previousBuild` looki
 After all stages complete:
 
 1. If `BUILD_UID == null` (no stage ran at all — e.g. Rebuild of a Restart) → sets `currentBuild.result = 'FAILURE'` with an explanatory message
-2. If `CLEAN_WORKSPACE_AFTER_STAGE=true` → allocates a new agent node and calls `cleanWs()` for a final workspace cleanup
+1. If `CLEAN_WORKSPACE_AFTER_STAGE=true` → allocates a new agent node and calls `cleanWs()` for a final workspace cleanup
 
 ## Environment Variables
 
@@ -161,7 +161,7 @@ After all stages complete:
 
 ### Normal first run
 
-```
+```text
 Initialize:
   BUILD_UID  generated → build-20260617-143022-abc12345
   GROUP_UID  from param → group-20260617-130000-f1e2d3c4
@@ -179,7 +179,7 @@ Smoke Tests:
 
 ### Restart from Smoke Tests
 
-```
+```text
 Jenkins skips Initialize and Build (already completed in the original run).
 
 Smoke Tests (new agent allocation):
@@ -195,7 +195,7 @@ Smoke Tests (new agent allocation):
 
 ### Rebuild (not Restart) — user error
 
-```
+```text
 Smoke Tests (new build, env vars cleared):
   initializeBuildContext():
     BUILD_UID generated (new, different value)
@@ -207,7 +207,7 @@ Smoke Tests (new build, env vars cleared):
 
 ### Build aborted by user
 
-```
+```text
 Build stage aborted mid-run:
   executeStageWithTracking catches FlowInterruptedException
   recordStageResult('Build', 'ABORTED')

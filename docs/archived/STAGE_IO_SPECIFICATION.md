@@ -18,7 +18,7 @@ All stage scripts receive these variables (set by `PipelineHelper.initializeStag
 
 In Jenkins, `initializeStage()` calls `copyArtifacts` to pull artifacts from the current build's archive into `INPUT_ARTIFACTS_DIR` before the stage script runs. The stage script writes outputs to `TARGET_DIR`, which is then archived with `archiveArtifacts`.
 
-```
+```text
 archiveArtifacts (Initialize stage)
     ↓
 copyArtifacts → INPUT_ARTIFACTS_DIR  ← stage reads from here
@@ -37,6 +37,7 @@ archiveArtifacts
 **Inputs**: Job parameters + `config-repo/configurations/jdk${N}_pipeline_config.json` + `config-repo/adoptium_pipeline_config.json`
 
 **Outputs archived**:
+
 - `pipeline-config.json` — generated pipeline configuration
 
 ---
@@ -46,6 +47,7 @@ archiveArtifacts
 **Prerequisites**: Initialize
 
 **Inputs**:
+
 - `${CONFIG_FILE}` — pipeline configuration
 - Boot JDK, build toolchain
 
@@ -55,6 +57,7 @@ archiveArtifacts
 | `TARGET_DIR` | `${WORKSPACE}/build_output` |
 
 **Outputs archived** (from `TARGET_DIR/**/*`):
+
 - `workspace/target/*.tar.gz` — JDK tarballs
 - `workspace/target/*.zip` — JDK zips (Windows)
 - `workspace/target/metadata/` — build metadata, SBOMs
@@ -68,6 +71,7 @@ archiveArtifacts
 **Prerequisites**: Build
 
 **Inputs** (`pipeline-config.json,workspace/target/jmods/**/*`):
+
 - `pipeline-config.json`
 - `workspace/target/jmods/**/*` — unsigned JMODs
 
@@ -82,6 +86,7 @@ archiveArtifacts
 **Prerequisites**: Build
 
 **Inputs** (`pipeline-config.json,signed-jmods/**/*`):
+
 - Signed JMODs from Internal Sign stage
 
 **Outputs**: assembled JDK image (archived from `TARGET_DIR`)
@@ -95,6 +100,7 @@ archiveArtifacts
 **Prerequisites**: Assemble (or Build if no Internal Sign)
 
 **Inputs** (`pipeline-config.json,workspace/target/**/*.tar.gz,...`):
+
 - JDK tarballs and metadata
 
 **Env vars**:
@@ -114,6 +120,7 @@ archiveArtifacts
 **Prerequisites**: Build
 
 **Inputs** (`pipeline-config.json,**/*.tar.gz,**/*.zip,**/metadata/**/*`):
+
 - JDK archives
 
 **Outputs**: platform installers (`.msi`, `.pkg`, `.deb`, `.rpm`)
@@ -127,6 +134,7 @@ archiveArtifacts
 **Prerequisites**: Build Installers
 
 **Inputs** (`pipeline-config.json,installers/**/*`):
+
 - Unsigned installer packages
 
 **Outputs**: signed installer packages
@@ -166,6 +174,7 @@ Also invokes `scripts/stages/10-sbom-sign.sh` inline if `--create-sbom` is in bu
 **Prerequisites**: Build
 
 **Inputs** (`pipeline-config.json,*sbom*.json`):
+
 - SBOM JSON files from build
 
 **Env vars**:
@@ -185,6 +194,7 @@ Also invokes `scripts/stages/10-sbom-sign.sh` inline if `--create-sbom` is in bu
 **Prerequisites**: Build
 
 **Inputs** (`pipeline-config.json,*.tar.gz,*.zip`):
+
 - JDK archive
 
 **Env vars**:
@@ -204,6 +214,7 @@ Also invokes `scripts/stages/10-sbom-sign.sh` inline if `--create-sbom` is in bu
 **Prerequisites**: Build
 
 **Inputs** (`pipeline-config.json,*.tar.gz,*.zip`):
+
 - Locally built JDK archive
 
 **Env vars**:
@@ -215,6 +226,7 @@ Also invokes `scripts/stages/10-sbom-sign.sh` inline if `--create-sbom` is in bu
 | `RELEASE` | `true` or `false` |
 
 **Outputs** (archived from `TARGET_DIR/**/*`):
+
 - `comparison-report.txt`
 - `reprotest.diff`
 - `reproducible_evidence.log`
@@ -270,9 +282,9 @@ Build set to UNSTABLE (not failed) on differences.
 All stage scripts must:
 
 1. Source shared utilities: `logging-utils.sh`, `config-utils.sh`, `artifact-utils.sh`
-2. Call `validate_standard_environment` to verify required variables
-3. Read inputs from `${INPUT_ARTIFACTS_DIR}` (or `${CONFIG_FILE}`)
-4. Write outputs to `${TARGET_DIR}`
-5. Exit 0 on success, non-zero on failure
+1. Call `validate_standard_environment` to verify required variables
+1. Read inputs from `${INPUT_ARTIFACTS_DIR}` (or `${CONFIG_FILE}`)
+1. Write outputs to `${TARGET_DIR}`
+1. Exit 0 on success, non-zero on failure
 
 See [`UNIVERSAL_STAGE_PATTERN.md`](../UNIVERSAL_STAGE_PATTERN.md) for the full template.

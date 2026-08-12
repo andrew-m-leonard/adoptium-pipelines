@@ -9,9 +9,9 @@ This directory contains Jenkins-specific pipeline definitions, shared Groovy lib
 Single-platform build pipeline. Every `Build_openjdk<version>_<distro>_<arch>_<os>` job points at this file. It:
 
 1. Loads shared helpers from `lib/` after checkout
-2. Runs all applicable pipeline stages in sequence
-3. Calls the appropriate `scripts/stages/` shell script for each stage via `StageScriptRunner`
-4. Tracks stage results in `BUILD_STAGE_RESULTS` to support "Restart from Stage"
+1. Runs all applicable pipeline stages in sequence
+1. Calls the appropriate `scripts/stages/` shell script for each stage via `StageScriptRunner`
+1. Tracks stage results in `BUILD_STAGE_RESULTS` to support "Restart from Stage"
 
 **Script path in Jenkins job config**: `ci/jenkins/Jenkinsfile.declarative`
 
@@ -20,9 +20,9 @@ Single-platform build pipeline. Every `Build_openjdk<version>_<distro>_<arch>_<o
 Multi-platform launch pipeline. Jobs named `Build_openjdk<version>_launch` (in `Build_openjdk_launchers/`) use this file. It:
 
 1. Reads `jdk${version}_pipeline_config.json` from the config repo to discover available platforms
-2. Determines which platforms to build (all, or a subset from the `PLATFORMS` parameter)
-3. Optionally regenerates platform build jobs via Job DSL (on first run or when `REGENERATE_JOBS=true`)
-4. Triggers all selected platform build jobs in parallel, passing a shared `GROUP_UID`
+1. Determines which platforms to build (all, or a subset from the `PLATFORMS` parameter)
+1. Optionally regenerates platform build jobs via Job DSL (on first run or when `REGENERATE_JOBS=true`)
+1. Triggers all selected platform build jobs in parallel, passing a shared `GROUP_UID`
 
 ### lib/
 
@@ -51,8 +51,8 @@ Shared Groovy helpers loaded with `load()` at the start of each stage. These are
 
 - `run(scriptStem, config)` — resolves the script to execute for a given stage stem using the vendor-override search order:
   1. `config-repo/vendor-scripts/<stem>.sh` / `.groovy` / `.py`
-  2. `scripts/stages/<stem>.sh` / `.groovy` / `.py`
-  3. No-op (stage skipped)
+  1. `scripts/stages/<stem>.sh` / `.groovy` / `.py`
+  1. No-op (stage skipped)
 - `.groovy` scripts receive the `config` map as their `call()` argument; `.sh` and `.py` scripts receive config via environment variables
 
 ### job-dsl/
@@ -62,6 +62,7 @@ Job DSL scripts that create and maintain all Jenkins jobs from code — no manua
 #### seed/seed_job_dsl.groovy
 
 Bootstrap script. Run once from a Freestyle "seed job" to create all other jobs:
+
 - Creates `Build_openjdk_launchers/Build_openjdk<version>_launch` jobs for each active JDK version
 - Reads the config repo to discover active JDK versions and their platform lists
 - Configures log rotation, parameters, and SCM from the config repo's `jenkins_job_config.json`
@@ -70,6 +71,7 @@ Bootstrap script. Run once from a Freestyle "seed job" to create all other jobs:
 #### openjdk_build_pipeline_job_dsl.groovy
 
 Called by the launch pipeline (via `jobDsl()` step) to create or update a single platform build job:
+
 - Fetches `jdk${version}_pipeline_config.json` from the config repo to extract `arch`, `os`, and `variant` for the platform
 - Creates `Build_openjdk/Build_openjdk<version>_<distro>_<arch>_<os>` following the AQA-style naming convention
 - Configures all pipeline parameters with defaults from `jenkins_job_config.json`
@@ -89,10 +91,10 @@ Called by the launch pipeline (via `jobDsl()` step) to create or update a single
 ### Seed Job Bootstrap
 
 1. Create a **Freestyle** job named `seed-job`
-2. Add string parameters: `CONFIG_REPO_URL`, `CONFIG_REPO_BRANCH`
-3. SCM: Git → `https://github.com/adoptium/ci-adoptium-pipelines.git`, branch `main`
-4. Build step: **Process Job DSLs** → script path `ci/jenkins/job-dsl/seed/seed_job_dsl.groovy`
-5. Run the seed job with your configuration repository URL and branch
+1. Add string parameters: `CONFIG_REPO_URL`, `CONFIG_REPO_BRANCH`
+1. SCM: Git → `https://github.com/adoptium/ci-adoptium-pipelines.git`, branch `main`
+1. Build step: **Process Job DSLs** → script path `ci/jenkins/job-dsl/seed/seed_job_dsl.groovy`
+1. Run the seed job with your configuration repository URL and branch
 
 The seed job creates all launch jobs. Running a launch job creates the platform build jobs.
 
@@ -126,11 +128,12 @@ Parameters are defined by the Job DSL seed job (from `jenkins_job_config.json`) 
 ## Stage Restart Behaviour
 
 Each stage:
+
 1. Calls `cleanWs()` to start clean
-2. Checks out this repo and the config repo
-3. Calls `BuildUidHelper.initializeBuildContext()` — generates or **reuses** `BUILD_UID` from the previous run
-4. Calls `validatePrerequisites()` — verifies required earlier stages passed (via `BUILD_STAGE_RESULTS` env var)
-5. Calls `copyArtifacts` to pull in artifacts from earlier stages of the **same build number**
+1. Checks out this repo and the config repo
+1. Calls `BuildUidHelper.initializeBuildContext()` — generates or **reuses** `BUILD_UID` from the previous run
+1. Calls `validatePrerequisites()` — verifies required earlier stages passed (via `BUILD_STAGE_RESULTS` env var)
+1. Calls `copyArtifacts` to pull in artifacts from earlier stages of the **same build number**
 
 On "Restart from Stage", Jenkins preserves all env vars from the previous run including `BUILD_UID` and `BUILD_STAGE_RESULTS`.
 
@@ -140,7 +143,7 @@ On "Restart from Stage", Jenkins preserves all env vars from the previous run in
 
 Expected structure of the config repo (e.g. `ci-temurin-config`):
 
-```
+```text
 <config-repo>/
 ├── adoptium_pipeline_config.json      # Pipeline defaults (repo URLs, branches, variant)
 ├── jenkins_job_config.json            # Job DSL settings (log rotation, default params, active JDKs)
@@ -151,7 +154,8 @@ Expected structure of the config repo (e.g. `ci-temurin-config`):
 ```
 
 Optionally, vendor-specific stage overrides:
-```
+
+```text
 <config-repo>/
 └── vendor-scripts/
     ├── 02-build.sh                    # Replaces scripts/stages/02-build.sh for this vendor

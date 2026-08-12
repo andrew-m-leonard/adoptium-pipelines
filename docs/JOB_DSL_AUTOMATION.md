@@ -7,6 +7,7 @@ This document describes how Jenkins pipeline jobs are created and updated using 
 All Jenkins pipeline jobs are defined as code using Job DSL scripts. A seed **Pipeline** job reads these scripts and creates/updates all launch and platform build jobs automatically. This ensures jobs are reproducible and version-controlled.
 
 **Key points**:
+
 - The seed job is a Jenkins **Pipeline** job using "Pipeline from SCM" — it points at a `Jenkinsfile.seed` that the vendor places in their config repo.
 - A template `Jenkinsfile.seed` is provided at [`ci/jenkins/Jenkinsfile.seed`](../ci/jenkins/Jenkinsfile.seed) — copy it into your config repo and adjust as needed.
 - Credentials for both repositories are managed entirely by the Jenkins Credentials store — nothing is placed on agents manually.
@@ -20,19 +21,19 @@ mandatory Jenkins instance requirements (plugins, node labels, timeout behaviour
 In summary, your Jenkins instance must have:
 
 1. **Job DSL Plugin** installed and configured
-2. **Pipeline Plugin** installed
-3. **Git Plugin** installed
-4. **Workspace Cleanup Plugin** (`ws-cleanup`) installed
-5. **Build Timeout Plugin** (`build-timeout`) installed
-6. **Script Security** configured to allow Job DSL scripts
-7. At least one agent labelled **`ci.role.worker`** online
-8. Access to:
+1. **Pipeline Plugin** installed
+1. **Git Plugin** installed
+1. **Workspace Cleanup Plugin** (`ws-cleanup`) installed
+1. **Build Timeout Plugin** (`build-timeout`) installed
+1. **Script Security** configured to allow Job DSL scripts
+1. At least one agent labelled **`ci.role.worker`** online
+1. Access to:
    - `https://github.com/adoptium/ci-adoptium-pipelines.git` (pipeline code)
    - Your vendor-specific configuration repository
 
 ## Architecture
 
-```
+```text
 openjdk-build-seed-job  (Pipeline job — Pipeline from SCM → config repo Jenkinsfile.seed)
   │
   ├─ Pipeline SCM checkout: vendor config repo → workspace root
@@ -70,7 +71,7 @@ Build_openjdk_launchers/Build_openjdk21_launch  (Pipeline — Jenkinsfile.launch
 Copy [`ci/jenkins/Jenkinsfile.seed`](../ci/jenkins/Jenkinsfile.seed)
 from this repo into the **root of your vendor config repository** (or any path you prefer):
 
-```
+```text
 <your-config-repo>/
   Jenkinsfile.seed          ← copied from this template
   adoptium_pipeline_config.json
@@ -93,7 +94,7 @@ For a fork or a pinned branch, change these values. Commit and push.
 
 1. In Jenkins, create a new **Pipeline** job named `openjdk-build-seed-job`
 
-2. **Add Parameters** — click *This project is parameterized* and add two String Parameters **in the Jenkins job configuration UI**:
+1. **Add Parameters** — click *This project is parameterized* and add two String Parameters **in the Jenkins job configuration UI**:
 
    | Name | Default | Description |
    |---|---|---|
@@ -104,7 +105,7 @@ For a fork or a pinned branch, change these values. Commit and push.
 
    These values are baked into every generated launch job so `Jenkinsfile.launch` can check out the config repo at runtime on each build agent.
 
-3. Under **Pipeline**:
+1. Under **Pipeline**:
    - **Definition**: `Pipeline script from SCM`
    - **SCM**: Git
    - **Repository URL**: your vendor config repo URL
@@ -112,7 +113,7 @@ For a fork or a pinned branch, change these values. Commit and push.
    - **Branch Specifier**: your config repo branch (e.g. `main`)
    - **Script Path**: `Jenkinsfile.seed` *(or the path you chose in Step 1)*
 
-4. Save the job.
+1. Save the job.
 
 > **Note**: The Pipeline SCM step checks out the vendor config repo to the workspace
 > root, so `adoptium_pipeline_config.json`, `jenkins_job_config.json`,
@@ -123,11 +124,12 @@ For a fork or a pinned branch, change these values. Commit and push.
 ### Step 3: Run the seed job
 
 1. Click **Build with Parameters**
-2. Set `CONFIG_REPO_URL` to your config repo URL (e.g. `https://github.com/adoptium/ci-temurin-config.git`)
-3. Set `CONFIG_REPO_BRANCH` to your branch (e.g. `main`)
-4. Click **Build**
+1. Set `CONFIG_REPO_URL` to your config repo URL (e.g. `https://github.com/adoptium/ci-temurin-config.git`)
+1. Set `CONFIG_REPO_BRANCH` to your branch (e.g. `main`)
+1. Click **Build**
 
 The job will:
+
 - Check out `ci-adoptium-pipelines` into `pipelines/`
 - Collate stage parameters from `pipelines/scripts/stages/` and `vendor-scripts/`
 - Read `adoptium_pipeline_config.json` and `jenkins_job_config.json` from the config repo
@@ -150,7 +152,7 @@ compares it against `env.GIT_COMMIT` — the SHA Jenkins actually checked out to
 execute `Jenkinsfile.launch`. If they differ the build fails immediately with a
 clear message:
 
-```
+```text
 This launch job is out of date.
   Job generated from : <old-sha>
   Current SCM SHA    : <new-sha>
@@ -167,6 +169,7 @@ If they differ, or the job does not yet exist, the job is regenerated. If they
 match the job is left untouched and the stage moves on immediately.
 
 Platform jobs created this way will look like:
+
 - `Build_openjdk/Build_openjdk21_temurin_x86-64_linux`
 - `Build_openjdk/Build_openjdk21_temurin_aarch64_mac`
 
@@ -195,7 +198,7 @@ The seed reads enabled entries and creates one launch job per version.
 Stage parameters are collated at seed-job time from two sources:
 
 1. **Default params** — `pipelines/scripts/stages/*.params.json` (from `ci-adoptium-pipelines`)
-2. **Vendor overrides** — `vendor-scripts/*.params.json` (from the vendor config repo, checked out to workspace root by the Pipeline SCM step)
+1. **Vendor overrides** — `vendor-scripts/*.params.json` (from the vendor config repo, checked out to workspace root by the Pipeline SCM step)
 
 Vendor files can add new parameters, replace defaults, or suppress defaults via `ignoreDefaultParams`.
 The collated set is baked into every launch job and platform build job, with a hidden
@@ -233,6 +236,7 @@ Default parameter values come from `jenkins_job_config.json` in the config repo:
 ### Re-running the Seed Job
 
 Run the seed job any time to pick up changes to:
+
 - Active JDK versions (`adoptium_pipeline_config.json`)
 - Default parameters or log rotation (`jenkins_job_config.json`)
 - Stage parameter definitions (`scripts/stages/*.params.json` or `vendor-scripts/*.params.json`)
@@ -243,14 +247,14 @@ The config repo is re-checked out by the Pipeline SCM step; `pipelines/` (ci-ado
 ### Adding/Removing JDK Versions
 
 1. Edit `adoptium_pipeline_config.json` in the config repo — set `"enabled": false` or add a new entry
-2. Commit and push
-3. Re-run the seed job
+1. Commit and push
+1. Re-run the seed job
 
 ### Updating Platform Jobs
 
 1. Edit `jenkins_job_config.json` in the config repo or the Job DSL scripts
-2. Commit and push
-3. Re-run the seed job
+1. Commit and push
+1. Re-run the seed job
 
 Platform build jobs are automatically regenerated on the next launch run — the
 launch job detects that the `pipeline-sha` stored in each job's description no
@@ -323,9 +327,11 @@ launch job with the new SHA. Then retry the launch build.
 Jenkins Script Security sandbox on first use.
 
 **Fix**: Go to **Manage Jenkins → In-process Script Approval** and approve:
-```
+
+```text
 method hudson.model.AbstractItem getDescription
 ```
+
 This is a one-time, read-only approval scoped to the current job's own metadata.
 
 ### Platform Jobs Not Created / Out of Date

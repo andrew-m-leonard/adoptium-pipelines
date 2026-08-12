@@ -29,6 +29,7 @@ pipeline {
 ```
 
 **Characteristics:**
+
 - ❌ **Immutable** - Cannot be changed after initialization
 - ✅ **Declarative** - Defined at pipeline level
 - ✅ **Visible in UI** - Shows in environment variables list
@@ -36,6 +37,7 @@ pipeline {
 - ✅ **Can use expressions** - But only evaluated once at start
 
 **Use Case:** Static configuration values that never change
+
 ```groovy
 environment {
     APP_NAME = 'my-app'
@@ -64,6 +66,7 @@ pipeline {
 ```
 
 **Characteristics:**
+
 - ✅ **Mutable** - Can be changed anytime
 - ✅ **Dynamic** - Can be set based on runtime conditions
 - ✅ **Persists** - Available in all subsequent stages
@@ -71,6 +74,7 @@ pipeline {
 - ⚠️ **Not in UI** - Doesn't show in environment variables list (unless set)
 
 **Use Case:** Dynamic values that need to be computed or changed
+
 ```groovy
 script {
     env.BUILD_UID = "${currentBuild.startTimeInMillis}-${UUID.randomUUID()}"
@@ -86,7 +90,7 @@ script {
    - `environment {}` block is evaluated
    - Values are set and locked
 
-2. **Execution Phase** - Stages run
+1. **Execution Phase** - Stages run
    - `environment {}` variables are read-only
    - `env.VAR` assignments work
 
@@ -115,6 +119,7 @@ pipeline {
 ```
 
 **Why it fails:**
+
 - `environment { BUILD_UID = '' }` creates a read-only binding
 - `env.BUILD_UID = "abc123"` tries to modify it
 - Jenkins ignores the modification (or it has no effect)
@@ -289,6 +294,7 @@ pipeline {
 ```
 
 This allowed `env.BUILD_UID` to be:
+
 - ✅ Set dynamically in Stage 1
 - ✅ Read in Stage 2 and 3
 - ✅ Preserved across restarts (via parameter)
@@ -372,9 +378,10 @@ pipeline {
 ### Why It Matters
 
 Your discovery is critical because:
+
 1. ✅ `env.BUILD_UID` works across stages and restarts
-2. ❌ `environment { BUILD_UID }` would have broken everything
-3. ✅ Now we know the correct pattern for workspace validation
+1. ❌ `environment { BUILD_UID }` would have broken everything
+1. ✅ Now we know the correct pattern for workspace validation
 
 ### The Correct Pattern
 

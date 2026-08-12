@@ -18,12 +18,14 @@ This document describes the migration from separate `RELEASE` and `WEEKLY` boole
 **File**: `ci/jenkins/job-dsl/openjdk_build_pipeline_job_dsl.groovy`
 
 **Before**:
+
 ```groovy
 booleanParam('RELEASE', false, 'Is this a release build?')
 booleanParam('WEEKLY', false, 'Is this a weekly build?')
 ```
 
 **After**:
+
 ```groovy
 choiceParam('RELEASE_TYPE',
     ['NIGHTLY', 'WEEKLY', 'RELEASE'],
@@ -35,7 +37,9 @@ choiceParam('RELEASE_TYPE',
 **File**: `ci/jenkins/Jenkinsfile.declarative`
 
 #### Build Display Name (Lines 61-66)
+
 **Before**:
+
 ```groovy
 if (params.RELEASE) {
     displayName += " [RELEASE]"
@@ -45,6 +49,7 @@ if (params.RELEASE) {
 ```
 
 **After**:
+
 ```groovy
 if (params.RELEASE_TYPE && params.RELEASE_TYPE != 'NIGHTLY') {
     displayName += " [${params.RELEASE_TYPE}]"
@@ -52,7 +57,9 @@ if (params.RELEASE_TYPE && params.RELEASE_TYPE != 'NIGHTLY') {
 ```
 
 #### Python Script Arguments (Lines 232-241)
+
 **Before**:
+
 ```groovy
 if (params.RELEASE) {
     pythonArgs.add("--release")
@@ -63,6 +70,7 @@ if (params.WEEKLY) {
 ```
 
 **After**:
+
 ```groovy
 if (params.RELEASE_TYPE) {
     // Validate RELEASE_TYPE parameter
@@ -76,12 +84,15 @@ if (params.RELEASE_TYPE) {
 ```
 
 #### Environment Variable (Line 694)
+
 **Before**:
+
 ```groovy
 env.RELEASE = params.RELEASE ? 'true' : 'false'
 ```
 
 **After**:
+
 ```groovy
 env.RELEASE = (params.RELEASE_TYPE == 'RELEASE') ? 'true' : 'false'
 ```
@@ -93,12 +104,14 @@ env.RELEASE = (params.RELEASE_TYPE == 'RELEASE') ? 'true' : 'false'
 **File**: `scripts/lib/load-json-config.py`
 
 **Parameter Definition** (Lines 258-259):
+
 ```python
 parser.add_argument('--release-type', choices=['NIGHTLY', 'WEEKLY', 'RELEASE'],
                     help='Type of release build (NIGHTLY=default, WEEKLY=weekly builds, RELEASE=official releases)')
 ```
 
 **Parameter Processing** (Lines 99-103):
+
 ```python
 # Determine release type from --release-type parameter (defaults to NIGHTLY)
 release_type = args.release_type or 'NIGHTLY'
@@ -107,6 +120,7 @@ is_weekly = (release_type == 'WEEKLY')
 ```
 
 **Documentation Example** (Lines 227-234):
+
 ```bash
 python3 load-json-config.py \
     --jdk-version jdk17u \
@@ -122,18 +136,21 @@ python3 load-json-config.py \
 **File**: `ci/local/run-pipeline.py`
 
 **Parameter Definition** (Lines 606-607):
+
 ```python
 parser.add_argument('--release-type', choices=['NIGHTLY', 'WEEKLY', 'RELEASE'],
                     help='Type of release build (NIGHTLY=default, WEEKLY=weekly builds, RELEASE=official releases)')
 ```
 
 **Parameter Forwarding** (Lines 213-214):
+
 ```python
 if self.args.release_type:
     cmd.extend(['--release-type', self.args.release_type])
 ```
 
 **Documentation Examples** (Lines 545, 581):
+
 ```bash
 --release-type RELEASE
 ```
@@ -153,12 +170,14 @@ if self.args.release_type:
 The `RELEASE_TYPE` parameter is validated at multiple layers for robustness:
 
 ### 1. Jenkins Job Definition (Job DSL)
+
 - **Location**: Job parameter definition
 - **Method**: `choiceParam()` restricts to predefined values
 - **Effect**: Users can only select from dropdown menu
 - **Values**: `['NIGHTLY', 'WEEKLY', 'RELEASE']`
 
 ### 2. Jenkinsfile (Pipeline Script)
+
 - **Location**: [`Jenkinsfile.declarative`](../ci/jenkins/Jenkinsfile.declarative:232) lines 232-244
 - **Method**: Converts to uppercase, then validates before passing to Python
 - **Effect**: Case-insensitive input, fails fast with clear error message if invalid value
@@ -176,6 +195,7 @@ if (!validReleaseTypes.contains(releaseType)) {
 ```
 
 ### 3. Python Scripts (load-json-config.py, run-pipeline.py)
+
 - **Location**: Argument parser and processing logic
 - **Method**: Converts to uppercase, then validates against allowed values
 - **Effect**: Case-insensitive input with clear error message for invalid values
@@ -195,12 +215,13 @@ if release_type not in valid_release_types:
 ### Defense in Depth
 
 This multi-layer validation ensures:
+
 1. **UI Protection**: Dropdown prevents typos in Jenkins UI
-2. **Case Insensitivity**: All layers accept lowercase, mixed case, or uppercase
-3. **API Protection**: Jenkinsfile validation catches programmatic errors
-4. **Script Protection**: Python validation provides final safety net
-5. **Clear Errors**: Each layer provides helpful error messages
-6. **Consistent Behavior**: All layers normalize to uppercase internally
+1. **Case Insensitivity**: All layers accept lowercase, mixed case, or uppercase
+1. **API Protection**: Jenkinsfile validation catches programmatic errors
+1. **Script Protection**: Python validation provides final safety net
+1. **Clear Errors**: Each layer provides helpful error messages
+1. **Consistent Behavior**: All layers normalize to uppercase internally
 
 ## Migration Guide
 
@@ -209,14 +230,15 @@ This multi-layer validation ensures:
 When creating or updating jobs via Job DSL:
 
 1. Remove the `RELEASE` and `WEEKLY` boolean parameters
-2. Add the `RELEASE_TYPE` choice parameter with values `['NIGHTLY', 'WEEKLY', 'RELEASE']`
-3. Set default value to `NIGHTLY`
+1. Add the `RELEASE_TYPE` choice parameter with values `['NIGHTLY', 'WEEKLY', 'RELEASE']`
+1. Set default value to `NIGHTLY`
 
 ### For Pipeline Scripts
 
 When calling the pipeline:
 
 **Before**:
+
 ```groovy
 build job: 'openjdk-build', parameters: [
     booleanParam(name: 'RELEASE', value: true)
@@ -224,6 +246,7 @@ build job: 'openjdk-build', parameters: [
 ```
 
 **After**:
+
 ```groovy
 build job: 'openjdk-build', parameters: [
     choice(name: 'RELEASE_TYPE', value: 'RELEASE')
@@ -233,12 +256,14 @@ build job: 'openjdk-build', parameters: [
 ### For Python Scripts
 
 **Before**:
+
 ```bash
 python3 load-json-config.py --release
 python3 load-json-config.py --weekly
 ```
 
 **After**:
+
 ```bash
 python3 load-json-config.py --release-type RELEASE
 python3 load-json-config.py --release-type WEEKLY
@@ -248,12 +273,14 @@ python3 load-json-config.py --release-type NIGHTLY  # or omit for default
 ### For Local Testing
 
 **Before**:
+
 ```bash
 python3 run-pipeline.py --release
 python3 run-pipeline.py --weekly
 ```
 
 **After**:
+
 ```bash
 python3 run-pipeline.py --release-type RELEASE
 python3 run-pipeline.py --release-type WEEKLY
@@ -273,10 +300,10 @@ python3 run-pipeline.py --release-type NIGHTLY  # or omit for default
 ### Rollout Strategy
 
 1. Update Job DSL scripts to create jobs with new parameter
-2. Update all pipeline scripts to use new parameter
-3. Update documentation and examples
-4. Communicate changes to users
-5. Monitor for any issues during transition
+1. Update all pipeline scripts to use new parameter
+1. Update documentation and examples
+1. Communicate changes to users
+1. Monitor for any issues during transition
 
 ## Testing
 
@@ -287,27 +314,27 @@ python3 run-pipeline.py --release-type NIGHTLY  # or omit for default
    - Verify display name shows no suffix
    - Verify `env.RELEASE` is `false`
 
-2. **WEEKLY build**:
+1. **WEEKLY build**:
    - Trigger build with `RELEASE_TYPE=WEEKLY`
    - Verify display name shows `[WEEKLY]`
    - Verify `env.RELEASE` is `false`
 
-3. **RELEASE build**:
+1. **RELEASE build**:
    - Trigger build with `RELEASE_TYPE=RELEASE`
    - Verify display name shows `[RELEASE]`
    - Verify `env.RELEASE` is `true`
 
-4. **Stage restart**:
+1. **Stage restart**:
    - Verify RELEASE_TYPE persists across stage restarts
    - Verify display name remains correct after restart
 
 ## Benefits
 
 1. **Clearer Intent**: Single parameter makes build type explicit
-2. **Easier to Extend**: Adding new build types (e.g., BETA, RC) is straightforward
-3. **Better UX**: Dropdown selection is more user-friendly than multiple checkboxes
-4. **Reduced Errors**: Impossible to select both RELEASE and WEEKLY simultaneously
-5. **Simplified Logic**: Fewer conditional branches in code
+1. **Easier to Extend**: Adding new build types (e.g., BETA, RC) is straightforward
+1. **Better UX**: Dropdown selection is more user-friendly than multiple checkboxes
+1. **Reduced Errors**: Impossible to select both RELEASE and WEEKLY simultaneously
+1. **Simplified Logic**: Fewer conditional branches in code
 
 ## Related Files
 

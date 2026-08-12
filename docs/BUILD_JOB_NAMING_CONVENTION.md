@@ -13,7 +13,7 @@ Build pipeline jobs follow the same structural naming convention as AQA test job
 
 ## Platform Build Job Name Format
 
-```
+```text
 Build_openjdk<version>_<distro>_<arch>_<os>
 ```
 
@@ -27,7 +27,7 @@ Build_openjdk<version>_<distro>_<arch>_<os>
 
 ## Launch Orchestrator Job Name Format
 
-```
+```text
 Build_openjdk<version>_launch
 ```
 
@@ -35,7 +35,7 @@ One per active JDK version, lives in `Build_openjdk_launchers/`.
 
 ## Examples
 
-```
+```text
 Build_openjdk_launchers/Build_openjdk21_launch
 Build_openjdk_launchers/Build_openjdk17_launch
 Build_openjdk_launchers/Build_openjdk11_launch
@@ -53,7 +53,7 @@ Build_openjdk/Build_openjdk8_temurin_ppc64_aix
 
 ## Folder Layout
 
-```
+```text
 Build_openjdk_launchers/
 ├── Build_openjdk21_launch      ← triggers all enabled JDK 21 platforms
 ├── Build_openjdk17_launch      ← triggers all enabled JDK 17 platforms
@@ -74,13 +74,13 @@ Build_openjdk/
 
 The AQA test suite uses this convention for test jobs:
 
-```
+```text
 Test_openjdk<version>_<impl|distro>_<testLevel>.<testGroup>_<arch>_<os>
 ```
 
 Our build jobs mirror the `version`, `distro`, `arch`, and `os` segments with a `Build_` prefix, omitting the test-specific `testLevel`/`testGroup` segments:
 
-```
+```text
 Build_openjdk<version>_<distro>_<arch>_<os>
 ```
 

@@ -9,6 +9,7 @@ This document describes the fundamental shift in how Adoptium build pipelines ar
 The original pipeline architecture had critical flaws that prevented effective use of CI restart capabilities and created misleading status reporting.
 
 ### Business Impact
+
 - **Misleading Status**: Build pipelines reported as FAILED when only a single test case failed
 - **Lost Context**: Cannot distinguish between build failures and test failures
 - **Fragile Artifact Flow**: Extra copy step from downstream to top-level can lose artifacts
@@ -19,7 +20,7 @@ The original pipeline architecture had critical flaws that prevented effective u
 
 ### Flow Diagram
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │ Top-Level "Release Trigger" Pipeline                           │
 │ (Collects all artifacts from downstream)                       │
@@ -78,7 +79,7 @@ The original pipeline architecture had critical flaws that prevented effective u
 
 **Problem**: Build pipeline status includes test results, making it impossible to distinguish build success from test success.
 
-```
+```text
 Scenario: Linux x64 Build Pipeline
 
 Build Stages:
@@ -106,7 +107,7 @@ Pipeline Status: ❌ UNSTABLE
 
 **Problem**: Extra copy step from downstream build pipeline to top-level pipeline can fail, losing artifacts even though build succeeded.
 
-```
+```text
 Scenario: Artifact Copy Failure
 
 Linux aarch64 Build Pipeline:
@@ -125,7 +126,7 @@ Result:
 
 **Problem**: Cannot restart build stages independently of tests, or vice versa.
 
-```
+```text
 Scenario: Need to re-run tests only
 
 Current Situation:
@@ -144,7 +145,7 @@ Required Actions:
 
 **Problem**: Test failures propagate up through the entire chain, masking successful builds.
 
-```
+```text
 Build Pipeline Hierarchy:
 
 Top-Level Pipeline
@@ -162,9 +163,9 @@ Result:
 
 ## New Architecture: Independent Platform Pipelines
 
-### Flow Diagram
+### Status Flow
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │ Release Trigger Event                                           │
 │ (e.g., "Build JDK 21.0.5+11")                                  │
@@ -224,14 +225,16 @@ Result:
 #### 1. **Clear Status Separation**
 
 **Before**: Build pipeline shows UNSTABLE due to test failure
-```
+
+```text
 Linux x64 Build Pipeline: ❌ UNSTABLE
 └─ Reason: 1 test failed out of 45,000
    (But build was 100% successful!)
 ```
 
 **After**: Build and test status are independent
-```
+
+```text
 Linux x64 Build Pipeline: ✅ SUCCESS
 └─ All build stages completed successfully
 
@@ -240,6 +243,7 @@ Linux x64 Test Pipeline: ❌ UNSTABLE
 ```
 
 **Benefit**: Release team can immediately see:
+
 - Build succeeded → Artifacts are ready for release
 - Tests mostly passed → Only 1 test needs investigation
 - Can release build while investigating test failure
@@ -247,7 +251,8 @@ Linux x64 Test Pipeline: ❌ UNSTABLE
 #### 2. **No Artifact Copy Step**
 
 **Before**: Artifacts copied from downstream to top-level
-```
+
+```text
 Build Pipeline → Artifacts → Copy to Top-Level
                               ↓
                          ❌ Copy can fail
@@ -255,7 +260,8 @@ Build Pipeline → Artifacts → Copy to Top-Level
 ```
 
 **After**: Artifacts stay in build pipeline
-```
+
+```text
 Build Pipeline → Artifacts stored here
                  ↓
             ✅ No copy step
@@ -266,7 +272,8 @@ Build Pipeline → Artifacts stored here
 #### 3. **Independent Restartability**
 
 **Before**: Must restart entire pipeline
-```
+
+```text
 Need to re-run 1 failed test:
 ❌ Restart entire build pipeline (2 hours)
 ❌ Rebuild everything
@@ -274,7 +281,8 @@ Need to re-run 1 failed test:
 ```
 
 **After**: Restart only what failed
-```
+
+```text
 Need to re-run 1 failed test:
 ✅ Build pipeline: Already complete (no action)
 ✅ Test pipeline: Restart failed test suite (10 minutes)
@@ -286,7 +294,8 @@ Need to re-run 1 failed test:
 **Critical Advantage**: AQA Test Pipelines can be triggered on **local OR remote Jenkins instances**
 
 **Architecture Flexibility**:
-```
+
+```text
 Build Pipeline (Jenkins Instance A)
     │
     │ Triggers test pipeline with artifact reference
@@ -301,7 +310,8 @@ Test Suite A   Test Suite B   Test Suite C   Test Suite D
 ```
 
 **Scalability Benefits**:
-```
+
+```text
 Old Architecture (Single Jenkins):
 ├─ All tests run on same Jenkins instance
 ├─ Limited by single instance capacity
@@ -316,7 +326,8 @@ New Architecture (Distributed):
 ```
 
 **Resilience Benefits**:
-```
+
+```text
 Scenario: Jenkins Instance Failure
 
 Old Architecture:
@@ -333,7 +344,8 @@ New Architecture:
 ```
 
 **Real-World Example**:
-```
+
+```text
 Scenario: Testing JDK 21.0.5 across 12 platforms
 
 Old Architecture:
@@ -354,7 +366,8 @@ Improvement: 12× faster testing
 ```
 
 **Geographic Distribution**:
-```
+
+```text
 Build Artifacts (Central Location)
     │
     ├─────────────┬─────────────┬─────────────┐
@@ -372,7 +385,8 @@ Benefits:
 ```
 
 **Failure Recovery**:
-```
+
+```text
 Scenario: Remote Jenkins Instance Becomes Unavailable
 
 Action:
@@ -395,7 +409,8 @@ New Architecture:
 #### 4. **Accurate Status Reporting**
 
 **Before**: Confusing status
-```
+
+```text
 Dashboard shows:
 ├─ Linux x64: UNSTABLE
 ├─ Mac x64: UNSTABLE
@@ -406,7 +421,8 @@ Answer: Unknown without deep investigation
 ```
 
 **After**: Clear status
-```
+
+```text
 Dashboard shows:
 
 BUILD PIPELINES:
@@ -427,7 +443,8 @@ Answer: All builds succeeded, 1 test needs investigation
 ### Scenario: Single Test Failure
 
 #### Old Architecture
-```
+
+```text
 Timeline:
 Hour 0:   Release trigger starts
 Hour 1:   Linux x64 build completes (compile, sign, installer, SBOM)
@@ -450,7 +467,8 @@ Release Team Sees:
 ```
 
 #### New Architecture
-```
+
+```text
 Timeline:
 Hour 0:   Release trigger starts
 Hour 1:   Linux x64 BUILD pipeline completes
@@ -479,8 +497,9 @@ Release Team Sees:
 
 ### Scenario: Artifact Copy Failure
 
-#### Old Architecture
-```
+#### Old Architecture (Status)
+
+```text
 Timeline:
 Hour 0: Linux aarch64 build completes successfully
 Hour 1: Artifacts being copied to top-level pipeline
@@ -499,8 +518,9 @@ Recovery:
 3. Hope copy succeeds this time
 ```
 
-#### New Architecture
-```
+#### New Architecture (Status)
+
+```text
 Timeline:
 Hour 0: Linux aarch64 build completes successfully
 Hour 1: Artifacts stored in build pipeline
@@ -521,30 +541,35 @@ Not needed - artifacts are safe
 
 ### 1. Operational Excellence
 
-**Clear Status Reporting**
+#### Clear Status Reporting
+
 - Old: "UNSTABLE" (ambiguous)
 - New: "Build: SUCCESS, Tests: UNSTABLE" (clear)
 - **Improvement: Instant clarity on what failed**
 
-**Faster Recovery**
+#### Faster Recovery
+
 - Old: Restart entire pipeline (2-3 hours)
 - New: Restart failed component only (10-15 minutes)
 - **Improvement: 12x faster recovery**
 
-**Artifact Safety**
+#### Artifact Safety
+
 - Old: Extra copy step can fail
 - New: No copy step, artifacts stay in place
 - **Improvement: 100% artifact retention**
 
-**Distributed Test Execution**
+#### Distributed Test Execution
+
 - Old: Single Jenkins instance (bottleneck, single point of failure)
 - New: Multiple Jenkins instances (scalable, resilient)
 - **Improvement: 12× faster testing, unlimited scalability**
 
 ### 2. Release Management
 
-**Better Decision Making**
-```
+#### Better Decision Making
+
+```text
 Old Dashboard:
 ├─ Linux x64: UNSTABLE
 └─ Decision: Unknown if we can release
@@ -555,15 +580,17 @@ New Dashboard:
 └─ Decision: Can release, 1 test needs investigation
 ```
 
-**Partial Releases**
+#### Partial Releases
+
 - Can release platforms with successful builds
 - Even if some tests are still running
 - Or if some tests need investigation
 
 ### 3. Developer Experience
 
-**Faster Iteration**
-```
+#### Faster Iteration
+
+```text
 Old: Test failed, need to re-run
 ├─ Restart entire pipeline
 ├─ Wait 2 hours for rebuild
@@ -576,15 +603,17 @@ New: Test failed, need to re-run
 └─ Total: 10 minutes
 ```
 
-**Clear Feedback**
+#### Clear Feedback
+
 - Know immediately if build failed vs test failed
 - Can focus investigation on right component
 - No confusion about pipeline status
 
 ### 4. Cost Efficiency
 
-**Reduced Waste**
-```
+#### Reduced Waste
+
+```text
 Scenario: 1 test fails out of 45,000
 
 Old Cost:
@@ -598,44 +627,50 @@ New Cost:
 └─ Total: 10 minutes
 ```
 
-**Improvement: 95% cost reduction**
+#### Improvement: 95% cost reduction
 
 ## Migration Strategy
 
 ### Phase 1: Separate Build and Test Pipelines
+
 1. Create independent build pipeline (build stages only)
-2. Create independent test pipeline (tests only)
-3. Build pipeline triggers test pipeline on success
-4. Artifacts stay in build pipeline
+1. Create independent test pipeline (tests only)
+1. Build pipeline triggers test pipeline on success
+1. Artifacts stay in build pipeline
 
 ### Phase 2: Update Status Reporting
+
 1. Build pipeline reports only build status
-2. Test pipeline reports only test status
-3. Update dashboards to show both separately
-4. Train team on new status interpretation
+1. Test pipeline reports only test status
+1. Update dashboards to show both separately
+1. Train team on new status interpretation
 
 ### Phase 3: Implement Restartability
+
 1. Enable stage-level restart in build pipeline
-2. Enable test suite restart in test pipeline
-3. Remove dependency between build and test restarts
-4. Document restart procedures
+1. Enable test suite restart in test pipeline
+1. Remove dependency between build and test restarts
+1. Document restart procedures
 
 ### Phase 4: Remove Artifact Copying
+
 1. Test pipeline references build artifacts directly
-2. Remove copy step from build to top-level
-3. Update artifact storage strategy
-4. Validate artifact accessibility
+1. Remove copy step from build to top-level
+1. Update artifact storage strategy
+1. Validate artifact accessibility
 
 ### Phase 5: Deprecate Old Architecture
+
 1. Run both architectures in parallel (validation)
-2. Compare status clarity and recovery times
-3. Migrate all platforms to new architecture
-4. Decommission old top-level collection pipeline
+1. Compare status clarity and recovery times
+1. Migrate all platforms to new architecture
+1. Decommission old top-level collection pipeline
 
 ## Monitoring and Observability
 
 ### Old Architecture
-```
+
+```text
 Single View (Confusing):
 ├── Linux x64: UNSTABLE
     └── Problem: Is it build or test?
@@ -643,7 +678,8 @@ Single View (Confusing):
 ```
 
 ### New Architecture
-```
+
+```text
 Clear Separation:
 ├── BUILD PIPELINES
 │   ├── Linux x64 Build: ✅ SUCCESS
@@ -665,15 +701,15 @@ The shift from daisy-chained to independent build and test pipelines represents 
 ### Key Takeaways
 
 1. **Clear Status Separation**: Build success vs test success are independent
-2. **No Misleading Status**: Build pipeline shows only build status
-3. **Artifact Safety**: No extra copy step to fail
-4. **Independent Restartability**: Restart builds or tests independently
-5. **Distributed Test Execution**: Tests can run on local or remote Jenkins instances
-6. **Scalability**: Unlimited test parallelization across multiple Jenkins instances
-7. **Resilience**: Instance failures don't stop all testing
-8. **Faster Recovery**: 12× faster (minutes vs hours)
-9. **Better Decisions**: Release team knows exactly what succeeded/failed
-10. **Cost Reduction**: 95% less wasted compute
+1. **No Misleading Status**: Build pipeline shows only build status
+1. **Artifact Safety**: No extra copy step to fail
+1. **Independent Restartability**: Restart builds or tests independently
+1. **Distributed Test Execution**: Tests can run on local or remote Jenkins instances
+1. **Scalability**: Unlimited test parallelization across multiple Jenkins instances
+1. **Resilience**: Instance failures don't stop all testing
+1. **Faster Recovery**: 12× faster (minutes vs hours)
+1. **Better Decisions**: Release team knows exactly what succeeded/failed
+1. **Cost Reduction**: 95% less wasted compute
 
 ### Success Metrics
 
@@ -691,6 +727,7 @@ This architecture change is essential for achieving the operational excellence, 
 ---
 
 **Related Documentation:**
+
 - [CI-Agnostic Architecture](../CI_AGNOSTIC_ARCHITECTURE.md) - Overall architecture design
 - [Restartability Guide](./RESTARTABILITY_GUIDE.md) - Stage restart implementation
 - [Workspace Architecture](../WORKSPACE_ARTIFACTS_ARCHITECTURE.md) - Artifact management

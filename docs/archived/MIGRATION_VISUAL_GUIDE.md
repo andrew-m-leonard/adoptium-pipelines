@@ -5,12 +5,13 @@ This document provides visual representations of the migration process, architec
 ---
 
 ## Table of Contents
+
 1. [Migration Timeline](#migration-timeline)
-2. [Parallel Execution Architecture](#parallel-execution-architecture)
-3. [Comparison Workflow](#comparison-workflow)
-4. [Rollout Strategy](#rollout-strategy)
-5. [Risk Mitigation](#risk-mitigation)
-6. [Success Metrics](#success-metrics)
+1. [Parallel Execution Architecture](#parallel-execution-architecture)
+1. [Comparison Workflow](#comparison-workflow)
+1. [Rollout Strategy](#rollout-strategy)
+1. [Risk Mitigation](#risk-mitigation)
+1. [Success Metrics](#success-metrics)
 
 ---
 
@@ -18,7 +19,7 @@ This document provides visual representations of the migration process, architec
 
 ### High-Level Timeline
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────┐
 │                    ACCELERATED MIGRATION TIMELINE                           │
 │                         (2.5-3.5 Months Total)                              │
@@ -68,7 +69,7 @@ Weeks 11-14: COMPLETION
 
 ### System Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                     PARALLEL EXECUTION SYSTEM                            │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -143,7 +144,7 @@ Weeks 11-14: COMPLETION
 
 ### Detailed Comparison Process Using repro_compare.sh
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │              COMPARISON WORKFLOW (using repro_compare.sh)                │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -297,7 +298,7 @@ Step 7: FINAL REPORT             │   │
 
 ### Platform Rollout Sequence
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                      PLATFORM ROLLOUT STRATEGY                           │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -373,7 +374,7 @@ EDGE CASES: SPECIAL CONFIGURATIONS
 
 ### Decision Tree for Platform Migration
 
-```
+```text
                     ┌─────────────────┐
                     │ Start Migration │
                     │   for Platform  │
@@ -466,7 +467,7 @@ EDGE CASES: SPECIAL CONFIGURATIONS
 
 ### Risk Matrix
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                           RISK MATRIX                                    │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -538,7 +539,7 @@ MITIGATION STRATEGIES:
 
 ### Key Performance Indicators Dashboard
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                      SUCCESS METRICS DASHBOARD                           │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -641,6 +642,7 @@ STATUS: ✅ ON TRACK
 ## Conclusion
 
 This visual guide provides clear representations of:
+
 - ✅ Migration timeline and phases
 - ✅ Parallel execution architecture
 - ✅ Comparison workflow details
@@ -652,7 +654,7 @@ Use these diagrams in presentations, documentation, and team communications to e
 
 ---
 
-*Document Version: 1.0*
+Document Version: 1.0
 
 ---
 
@@ -672,6 +674,7 @@ cd temurin-build/tooling/reproducible
 ### Platform-Specific Examples
 
 #### Linux x64 Example
+
 ```bash
 # Extract builds
 tar -xzf /old-builds/jdk21u-linux-x64-20260512.tar.gz -C /tmp/old-jdk
@@ -693,6 +696,7 @@ fi
 ```
 
 #### macOS aarch64 Example
+
 ```bash
 # Extract builds
 tar -xzf /old-builds/jdk21u-mac-aarch64-20260512.tar.gz -C /tmp/old-jdk
@@ -711,6 +715,7 @@ cp reproducible_evidence.log /results/mac-aarch64-evidence.log
 ```
 
 #### Windows x64 Example
+
 ```bash
 # Extract builds (in CYGWIN environment)
 tar -xzf /old-builds/jdk21u-windows-x64-20260512.tar.gz -C /tmp/old-jdk
@@ -732,13 +737,15 @@ grep "ReproduciblePercent" reproducible_evidence.log
 After running the comparison, the following files are generated:
 
 1. **`reprotest.diff`** - Lists files that differ
-   ```
+
+   ```text
    diff: ./bin/java
    diff: ./lib/modules
    ```
 
-2. **`reproducible_evidence.log`** - Detailed comparison evidence
-   ```
+1. **`reproducible_evidence.log`** - Detailed comparison evidence
+
+   ```text
    Comparing: /tmp/old-jdk/jdk-21.0.12+1
    Against:   /tmp/new-jdk/jdk-21.0.12+1
    Platform:  Linux
@@ -751,7 +758,7 @@ After running the comparison, the following files are generated:
    ReproduciblePercent: 100%
    ```
 
-3. **Exit Code**
+1. **Exit Code**
    - `0` = Builds are identical (100% reproducible)
    - `1` = Builds differ (check reprotest.diff for details)
 
@@ -798,17 +805,20 @@ stage('Compare Builds') {
 ### Interpreting Results
 
 #### Success Case (100% Reproducible)
-```
+
+```text
 Files compared: 15,234
 Files identical: 15,234
 Files different: 0
 ReproduciblePercent: 100%
 Exit code: 0
 ```
+
 **Action**: Proceed with migration ✓
 
 #### Failure Case (Differences Found)
-```
+
+```text
 Files compared: 15,234
 Files identical: 15,230
 Files different: 4
@@ -821,11 +831,13 @@ diff: ./lib/modules
 diff: ./lib/server/libjvm.so
 diff: ./release
 ```
+
 **Action**: Investigate differences before proceeding ✗
 
 ### Common Differences (Expected)
 
 The tool automatically handles these expected differences:
+
 - Build timestamps
 - Build IDs and UUIDs
 - Absolute build paths in debug info
@@ -837,15 +849,16 @@ The tool automatically handles these expected differences:
 If builds don't match:
 
 1. **Check reprotest.diff** for list of different files
-2. **Review reproducible_evidence.log** for detailed comparison
-3. **Verify platform** matches (Linux/Darwin/CYGWIN)
-4. **Check preprocessing** ran correctly for the platform
-5. **Compare build environments** (compiler versions, flags, etc.)
-6. **Review build logs** for differences in build process
+1. **Review reproducible_evidence.log** for detailed comparison
+1. **Verify platform** matches (Linux/Darwin/CYGWIN)
+1. **Check preprocessing** ran correctly for the platform
+1. **Compare build environments** (compiler versions, flags, etc.)
+1. **Review build logs** for differences in build process
 
 ### Success Criteria for Migration
 
 For a platform to be approved for migration:
+
 - ✅ **ReproduciblePercent = 100%**
 - ✅ **Exit code = 0**
 - ✅ **reprotest.diff is empty**
@@ -858,5 +871,6 @@ For a platform to be approved for migration:
 - **Documentation**: `temurin-build/tooling/reproducible/README.md`
 - **Supported Platforms**: Linux, macOS (Darwin), Windows (CYGWIN)
 - **Issue Tracker**: Report tool issues to temurin-build repository
-*Last Updated: 2026-05-12*
-*For: Pipeline Migration Project*
+
+Last Updated: 2026-05-12
+For: Pipeline Migration Project

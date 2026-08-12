@@ -9,6 +9,7 @@ This document provides detailed implementation instructions, code examples, and 
 ## Document Purpose
 
 This guide contains:
+
 - Detailed code examples for each phase
 - Configuration file templates
 - Script implementations
@@ -21,16 +22,16 @@ This guide contains:
 | Phase | Section | Key Deliverables |
 |-------|---------|------------------|
 | 1 | [Phase 1 Implementation](#phase-1-linux-x64-jdk-build-implementation) | Linux x64 pipeline, config, validation |
-| 2 | [Phase 2 Implementation](#phase-2-job-generation-automation-implementation) | Job generation tools |
-| 3 | [Phase 3 Implementation](#phase-3-windows-x64-with-internal-signing-implementation) | Windows pipeline, signing scripts |
-| 4 | [Phase 4 Implementation](#phase-4-mac-aarch64-implementation) | Mac pipeline, platform scripts |
-| 5 | [Phase 5 Implementation](#phase-5-installers-and-packages-implementation) | Installer scripts |
-| 6 | [Phase 6 Implementation](#phase-6-aqa-test-integration-implementation) | Test trigger scripts |
-| 7 | [Phase 7 Implementation](#phase-7-publish-stage-implementation) | Publish scripts |
-| 8 | [Phase 8 Implementation](#phase-8-jck-test-integration-implementation) | JCK trigger scripts |
-| 9 | [Phase 9 Implementation](#phase-9-remaining-platforms-implementation) | Platform configs |
-| 10 | [Phase 10 Implementation](#phase-10-full-ea-validation-implementation) | Validation procedures |
-| 11 | [Phase 11 Implementation](#phase-11-production-cutover-implementation) | Cutover procedures |
+| 2 | [Phase 2 Implementation](#phase-2-pipeline-job-generation-automation-week-3) | Job generation tools |
+| 3 | [Phase 3 Implementation](#phase-3-windows-x64-with-internal-signing-weeks-4-5) | Windows pipeline, signing scripts |
+| 4 | [Phase 4 Implementation](#phase-4-mac-aarch64-week-6) | Mac pipeline, platform scripts |
+| 5 | [Phase 5 Implementation](#phase-5-installers-and-packages-weeks-7-8) | Installer scripts |
+| 6 | [Phase 6 Implementation](#phase-6-aqa-test-integration-week-9) | Test trigger scripts |
+| 7 | [Phase 7 Implementation](#phase-7-publish-stage-dry-run-week-10) | Publish scripts |
+| 8 | [Phase 8 Implementation](#phase-8-jck-test-integration-week-11) | JCK trigger scripts |
+| 9 | [Phase 9 Implementation](#phase-9-remaining-platforms-weeks-12-14) | Platform configs |
+| 10 | [Phase 10 Implementation](#phase-10-full-ea-build-validation-weeks-15-18) | Validation procedures |
+| 11 | [Phase 11 Implementation](#phase-11-production-cutover-week-19-20) | Cutover procedures |
 
 ## Phase 1: Linux x64 JDK Build Implementation
 
@@ -39,6 +40,7 @@ This guide contains:
 ### Implementation Tasks
 
 #### 1.1 Configuration Preparation
+
 ```bash
 # Convert legacy pipeline config to JSON
 cd refactored_pipeline_examples/tools
@@ -59,6 +61,7 @@ python3 ../scripts/lib/load-json-config.py \
 **Job Name**: `build-jdk21u-linux-x64-modular`
 
 **Jenkinsfile**:
+
 ```groovy
 @Library('adoptium-jenkins-helper') _
 
@@ -216,13 +219,15 @@ pipeline {
 #### 1.3 Validation Testing
 
 **Test Plan**:
+
 1. Trigger build manually
-2. Verify build completes successfully
-3. Compare artifacts with legacy build using `repro_compare.sh`
-4. Verify reproducibility (should be byte-for-byte identical)
-5. Test restart capability (fail a stage, restart from that stage)
+1. Verify build completes successfully
+1. Compare artifacts with legacy build using `repro_compare.sh`
+1. Verify reproducibility (should be byte-for-byte identical)
+1. Test restart capability (fail a stage, restart from that stage)
 
 **Success Criteria**:
+
 - ✅ Build completes without errors
 - ✅ Artifacts match legacy build (reproducible)
 - ✅ Stage restart works correctly
@@ -233,14 +238,16 @@ pipeline {
 #### 1.4 EA Beta Integration
 
 **Tasks**:
+
 1. Configure pipeline to trigger from jdk21u EA Beta builds
-2. Set up automatic triggering (SCM polling or webhook)
-3. Run 3-5 EA Beta builds for validation
-4. Monitor and document any issues
+1. Set up automatic triggering (SCM polling or webhook)
+1. Run 3-5 EA Beta builds for validation
+1. Monitor and document any issues
 
 **Deliverable**: Pipeline integrated with EA Beta build triggers
 
 ### Phase 1 Completion Criteria
+
 - ✅ Linux x64 JDK build pipeline operational
 - ✅ Reproducibility validated against legacy
 - ✅ EA Beta builds running successfully
@@ -254,16 +261,18 @@ pipeline {
 
 ## Phase 2: Pipeline Job Generation Automation (Week 3)
 
-### Objective
+### Phase 2 Objective
+
 Design and implement automated Jenkins pipeline job generation from configuration files, eliminating manual job creation.
 
-### Scope
+### Phase 2 Scope
+
 - Job generation script/tool
 - Parameter extraction from configuration
 - Trigger configuration
 - Job template system
 
-### Tasks
+### Phase 2 Tasks
 
 #### 2.1 Job Generation Script
 
@@ -528,12 +537,14 @@ configs.each { configName ->
 #### 2.3 Validation
 
 **Test**:
+
 1. Generate job configuration for Linux x64
-2. Create job in Jenkins (manually or via Job DSL)
-3. Verify job parameters match configuration
-4. Trigger build and verify it works
+1. Create job in Jenkins (manually or via Job DSL)
+1. Verify job parameters match configuration
+1. Trigger build and verify it works
 
 **Success Criteria**:
+
 - ✅ Jobs can be generated from configuration
 - ✅ Generated jobs work correctly
 - ✅ Parameters are correctly populated
@@ -541,6 +552,7 @@ configs.each { configName ->
 **Deliverable**: Working job generation system
 
 ### Phase 2 Completion Criteria
+
 - ✅ Job generation automation working
 - ✅ Documentation for adding new platforms
 - ✅ Template system established
@@ -552,16 +564,18 @@ configs.each { configName ->
 
 ## Phase 3: Windows x64 with Internal Signing (Weeks 4-5)
 
-### Objective
+### Phase 3 Objective
+
 Implement Windows x64 build pipeline with two-phase build process including internal signing stage.
 
-### Scope
+### Phase 3 Scope
+
 - **Platform**: Windows x64
 - **JDK Version**: jdk21u
 - **Stages**: Initialize, Build Phase 1, Internal Sign, Build Phase 2
 - **Validation**: Reproducible build comparison
 
-### Tasks
+### Phase 3 Tasks
 
 #### 3.1 Configuration Preparation
 
@@ -738,6 +752,7 @@ log_success "Artifacts archived"
 #### 3.3 Create Windows Pipeline
 
 **Generate job using automation**:
+
 ```bash
 python3 tools/generate-jenkins-jobs.py \
     configurations/jdk21u_windows_x64_config.json \
@@ -750,19 +765,22 @@ python3 tools/generate-jenkins-jobs.py \
 #### 3.4 Validation
 
 **Test Plan**:
+
 1. Trigger Windows x64 build
-2. Verify two-phase build process works
-3. Verify signing stage completes
-4. Compare with legacy Windows build
-5. Test restart from each stage
+1. Verify two-phase build process works
+1. Verify signing stage completes
+1. Compare with legacy Windows build
+1. Test restart from each stage
 
 **Success Criteria**:
+
 - ✅ Two-phase build works correctly
 - ✅ Signing stage completes successfully
 - ✅ Artifacts match legacy build
 - ✅ Stage restart works from any stage
 
 ### Phase 3 Completion Criteria
+
 - ✅ Windows x64 pipeline operational
 - ✅ Internal signing integrated
 - ✅ Reproducibility validated
@@ -774,20 +792,23 @@ python3 tools/generate-jenkins-jobs.py \
 
 ## Phase 4: Mac aarch64 (Week 6)
 
-### Objective
+### Phase 4 Objective
+
 Implement Mac aarch64 build pipeline with platform-specific considerations.
 
-### Scope
+### Phase 4 Scope
+
 - **Platform**: Mac aarch64
 - **JDK Version**: jdk21u
 - **Stages**: Initialize, Build, (Internal Sign if needed)
 - **Validation**: Reproducible build comparison
 
-### Tasks
+### Phase 4 Tasks
 
 #### 4.1 Configuration and Implementation
 
 Similar to Windows but with Mac-specific considerations:
+
 - Code signing requirements
 - Notarization (if applicable)
 - Mac-specific build options
@@ -797,17 +818,20 @@ Similar to Windows but with Mac-specific considerations:
 #### 4.2 Validation
 
 **Test Plan**:
+
 1. Trigger Mac aarch64 build
-2. Verify build completes on Mac hardware
-3. Compare with legacy Mac build
-4. Test on actual Mac aarch64 hardware
+1. Verify build completes on Mac hardware
+1. Compare with legacy Mac build
+1. Test on actual Mac aarch64 hardware
 
 **Success Criteria**:
+
 - ✅ Mac aarch64 build works
 - ✅ Artifacts match legacy
 - ✅ Code signing works (if applicable)
 
 ### Phase 4 Completion Criteria
+
 - ✅ Mac aarch64 pipeline operational
 - ✅ Platform-specific features working
 
@@ -818,16 +842,18 @@ Similar to Windows but with Mac-specific considerations:
 
 ## Phase 5: Installers and Packages (Weeks 7-8)
 
-### Objective
+### Phase 5 Objective
+
 Add installer creation and package generation stages to all platforms.
 
-### Scope
+### Phase 5 Scope
+
 - MSI installers (Windows)
 - PKG installers (Mac)
 - DEB/RPM packages (Linux)
 - Integration with existing tooling
 
-### Tasks
+### Phase 5 Tasks
 
 #### 5.1 Installer Stage Implementation
 
@@ -887,17 +913,20 @@ Add installer stage to all platform configurations:
 #### 5.3 Validation
 
 **Test Plan**:
+
 1. Build with installer stage enabled
-2. Verify installers are created
-3. Test installers on target platforms
-4. Compare with legacy installers
+1. Verify installers are created
+1. Test installers on target platforms
+1. Compare with legacy installers
 
 **Success Criteria**:
+
 - ✅ Installers created for all platforms
 - ✅ Installers work correctly
 - ✅ Match legacy installer functionality
 
 ### Phase 5 Completion Criteria
+
 - ✅ Installer creation integrated
 - ✅ All platforms producing installers
 
@@ -908,15 +937,17 @@ Add installer stage to all platform configurations:
 
 ## Phase 6: AQA Test Integration (Week 9)
 
-### Objective
+### Phase 6 Objective
+
 Enable remote triggering of AQA Test Pipeline for full test coverage.
 
-### Scope
+### Phase 6 Scope
+
 - Remote test pipeline triggering
 - Test result collection
 - Integration with TRSS
 
-### Tasks
+### Phase 6 Tasks
 
 #### 6.1 Test Trigger Stage
 
@@ -975,17 +1006,20 @@ stage('Trigger AQA Tests') {
 #### 6.3 Validation
 
 **Test Plan**:
+
 1. Trigger build with testing enabled
-2. Verify test pipelines are triggered
-3. Monitor test execution
-4. Verify test results are collected
+1. Verify test pipelines are triggered
+1. Monitor test execution
+1. Verify test results are collected
 
 **Success Criteria**:
+
 - ✅ Tests triggered successfully
 - ✅ Test results available
 - ✅ Integration with TRSS working
 
 ### Phase 6 Completion Criteria
+
 - ✅ AQA test integration complete
 - ✅ Test results flowing to TRSS
 
@@ -996,15 +1030,17 @@ stage('Trigger AQA Tests') {
 
 ## Phase 7: Publish Stage (Dry-Run) (Week 10)
 
-### Objective
+### Phase 7 Objective
+
 Add publish stage that runs in dry-run mode for validation.
 
-### Scope
+### Phase 7 Scope
+
 - Artifact publishing logic
 - Dry-run mode (no actual publishing)
 - Validation of publish process
 
-### Tasks
+### Phase 7 Tasks
 
 #### 7.1 Publish Stage Implementation
 
@@ -1059,17 +1095,20 @@ fi
 #### 7.2 Validation
 
 **Test Plan**:
+
 1. Run build with publish stage (dry-run)
-2. Verify publish preparation works
-3. Verify checksums are generated
-4. Review dry-run output
+1. Verify publish preparation works
+1. Verify checksums are generated
+1. Review dry-run output
 
 **Success Criteria**:
+
 - ✅ Publish stage runs in dry-run mode
 - ✅ Artifacts prepared correctly
 - ✅ No actual publishing occurs
 
 ### Phase 7 Completion Criteria
+
 - ✅ Publish stage implemented
 - ✅ Dry-run mode working
 
@@ -1080,21 +1119,24 @@ fi
 
 ## Phase 8: JCK Test Integration (Week 11)
 
-### Objective
+### Phase 8 Objective
+
 Add remote triggering of JCK tests.
 
-### Scope
+### Phase 8 Scope
+
 - JCK test triggering
 - Result collection
 - Integration with test reporting
 
-### Tasks
+### Phase 8 Tasks
 
 Similar to AQA test integration but for JCK tests.
 
 **Create**: `scripts/stages/16-trigger-jck.sh`
 
 ### Phase 8 Completion Criteria
+
 - ✅ JCK test integration complete
 
 **Duration**: 1 week
@@ -1104,10 +1146,12 @@ Similar to AQA test integration but for JCK tests.
 
 ## Phase 9: Remaining Platforms (Weeks 12-14)
 
-### Objective
+### Phase 9 Objective
+
 Roll out modularized pipeline to all remaining platforms.
 
-### Scope
+### Phase 9 Scope
+
 - Linux aarch64
 - Linux ppc64le
 - Linux s390x
@@ -1117,25 +1161,28 @@ Roll out modularized pipeline to all remaining platforms.
 - Windows x86-32
 - Solaris x64 (if still supported)
 
-### Tasks
+### Phase 9 Tasks
 
 #### 9.1 Platform Rollout
 
 For each platform:
+
 1. Create configuration file
-2. Generate pipeline job
-3. Run validation builds
-4. Compare with legacy
-5. Document any platform-specific issues
+1. Generate pipeline job
+1. Run validation builds
+1. Compare with legacy
+1. Document any platform-specific issues
 
 #### 9.2 Parallel Execution
 
 Roll out multiple platforms in parallel where possible:
+
 - Week 12: Linux aarch64, Linux ppc64le, Linux s390x
 - Week 13: AIX ppc64, Alpine Linux x64, Alpine Linux aarch64
 - Week 14: Windows x86-32, Solaris x64
 
 ### Phase 9 Completion Criteria
+
 - ✅ All platforms migrated
 - ✅ All platforms validated
 
@@ -1146,26 +1193,30 @@ Roll out multiple platforms in parallel where possible:
 
 ## Phase 10: Full EA Build Validation (Weeks 15-18)
 
-### Objective
+### Phase 10 Objective
+
 Run complete EA jdk21u builds for all platforms and validate against legacy.
 
-### Scope
+### Phase 10 Scope
+
 - Full EA build cycle
 - All platforms
 - All stages (build, test, installer, publish dry-run)
 - Comparison with legacy EA builds
 
-### Tasks
+### Phase 10 Tasks
 
 #### 10.1 EA Build Execution
 
 **Week 15-16**: Run 2-3 complete EA builds
+
 - Trigger all platform builds
 - Run all tests
 - Create all installers
 - Dry-run publish
 
 **Week 17-18**: Validation and refinement
+
 - Compare all artifacts with legacy
 - Validate reproducibility
 - Fix any issues found
@@ -1174,6 +1225,7 @@ Run complete EA jdk21u builds for all platforms and validate against legacy.
 #### 10.2 Validation Criteria
 
 For each EA build:
+
 - ✅ All platforms build successfully
 - ✅ All tests pass (or match legacy pass rate)
 - ✅ All installers created
@@ -1184,12 +1236,14 @@ For each EA build:
 #### 10.3 Parallel Operation
 
 Run new and legacy pipelines in parallel:
+
 - Legacy continues to publish
 - New pipeline runs for validation
 - Compare results
 - Document any discrepancies
 
 ### Phase 10 Completion Criteria
+
 - ✅ Multiple successful EA builds
 - ✅ All platforms validated
 - ✅ Reproducibility confirmed
@@ -1203,16 +1257,18 @@ Run new and legacy pipelines in parallel:
 
 ## Phase 11: Production Cutover (Week 19-20)
 
-### Objective
+### Phase 11 Objective
+
 Switch from legacy to new pipeline for EA build publishing.
 
-### Scope
+### Phase 11 Scope
+
 - Disable legacy EA publishing
 - Enable new pipeline publishing
 - Monitor first production builds
 - Rollback plan ready
 
-### Tasks
+### Phase 11 Tasks
 
 #### 11.1 Pre-Cutover Checklist
 
@@ -1227,17 +1283,20 @@ Switch from legacy to new pipeline for EA build publishing.
 #### 11.2 Cutover Process
 
 **Day 1**: Preparation
+
 - Final validation build
 - Review all systems
 - Confirm rollback plan
 
 **Day 2**: Cutover
+
 - Disable legacy EA publishing
 - Enable new pipeline publishing (DRY_RUN=false)
 - Trigger first production EA build
 - Monitor closely
 
 **Day 3-7**: Monitoring
+
 - Monitor first production builds
 - Address any issues immediately
 - Collect feedback
@@ -1246,13 +1305,15 @@ Switch from legacy to new pipeline for EA build publishing.
 #### 11.3 Rollback Plan
 
 If critical issues occur:
+
 1. Immediately disable new pipeline publishing
-2. Re-enable legacy pipeline
-3. Investigate issues
-4. Fix and re-validate
-5. Plan new cutover date
+1. Re-enable legacy pipeline
+1. Investigate issues
+1. Fix and re-validate
+1. Plan new cutover date
 
 ### Phase 11 Completion Criteria
+
 - ✅ New pipeline publishing EA builds
 - ✅ Legacy pipeline deprecated for EA
 - ✅ No critical issues
@@ -1301,12 +1362,12 @@ If critical issues occur:
    - Mitigation: Extensive testing, fallback to legacy signing
    - Contingency: Manual signing process documented
 
-2. **Production Cutover**
+1. **Production Cutover**
    - Risk: Issues in first production build
    - Mitigation: Multiple validation builds, rollback plan
    - Contingency: Immediate rollback to legacy
 
-3. **Multi-Platform Coordination**
+1. **Multi-Platform Coordination**
    - Risk: Platform-specific issues
    - Mitigation: Phased rollout, platform-by-platform validation
    - Contingency: Roll back individual platforms
@@ -1318,7 +1379,7 @@ If critical issues occur:
    - Mitigation: Extensive comparison testing
    - Contingency: Document acceptable differences
 
-2. **Test Integration**
+1. **Test Integration**
    - Risk: Test triggering may fail
    - Mitigation: Thorough testing of trigger mechanism
    - Contingency: Manual test triggering
@@ -1330,7 +1391,7 @@ If critical issues occur:
    - Mitigation: Validation before deployment
    - Contingency: Manual job creation
 
-2. **Documentation**
+1. **Documentation**
    - Risk: Incomplete documentation
    - Mitigation: Document as you go
    - Contingency: Post-migration documentation sprint
@@ -1340,14 +1401,15 @@ If critical issues occur:
 ### Stakeholders
 
 1. **Build Team**: Daily updates during active phases
-2. **Release Team**: Weekly updates, critical issues immediately
-3. **QA Team**: Updates before test integration phases
-4. **Management**: Bi-weekly status reports
+1. **Release Team**: Weekly updates, critical issues immediately
+1. **QA Team**: Updates before test integration phases
+1. **Management**: Bi-weekly status reports
 
 ### Status Reporting
 
 **Weekly Status Report Template**:
-```
+
+```text
 Migration Status Report - Week X
 
 Current Phase: [Phase Name]
@@ -1380,22 +1442,22 @@ Metrics:
 Each phase has a rollback procedure:
 
 1. **Identify Issue**: Determine if rollback needed
-2. **Notify Stakeholders**: Inform team of rollback
-3. **Execute Rollback**: Follow phase-specific procedure
-4. **Validate**: Confirm legacy system working
-5. **Investigate**: Root cause analysis
-6. **Plan Recovery**: Fix and re-attempt
+1. **Notify Stakeholders**: Inform team of rollback
+1. **Execute Rollback**: Follow phase-specific procedure
+1. **Validate**: Confirm legacy system working
+1. **Investigate**: Root cause analysis
+1. **Plan Recovery**: Fix and re-attempt
 
 ### Emergency Rollback
 
 For critical production issues:
 
 1. **Immediate Action**: Disable new pipeline
-2. **Enable Legacy**: Re-activate legacy pipeline
-3. **Notify All**: Emergency communication
-4. **Investigate**: Urgent root cause analysis
-5. **Fix**: Address critical issue
-6. **Re-validate**: Full validation before retry
+1. **Enable Legacy**: Re-activate legacy pipeline
+1. **Notify All**: Emergency communication
+1. **Investigate**: Urgent root cause analysis
+1. **Fix**: Address critical issue
+1. **Re-validate**: Full validation before retry
 
 ## Timeline Summary
 
@@ -1420,17 +1482,18 @@ For critical production issues:
 This migration plan provides a structured, phased approach to transitioning from the legacy monolithic pipeline to the new modularized declarative pipeline architecture. The plan emphasizes:
 
 1. **Incremental Progress**: Start small, expand gradually
-2. **Continuous Validation**: Verify at each step
-3. **Risk Mitigation**: Rollback capability at every phase
-4. **Reproducibility**: Ensure builds match legacy
-5. **Automation**: Generate jobs from configuration
-6. **Parallel Operation**: Run alongside legacy for validation
+1. **Continuous Validation**: Verify at each step
+1. **Risk Mitigation**: Rollback capability at every phase
+1. **Reproducibility**: Ensure builds match legacy
+1. **Automation**: Generate jobs from configuration
+1. **Parallel Operation**: Run alongside legacy for validation
 
 By following this plan, the migration can be completed with minimal risk and maximum confidence in the new system.
 
 ---
 
 **Related Documentation:**
+
 - [CI-Agnostic Architecture](../CI_AGNOSTIC_ARCHITECTURE.md)
 - [Pipeline Orchestration Architecture](./PIPELINE_ORCHESTRATION_ARCHITECTURE.md)
 - [Restartability Guide](./RESTARTABILITY_GUIDE.md)

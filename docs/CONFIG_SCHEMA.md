@@ -117,7 +117,7 @@ Jenkins-specific configuration. Contains two groups: **job-creation settings** (
 }
 ```
 
-### Fields
+### Extended Fields
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -197,7 +197,7 @@ values. This is noted in the Type column as `string | variant-object`.
 | `dockerArgs` | string | Extra arguments passed to `docker run`, e.g. `"--platform linux/arm/v7"` |
 | `podmanArgs` | string | Extra arguments passed to `podman run` when Podman is used instead of Docker |
 | `dockerFile` | variant-object | Per-variant path to a custom Dockerfile, relative to the build repo root. Only present when a non-default image build is required |
-| `dockerRegistry` | string | Registry URL used to pull the `dockerImage`, e.g. `"https://adoptium.azurecr.io"` |
+| `dockerRegistry` | string | Registry URL used to pull the `dockerImage`, e.g. `"<https://adoptium.azurecr.io>"` |
 | `dockerCredential` | string | Jenkins credentials ID used to authenticate with `dockerRegistry` |
 | `crossCompile` | string | Host architecture used as the cross-compilation toolchain host. E.g. `"aarch64"` when building arm32, `"x64"` when cross-compiling aarch64 Windows, `"qemustatic"` for RISC-V via QEMU |
 | `additionalNodeLabels` | `string \| variant-object` | Extra Jenkins node label expression ANDed onto the base agent selector. Values **must** use the `sw.*` / `hw.*` / `ci.*` label schema (e.g. `sw.tool.xcode15.0.1`, `sw.os.windows.2022&&sw.tool.vs2022`). String applies to all variants; variant-object allows per-variant labels. See `LABEL_SCHEMA.md` for the full token migration table |
@@ -215,11 +215,13 @@ The pipeline resolves the effective value by looking up the active variant key; 
 back to the plain string form.
 
 **String form** — applies to all variants:
+
 ```json
 "configureArgs": "--enable-dtrace"
 ```
 
 **Variant-object form** — per-variant values:
+
 ```json
 "configureArgs": {
   "temurin": "--enable-dtrace",
@@ -267,7 +269,7 @@ Platform keys in `buildConfigurations` follow the aqa-tests `PLATFORM_MAP` conve
 
 The pipeline resolves per-version config files using fields from `adoptium_pipeline_config.json`:
 
-```
+```text
 {configFilePrefix}{version}{configFileSuffix}
 → configurations/jdk21_pipeline_config.json
 ```

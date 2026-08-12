@@ -144,7 +144,7 @@ Updated hardcoded JSON examples to use the standardized parameter names:
 If you have existing jobs using the old parameter names:
 
 1. **ENABLE_TESTS** → Use **RUN_TESTS** instead
-2. **ENABLE_SIGNER** → Use **SIGN_ARTIFACTS** instead
+1. **ENABLE_SIGNER** → Use **SIGN_ARTIFACTS** instead
 
 ### For Scripts
 
@@ -159,16 +159,16 @@ Scripts should reference the standardized parameter names:
 When creating or updating jobs via Job DSL:
 
 1. Remove any references to `ENABLE_TESTS` and `ENABLE_SIGNER`
-2. Use `RUN_TESTS` and `SIGN_ARTIFACTS` instead
-3. Ensure `SCM_REF`, `BUILD_REF`, and `RELEASE_TYPE` are passed from launch to build jobs
+1. Use `RUN_TESTS` and `SIGN_ARTIFACTS` instead
+1. Ensure `SCM_REF`, `BUILD_REF`, and `RELEASE_TYPE` are passed from launch to build jobs
 
 ## Benefits
 
 1. **Consistency**: Single parameter name for each function across all jobs
-2. **Clarity**: Clear, descriptive parameter names
-3. **Maintainability**: Easier to understand and modify job configurations
-4. **Flexibility**: Source control parameters enable better version control
-5. **Standardization**: Aligned with industry best practices
+1. **Clarity**: Clear, descriptive parameter names
+1. **Maintainability**: Easier to understand and modify job configurations
+1. **Flexibility**: Source control parameters enable better version control
+1. **Standardization**: Aligned with industry best practices
 
 ## Related Documentation
 
@@ -181,17 +181,17 @@ When creating or updating jobs via Job DSL:
 After applying these changes:
 
 1. Regenerate jobs using the seed job
-2. Verify launch job has new parameters (SCM_REF, BUILD_REF, RELEASE_TYPE)
-3. Verify build jobs no longer have ENABLE_TESTS and ENABLE_SIGNER
-4. Test launching a build with various parameter combinations
-5. Verify parameters are correctly passed from launch to build jobs
+1. Verify launch job has new parameters (SCM_REF, BUILD_REF, RELEASE_TYPE)
+1. Verify build jobs no longer have ENABLE_TESTS and ENABLE_SIGNER
+1. Test launching a build with various parameter combinations
+1. Verify parameters are correctly passed from launch to build jobs
 
 ## Rollback
 
 If issues arise, the old parameters can be temporarily restored by:
 
 1. Re-adding the removed parameters to `openjdk_build_pipeline_job_dsl.groovy`
-2. Reverting the changes to `Jenkinsfile.launch`
-3. Regenerating jobs via the seed job
+1. Reverting the changes to `Jenkinsfile.launch`
+1. Regenerating jobs via the seed job
 
 However, this is not recommended as it reintroduces the duplication issues.

@@ -5,13 +5,14 @@ This guide explains the new simplified configuration system for the refactored O
 ## Overview
 
 The new system replaces Groovy configuration files with JSON and uses an initialize stage to generate BUILD_CONFIGURATION dynamically based on:
+
 - JDK version (jdk8u, jdk11u, jdk17u, jdk21u, etc.)
 - Target platform (OS + Architecture)
 - Build variant (temurin, hotspot)
 
 ## Architecture
 
-```
+```text
 Input Parameters          Configuration Files              Generated Output
 ┌─────────────────┐      ┌──────────────────────┐        ┌────────────────────────┐
 │ JAVA_VERSION    │      │ jdk21u_pipeline_     │        │ BUILD_CONFIGURATION    │
@@ -33,7 +34,8 @@ Input Parameters          Configuration Files              Generated Output
 Configuration files are stored in a **separate repository** from the pipeline code:
 
 **Configuration Repository** (e.g., `ci-temurin-config/`):
-```
+
+```text
 ci-temurin-config/configurations/
 ├── jdk8u_pipeline_config.json
 ├── jdk11u_pipeline_config.json
@@ -44,7 +46,8 @@ ci-temurin-config/configurations/
 ```
 
 **Pipeline Code Repository** (`ci-adoptium-pipelines/`):
-```
+
+```text
 ci-adoptium-pipelines/
 ├── ci/
 │   ├── jenkins/Jenkinsfile.declarative
@@ -94,6 +97,7 @@ Each configuration file contains platform-specific build settings:
 Platform keys are constructed as: `{architecture}{OS}`
 
 Examples:
+
 - `aarch64Mac` - Apple Silicon Mac
 - `x64Mac` - Intel Mac
 - `x64Linux` - Intel/AMD Linux
@@ -114,8 +118,8 @@ Examples:
   "additionalNodeLabels": "xcode15.0.1"
 }
 ```
-When a field contains a simple string, that value is used for **all variants** (temurin, hotspot).
 
+When a field contains a simple string, that value is used for **all variants** (temurin, hotspot).
 
 #### Option 2: Variant-Specific Object (different value per variant)
 
@@ -143,10 +147,11 @@ When a field contains an object with variant keys, the initialize script extract
 The [`01-initialize.sh`](scripts/stages/01-initialize.sh:1) script automatically detects which format is used:
 
 1. **If the value is a string**: Uses that value for all variants
-2. **If the value is an object**: Extracts the variant-specific value
-3. **If variant-specific value not found**: Falls back to a default value (if provided)
+1. **If the value is an object**: Extracts the variant-specific value
+1. **If variant-specific value not found**: Falls back to a default value (if provided)
 
 **Fields that support variant-specific values:**
+
 - `buildArgs`
 - `configureArgs`
 - `dockerFile`
@@ -155,6 +160,7 @@ The [`01-initialize.sh`](scripts/stages/01-initialize.sh:1) script automatically
 - `additionalTestLabels`
 
 **Example from Groovy (original format):**
+
 ```groovy
 // Simple value - applies to all variants
 buildArgs: "--create-jre-image --create-sbom"
@@ -167,6 +173,7 @@ buildArgs: [
 ```
 
 **Equivalent JSON:**
+
 ```json
 // Simple value - applies to all variants
 "buildArgs": "--create-jre-image --create-sbom"
@@ -183,11 +190,12 @@ buildArgs: [
 ### Purpose
 
 The [`01-initialize.sh`](scripts/stages/01-initialize.sh:1) script:
+
 1. Loads the appropriate `jdkNN_pipeline_config.json`
-2. Selects the platform configuration
-3. Applies variant-specific overrides
-4. Generates `BUILD_CONFIGURATION.json`
-5. Creates simplified `pipeline-config.json` for build stage
+1. Selects the platform configuration
+1. Applies variant-specific overrides
+1. Generates `BUILD_CONFIGURATION.json`
+1. Creates simplified `pipeline-config.json` for build stage
 
 ### Usage
 
@@ -227,6 +235,7 @@ export CONFIG_DIR=${WORKSPACE}/configurations
 ### Output Files
 
 **BUILD_CONFIGURATION.json** - Complete configuration matching Jenkins format:
+
 ```json
 {
   "ARCHITECTURE": "aarch64",
@@ -247,6 +256,7 @@ export CONFIG_DIR=${WORKSPACE}/configurations
 ```
 
 **pipeline-config.json** - Simplified configuration for build stage:
+
 ```json
 {
   "buildConfig": {
@@ -281,6 +291,7 @@ Use the provided conversion tool to migrate from Groovy to JSON:
 #### 1. Extract Platform Configurations
 
 **Groovy (original):**
+
 ```groovy
 x64Mac: [
     os: 'mac',
@@ -290,6 +301,7 @@ x64Mac: [
 ```
 
 **JSON (new):**
+
 ```json
 "x64Mac": {
   "os": "mac",
@@ -301,11 +313,13 @@ x64Mac: [
 #### 2. Convert Simple Values
 
 **Groovy:**
+
 ```groovy
 buildArgs: "--create-jre-image --create-sbom"
 ```
 
 **JSON:**
+
 ```json
 "buildArgs": "--create-jre-image --create-sbom"
 ```
@@ -313,6 +327,7 @@ buildArgs: "--create-jre-image --create-sbom"
 #### 3. Convert Variant-Specific Maps
 
 **Groovy:**
+
 ```groovy
 buildArgs: [
     temurin: '--create-jre-image --create-sbom',
@@ -321,6 +336,7 @@ buildArgs: [
 ```
 
 **JSON:**
+
 ```json
 "buildArgs": {
   "temurin": "--create-jre-image --create-sbom",
@@ -331,6 +347,7 @@ buildArgs: [
 #### 4. Convert Test Lists
 
 **Groovy:**
+
 ```groovy
 test: [
     weekly: ['sanity.openjdk', 'sanity.system']
@@ -338,6 +355,7 @@ test: [
 ```
 
 **JSON:**
+
 ```json
 "test": {
   "weekly": ["sanity.openjdk", "sanity.system"]
@@ -414,8 +432,8 @@ export CONFIG_DIR=./configurations
 ```
 
 Generates configuration for building JDK 21 Temurin on Mac Apple Silicon.
-### Example 2: Linux x64 HotSpot Release Build
 
+### Example 2: Linux x64 HotSpot Release Build
 
 ```bash
 export WORKSPACE=~/openjdk-build
@@ -429,12 +447,13 @@ export CONFIG_DIR=./configurations
 
 ./scripts/stages/01-initialize.sh
 ```
-Generates configuration for a JDK 17 HotSpot release build on Linux x64.
 
+Generates configuration for a JDK 17 HotSpot release build on Linux x64.
 
 ### Example 3: Platform with Variant-Specific Settings
 
 **Configuration:**
+
 ```json
 {
   "buildConfigurations": {
@@ -455,6 +474,7 @@ Generates configuration for a JDK 17 HotSpot release build on Linux x64.
 ```
 
 **Building Temurin:**
+
 ```bash
 export VARIANT=temurin
 ./scripts/stages/01-initialize.sh
@@ -463,6 +483,7 @@ export VARIANT=temurin
 ```
 
 **Building HotSpot:**
+
 ```bash
 export VARIANT=hotspot
 ./scripts/stages/01-initialize.sh
@@ -575,24 +596,27 @@ jobs:
 **Error**: `Configuration file not found: configurations/jdk21u_pipeline_config.json`
 
 **Solution**:
+
 1. Check `CONFIG_DIR` is set correctly
-2. Verify the file exists: `ls -la ${CONFIG_DIR}/`
-3. Ensure filename matches pattern: `{JAVA_VERSION}_pipeline_config.json`
+1. Verify the file exists: `ls -la ${CONFIG_DIR}/`
+1. Ensure filename matches pattern: `{JAVA_VERSION}_pipeline_config.json`
 
 ### Platform Not Found
 
 **Error**: `Platform 'aarch64Mac' not found in configuration`
 
 **Solution**:
+
 1. Check available platforms: `jq '.buildConfigurations | keys' config.json`
-2. Verify OS and architecture are correct
-3. Add missing platform to configuration file
+1. Verify OS and architecture are correct
+1. Add missing platform to configuration file
 
 ### Variant-Specific Value Missing
 
 **Warning**: Falls back to default value
 
 **Solution**: Add variant-specific value to configuration:
+
 ```json
 {
   "buildArgs": {
@@ -607,6 +631,7 @@ jobs:
 **Error**: Cannot mix string and object formats for the same field
 
 **Solution**: Choose one format consistently:
+
 ```json
 // WRONG - mixing formats
 {
@@ -653,13 +678,13 @@ jobs:
 ## Benefits of New System
 
 1. **Simpler**: JSON is easier to read and edit than Groovy
-2. **CI-Agnostic**: Works with any CI system (Jenkins, GitLab, GitHub Actions)
-3. **Validated**: JSON syntax is validated automatically
-4. **Versioned**: Configuration files are version-controlled
-5. **Testable**: Easy to test locally without Jenkins
-6. **Maintainable**: Clear separation between configuration and logic
-7. **Extensible**: Easy to add new platforms or variants
-8. **Flexible**: Supports both simple and variant-specific values
+1. **CI-Agnostic**: Works with any CI system (Jenkins, GitLab, GitHub Actions)
+1. **Validated**: JSON syntax is validated automatically
+1. **Versioned**: Configuration files are version-controlled
+1. **Testable**: Easy to test locally without Jenkins
+1. **Maintainable**: Clear separation between configuration and logic
+1. **Extensible**: Easy to add new platforms or variants
+1. **Flexible**: Supports both simple and variant-specific values
 
 ## Resources
 

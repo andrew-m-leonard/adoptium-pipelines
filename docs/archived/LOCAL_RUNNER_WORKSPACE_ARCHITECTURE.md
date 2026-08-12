@@ -8,7 +8,7 @@ The local pipeline runner (`ci/local/run-pipeline.py`) uses a two-directory arch
 
 ## Directory Structure
 
-```
+```text
 PIPELINE_WORKSPACE/
 ├── pipeline-config.json          # Pipeline configuration
 ├── stage_workspace/              # Ephemeral - cleaned before/after each stage
@@ -23,13 +23,13 @@ PIPELINE_WORKSPACE/
    - Specified via `--workspace` parameter
    - Example: `~/openjdk-build`
 
-2. **`stage_workspace/`**: Ephemeral working directory
+1. **`stage_workspace/`**: Ephemeral working directory
    - Cleaned BEFORE every stage (pre-cleanup)
    - Optionally cleaned AFTER every stage (post-cleanup)
    - Used for temporary files during stage execution
    - Never persists between stages
 
-3. **artifacts/`**: Persistent artifact storage
+1. **artifacts/`**: Persistent artifact storage
    - Acts like Jenkins' artifact store
    - Preserves outputs between stages
    - Never automatically cleaned
@@ -58,12 +58,14 @@ PIPELINE_WORKSPACE/
 ## Cleanup Behavior
 
 ### Pre-Cleanup (Before Every Stage)
+
 - **Always runs** - no configuration option
 - Cleans entire `stage_workspace/` directory
 - Critical for restartability on same machine
 - Ensures clean state for each stage
 
 ### Post-Cleanup (After Every Stage)
+
 - Controlled by `cleanWorkspaceAfterStage` parameter (default: `true`)
 - Cleans `stage_workspace/` directory if enabled
 - Helps manage disk space
@@ -96,6 +98,7 @@ def stage_example(self):
 ## Example Usage
 
 ### Fresh Build
+
 ```bash
 # First time - workspace doesn't exist
 python3 run-pipeline.py \
@@ -116,6 +119,7 @@ python3 run-pipeline.py \
 ```
 
 ### Restart from Stage
+
 ```bash
 # Restart from build stage (workspace must exist)
 python3 run-pipeline.py \
@@ -136,7 +140,8 @@ python3 run-pipeline.py \
 ## Error Messages
 
 ### Workspace Exists Without Clean Flag
-```
+
+```text
 ERROR: Workspace already exists: /Users/user/openjdk-build
 
 For a fresh build, you must either:
@@ -148,7 +153,8 @@ This ensures workspace cleanliness and prevents pollution from previous runs.
 ```
 
 ### Restart Without Existing Workspace
-```
+
+```text
 ERROR: Cannot restart from stage 'build' - workspace does not exist: /Users/user/openjdk-build
 
 When restarting from a stage, the workspace must exist with artifacts from previous stages.
@@ -156,7 +162,8 @@ Run a full build first (without --start-from-stage) to create the workspace.
 ```
 
 ### Option Conflict
-```
+
+```text
 ERROR: Option conflict - cannot use --clean-workspace with --start-from-stage
 
 When restarting from a stage, the workspace must be preserved to access
@@ -177,14 +184,15 @@ artifacts from previous stages. Remove --clean-workspace to continue.
 ## Benefits
 
 1. **Restartability**: Clean stage workspace ensures consistent state when restarting
-2. **Artifact Preservation**: Persistent artifacts directory acts like Jenkins artifact store
-3. **Disk Space Management**: Optional post-cleanup helps manage disk usage
-4. **Error Prevention**: Strict validation prevents accidental workspace pollution
-5. **CI Parity**: Similar behavior to Jenkins declarative pipeline
+1. **Artifact Preservation**: Persistent artifacts directory acts like Jenkins artifact store
+1. **Disk Space Management**: Optional post-cleanup helps manage disk usage
+1. **Error Prevention**: Strict validation prevents accidental workspace pollution
+1. **CI Parity**: Similar behavior to Jenkins declarative pipeline
 
 ## Implementation Details
 
 ### Workspace Initialization
+
 ```python
 # Pipeline workspace is the root directory
 self.pipeline_workspace = Path(args.workspace).expanduser().resolve()
@@ -197,6 +205,7 @@ self.artifacts_dir = self.pipeline_workspace / 'artifacts'
 ```
 
 ### Cleanup Implementation
+
 ```python
 def cleanup_stage_workspace(self, cleanup_type):
     """Clean the ephemeral stage_workspace directory."""

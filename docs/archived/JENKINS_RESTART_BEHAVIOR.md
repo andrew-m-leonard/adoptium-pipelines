@@ -7,8 +7,9 @@
 ## The Answer
 
 **YES** - When you use "Restart from Stage" in Jenkins declarative pipelines, it:
+
 1. Starts from the chosen stage
-2. **Automatically runs all following stages** in the pipeline
+1. **Automatically runs all following stages** in the pipeline
 
 ## How Jenkins "Restart from Stage" Works
 
@@ -17,15 +18,16 @@
 When you click "Restart from Stage X" in Jenkins:
 
 1. **Jenkins starts at stage X** - Executes the selected stage
-2. **Continues through all subsequent stages** - Automatically runs every stage after X
-3. **Skips previous stages** - Stages before X are not re-run
+1. **Continues through all subsequent stages** - Automatically runs every stage after X
+1. **Skips previous stages** - Stages before X are not re-run
 
 ### Example Scenario
 
 Pipeline with 4 stages: Build → Sign → Installer → Test
 
 **Original Run:**
-```
+
+```text
 Build     ✅ SUCCESS
 Sign      ✅ SUCCESS
 Installer ❌ FAILED
@@ -33,7 +35,8 @@ Test      ⊘ SKIPPED (because Installer failed)
 ```
 
 **After "Restart from Installer":**
-```
+
+```text
 Build     ✅ SUCCESS (not re-run, shows previous result)
 Sign      ✅ SUCCESS (not re-run, shows previous result)
 Installer 🔄 RUNNING (restarted)
@@ -41,7 +44,8 @@ Test      ⏳ PENDING (will run after Installer completes)
 ```
 
 **Final Result:**
-```
+
+```text
 Build     ✅ SUCCESS (not re-run)
 Sign      ✅ SUCCESS (not re-run)
 Installer ✅ SUCCESS (just re-ran)
@@ -104,6 +108,7 @@ stage('Sign') {
 ```
 
 **Why this fails:**
+
 - Build runs on `build-node`, leaves artifacts in its workspace
 - Sign runs on `sign-node`, has empty workspace
 - Even though stages run sequentially, they're on different machines!
@@ -138,13 +143,14 @@ stage('Sign') {
 
 ### 3. Restart Scenarios Still Require Independence
 
-**Scenario: Restart from Sign**
+#### Scenario: Restart from Sign
 
 When you restart from Sign:
+
 1. Build stage did NOT just run
-2. Build artifacts are from the original run (could be hours/days old)
-3. Sign stage must retrieve those archived artifacts
-4. Installer and Test stages will run automatically after Sign
+1. Build artifacts are from the original run (could be hours/days old)
+1. Sign stage must retrieve those archived artifacts
+1. Installer and Test stages will run automatically after Sign
 
 ```groovy
 stage('Sign') {
@@ -177,7 +183,7 @@ When you restart a stage, all following stages run automatically. This means:
 
 If you fix a problem in stage X, all downstream stages automatically get the fix:
 
-```
+```text
 Restart from Sign (with fixed certificate)
   ↓
 Sign runs with new certificate
@@ -192,11 +198,13 @@ Test automatically runs (tests new installer)
 If you only want to re-run one stage, you can't use "Restart from Stage":
 
 **Example:**
+
 - Want to re-run just the Test stage with different test parameters
 - If you "Restart from Test", only Test runs (it's the last stage)
 - But if you "Restart from Installer", both Installer AND Test run
 
 **Solution for single-stage re-run:**
+
 - Use parameterized builds
 - Or create separate test jobs
 - Or use `when` conditions to skip stages
@@ -338,26 +346,29 @@ stage('Sign') {
 **Problem:** Installer stage failed due to missing dependency
 
 **Solution:**
+
 1. Install the missing dependency on the build node
-2. Click "Restart from Installer"
-3. **Result:** Installer runs, then Test automatically runs
+1. Click "Restart from Installer"
+1. **Result:** Installer runs, then Test automatically runs
 
 ### Scenario 2: Re-sign with Different Certificate
 
 **Problem:** Need to re-sign artifacts with production certificate
 
 **Solution:**
+
 1. Update signing configuration
-2. Click "Restart from Sign"
-3. **Result:** Sign runs with new certificate, then Installer and Test automatically run with newly signed artifacts
+1. Click "Restart from Sign"
+1. **Result:** Sign runs with new certificate, then Installer and Test automatically run with newly signed artifacts
 
 ### Scenario 3: Rebuild Everything
 
 **Problem:** Need to rebuild from scratch
 
 **Solution:**
+
 1. Click "Restart from Build" (first stage)
-2. **Result:** All stages run: Build → Sign → Installer → Test
+1. **Result:** All stages run: Build → Sign → Installer → Test
 
 **OR** just trigger a new build (cleaner!)
 
@@ -379,17 +390,20 @@ stage('Sign') {
 **Even though stages run sequentially and following stages run automatically, each stage must be independent.**
 
 Each stage should:
+
 1. Retrieve everything it needs from archives (copyArtifacts)
-2. Do its work independently
-3. Archive everything downstream stages might need (archiveArtifacts)
+1. Do its work independently
+1. Archive everything downstream stages might need (archiveArtifacts)
 
 This makes the pipeline:
+
 - ✅ Restartable from any point
 - ✅ Work across different nodes
 - ✅ Reliable over time
 - ✅ Debuggable (can inspect archived artifacts)
 
 The `archiveArtifacts` + `copyArtifacts` pattern is essential because:
+
 - Stages often run on different nodes
 - Workspaces are not shared between nodes
 - Restart scenarios need access to previous stage outputs

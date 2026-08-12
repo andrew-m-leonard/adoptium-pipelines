@@ -10,7 +10,7 @@ This document describes the challenge of monitoring complex multi-platform relea
 
 When submitting a new JDK release build, the pipeline orchestration creates a complex hierarchy:
 
-```
+```text
 Release Build Submission (e.g., JDK 21.0.5+11)
     │
     ├─ Triggers 12 Platform BUILD Pipelines
@@ -46,11 +46,13 @@ Total: 1 Release + 12 Builds + 144 Test Pipelines = 157 Pipeline Executions
 ### Jenkins UI Limitations
 
 **Jenkins is optimized for viewing:**
+
 - ✅ Individual Jobs (pipeline definitions)
 - ✅ Individual Pipeline Runs (single execution)
 - ✅ Job-level build history
 
 **Jenkins struggles with:**
+
 - ❌ **Release-level aggregation**: Cannot easily view all builds for a specific release
 - ❌ **Cross-pipeline correlation**: No native way to link related builds across different pipelines
 - ❌ **Rebuild tracking**: When a platform is rebuilt, hard to track which builds belong to the same release attempt
@@ -59,7 +61,7 @@ Total: 1 Release + 12 Builds + 144 Test Pipelines = 157 Pipeline Executions
 
 ### Real-World Scenario
 
-```
+```text
 Scenario: JDK 21.0.5+11 Release Build
 
 Initial Submission:
@@ -87,22 +89,23 @@ Answer: Extremely difficult to determine in Jenkins UI
 **To track a single release in Jenkins UI, you must:**
 
 1. Remember or note down the initial release trigger build number
-2. Navigate to each of 12 platform build pipelines
-3. For each platform, identify which build number corresponds to this release
-4. Check if that build was successful or if a rebuild was needed
-5. If rebuilt, find the rebuild build number
-6. For each successful build, navigate to 12 test pipeline jobs
-7. For each test pipeline, identify which build number corresponds to this release's build
-8. Check if tests were re-run and find the latest test build number
-9. Repeat for all 144 test pipeline executions
+1. Navigate to each of 12 platform build pipelines
+1. For each platform, identify which build number corresponds to this release
+1. Check if that build was successful or if a rebuild was needed
+1. If rebuilt, find the rebuild build number
+1. For each successful build, navigate to 12 test pipeline jobs
+1. For each test pipeline, identify which build number corresponds to this release's build
+1. Check if tests were re-run and find the latest test build number
+1. Repeat for all 144 test pipeline executions
 
-**Total navigation steps: 157+ separate Jenkins pages to view**
+#### Total navigation steps: 157+ separate Jenkins pages to view
 
 ## Current State: TRSS (Test Result Summary Service)
 
 ### What is TRSS?
 
 TRSS is an external tool used by the Adoptium project that:
+
 - Collates build and test results from Jenkins pipelines
 - Provides aggregated views of test results
 - Offers widget capabilities for custom dashboards
@@ -111,12 +114,14 @@ TRSS is an external tool used by the Adoptium project that:
 ### Current TRSS Capabilities
 
 **Strengths:**
+
 - ✅ Aggregates test results across multiple test runs
 - ✅ Provides historical trend analysis
 - ✅ Offers customizable widgets for dashboards
 - ✅ Better test result visualization than Jenkins
 
 **Current Limitations:**
+
 - ❌ Views are organized by **pipeline/job**, not by **release**
 - ❌ Cannot easily filter "all builds for JDK 21.0.5+11"
 - ❌ No correlation between related builds across platforms
@@ -132,17 +137,18 @@ TRSS is an external tool used by the Adoptium project that:
 ### Core Concept
 
 Introduce a **Release UUID** (Universally Unique Identifier) that:
+
 1. Is generated at release submission time
-2. Is passed as a **build parameter** to all downstream build pipelines
-3. Is passed from build pipelines to all test pipelines as a **build parameter**
-4. Is stored in Jenkins build metadata (via parameters)
-5. Is discoverable by TRSS via Jenkins API polling
+1. Is passed as a **build parameter** to all downstream build pipelines
+1. Is passed from build pipelines to all test pipelines as a **build parameter**
+1. Is stored in Jenkins build metadata (via parameters)
+1. Is discoverable by TRSS via Jenkins API polling
 
 **Note:** The term "Release UUID" is more accurate than "Build UUID" because it identifies a release across all its builds and tests.
 
 ### Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │ Release Submission                                          │
 │ ┌─────────────────────────────────────────────────────┐   │
@@ -204,7 +210,7 @@ Introduce a **Release UUID** (Universally Unique Identifier) that:
 
 ### UUID Propagation Flow
 
-```
+```text
 1. Release Submission
    └─ Generate UUID: "550e8400-e29b-41d4-a716-446655440000"
    └─ Metadata: { release: "JDK 21.0.5+11", timestamp: "2024-01-15T10:30:00Z" }
@@ -444,21 +450,21 @@ pipeline {
 
 ## TRSS Polling Strategy
 
-### Overview
+### TRSS Overview
 
 Since TRSS is read-only and cannot receive push notifications from Jenkins, it must poll the Jenkins API to discover builds with Release UUIDs. However, this can be optimized using several strategies:
 
 ### Optimization Strategies
 
 1. **Time Window Filtering**: Only query builds from last 14 days
-2. **Job Name Patterns**: Use naming conventions to identify relevant jobs
-3. **Caching**: Don't re-query builds already indexed
-4. **Incremental Updates**: Only query new builds since last poll
-5. **Batch Processing**: Query multiple jobs in parallel
+1. **Job Name Patterns**: Use naming conventions to identify relevant jobs
+1. **Caching**: Don't re-query builds already indexed
+1. **Incremental Updates**: Only query new builds since last poll
+1. **Batch Processing**: Query multiple jobs in parallel
 
 ### TRSS Polling Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │ TRSS Polling Service (runs every 5-15 minutes)             │
 │                                                             │
@@ -660,7 +666,7 @@ if __name__ == '__main__':
 
 **Polling Efficiency:**
 
-```
+```text
 Assumptions:
 - 50 relevant jobs (build-* and test-*)
 - Average 20 builds per job in last 14 days
@@ -686,7 +692,7 @@ Optimization with caching:
 
 **Scalability:**
 
-```
+```text
 For 100 jobs with 50 builds each (5000 total builds):
 - First poll: ~30-45 seconds
 - Subsequent polls: ~5-10 seconds
@@ -849,7 +855,7 @@ def get_builds():
    - Overall status (IN PROGRESS, COMPLETE, FAILED)
    - Progress: X/12 builds complete, Y/144 tests complete
 
-2. **Platform Builds Table**
+1. **Platform Builds Table**
    - Platform name
    - Build status (SUCCESS, FAILURE, RUNNING)
    - Build number (with link to Jenkins)
@@ -857,26 +863,26 @@ def get_builds():
    - Test progress (X/12 tests complete)
    - Actions (View details, View in Jenkins)
 
-3. **Test Summary**
+1. **Test Summary**
    - Total tests run
    - Pass rate
    - Failed tests (with links)
    - Running tests
 
-4. **Timeline**
+1. **Timeline**
    - Chronological view of all events
    - Build starts/completions
    - Rebuild events
    - Test starts/completions
    - Test re-run events
 
-5. **Auto-refresh**
+1. **Auto-refresh**
    - Dashboard auto-refreshes every 30-60 seconds
    - Shows live updates as builds complete
 
 ### Query Performance
 
-```
+```text
 Database Query Performance:
 - Get all builds for release: ~10-20ms (indexed)
 - Get latest build per platform: ~15-25ms (indexed)
@@ -893,11 +899,13 @@ Dashboard Load Time:
 ### 1. Unified Release View
 
 **Before:**
+
 - Navigate 157+ Jenkins pages to understand release status
 - Manual tracking of which builds belong to which release
 - Difficult to identify rebuilds vs original builds
 
 **After:**
+
 - Single dashboard shows entire release status
 - Automatic correlation of all related builds
 - Clear visibility of rebuilds and re-runs
@@ -905,13 +913,15 @@ Dashboard Load Time:
 ### 2. Rebuild Tracking
 
 **Before:**
-```
+
+```text
 Question: Which Mac x64 build is part of the release?
 Answer: Must manually check Jenkins history and timestamps
 ```
 
 **After:**
-```
+
+```text
 Query: SELECT * FROM builds WHERE release_uuid='550e8400-...' AND platform='mac-x64'
 Result:
   - Build #1236 (FAILED, attempt 1, 11:45)
@@ -921,6 +931,7 @@ Result:
 ### 3. No Jenkins Push Required
 
 **Advantage:**
+
 - TRSS remains read-only (no security concerns)
 - No changes to Jenkins security model
 - No risk of Jenkins being overwhelmed by push requests
@@ -929,6 +940,7 @@ Result:
 ### 4. Efficient Polling
 
 **Optimizations:**
+
 - Only query builds from last 14 days (not entire history)
 - Cache indexed builds (don't re-query)
 - Use job naming conventions to filter relevant jobs
@@ -938,6 +950,7 @@ Result:
 ### 5. Scalability
 
 **Performance:**
+
 - Polling cycle: 10-15 seconds for 1000 builds
 - Database queries: 50-100ms for complete release status
 - Dashboard load: < 1 second
@@ -948,13 +961,15 @@ Result:
 ### Phase 1: Jenkins Pipeline Updates (Week 1-2)
 
 **Tasks:**
+
 1. Update release trigger pipeline to generate RELEASE_UUID
-2. Update platform build pipelines to accept RELEASE_UUID parameter
-3. Update test pipelines to accept RELEASE_UUID parameter
-4. Store UUID in build descriptions for visibility
-5. Test with pilot release
+1. Update platform build pipelines to accept RELEASE_UUID parameter
+1. Update test pipelines to accept RELEASE_UUID parameter
+1. Store UUID in build descriptions for visibility
+1. Test with pilot release
 
 **Deliverables:**
+
 - All pipelines propagate RELEASE_UUID
 - UUID visible in Jenkins UI
 - UUID stored in build parameters
@@ -962,13 +977,15 @@ Result:
 ### Phase 2: TRSS Polling Service (Week 3-4)
 
 **Tasks:**
+
 1. Implement Jenkins API polling service
-2. Create TRSS database schema
-3. Implement build indexing logic
-4. Add caching and optimization
-5. Deploy polling service
+1. Create TRSS database schema
+1. Implement build indexing logic
+1. Add caching and optimization
+1. Deploy polling service
 
 **Deliverables:**
+
 - Polling service running continuously
 - Builds indexed in TRSS database
 - API endpoints for querying by RELEASE_UUID
@@ -976,14 +993,16 @@ Result:
 ### Phase 3: TRSS Dashboard (Week 5-8)
 
 **Tasks:**
+
 1. Design release dashboard UI
-2. Implement release overview page
-3. Implement platform builds table
-4. Implement test summary section
-5. Add timeline visualization
-6. Add auto-refresh capability
+1. Implement release overview page
+1. Implement platform builds table
+1. Implement test summary section
+1. Add timeline visualization
+1. Add auto-refresh capability
 
 **Deliverables:**
+
 - Release dashboard accessible via URL
 - Real-time status updates
 - Drill-down to platform and test details
@@ -991,13 +1010,15 @@ Result:
 ### Phase 4: Optimization & Monitoring (Week 9-10)
 
 **Tasks:**
+
 1. Optimize database queries
-2. Add monitoring for polling service
-3. Add alerting for polling failures
-4. Performance testing
-5. Documentation
+1. Add monitoring for polling service
+1. Add alerting for polling failures
+1. Performance testing
+1. Documentation
 
 **Deliverables:**
+
 - Optimized query performance
 - Monitoring dashboards
 - Complete documentation
@@ -1007,18 +1028,21 @@ Result:
 ### Operational Metrics
 
 **Before Implementation:**
+
 - Time to understand release status: 30-60 minutes
 - Time to identify current builds: 15-30 minutes
 - Time to find failed tests: 20-40 minutes
 - Number of pages to view: 157+
 
 **After Implementation:**
+
 - Time to understand release status: 30 seconds
 - Time to identify current builds: Instant
 - Time to find failed tests: 5 seconds
 - Number of pages to view: 1
 
 **Improvement:**
+
 - 98% reduction in time to understand release status
 - 100% reduction in manual tracking effort
 - Single source of truth for release status
@@ -1026,6 +1050,7 @@ Result:
 ### Technical Metrics
 
 **Targets:**
+
 - Polling cycle time: < 15 seconds
 - Build discovery latency: < 10 minutes
 - Database query time: < 100ms
@@ -1038,11 +1063,11 @@ The Release UUID traceability system with TRSS polling provides an efficient sol
 **Key Advantages:**
 
 1. **Simple Implementation**: Uses standard Jenkins build parameters
-2. **No Security Changes**: TRSS remains read-only
-3. **Efficient Polling**: Optimized with caching and time windows
-4. **Fast Queries**: Database indexes provide sub-100ms queries
-5. **Scalable**: Handles millions of builds
-6. **Unified View**: Single dashboard for entire release
+1. **No Security Changes**: TRSS remains read-only
+1. **Efficient Polling**: Optimized with caching and time windows
+1. **Fast Queries**: Database indexes provide sub-100ms queries
+1. **Scalable**: Handles millions of builds
+1. **Unified View**: Single dashboard for entire release
 
 **Trade-offs:**
 
@@ -1055,6 +1080,7 @@ This solution transforms release monitoring from a painful manual process into a
 ---
 
 **Related Documentation:**
+
 - [Pipeline Orchestration Architecture](./PIPELINE_ORCHESTRATION_ARCHITECTURE.md) - Independent build and test pipelines
 - [CI-Agnostic Architecture](../CI_AGNOSTIC_ARCHITECTURE.md) - Overall architecture design
 - [Restartability Guide](./RESTARTABILITY_GUIDE.md) - Stage restart implementation

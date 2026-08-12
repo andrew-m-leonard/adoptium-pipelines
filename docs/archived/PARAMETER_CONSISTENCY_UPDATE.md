@@ -7,6 +7,7 @@ This document describes the parameter naming consistency update implemented to a
 ## Problem Statement
 
 There was a mismatch between:
+
 - **Job DSL**: Created jobs with `PLATFORM` (combined like "x64Linux") and `BUILD_VARIANT` parameters
 - **Jenkinsfile**: Expected `VARIANT`, `TARGET_OS`, and `ARCHITECTURE` parameters (separate)
 - **load-json-config.py**: Expected `--variant`, `--target-os`, and `--architecture` arguments
@@ -29,24 +30,26 @@ Updated the Job DSL to create jobs with parameters that match what the Jenkinsfi
 **Build Pipeline Jobs** now have these parameters:
 
 1. **JDK_VERSION** (string) - JDK version (e.g., "21")
-2. **TARGET_OS** (string) - Operating system (e.g., "linux", "mac", "windows")
-3. **ARCHITECTURE** (string) - CPU architecture (e.g., "x64", "aarch64", "arm")
-4. **VARIANT** (string) - Build variant (e.g., "temurin", "dragonwell")
-5. **CONFIG_REPO_URL** (string) - Configuration repository URL
-6. **CONFIG_REPO_BRANCH** (string) - Configuration repository branch
-7. Other build configuration parameters...
+1. **TARGET_OS** (string) - Operating system (e.g., "linux", "mac", "windows")
+1. **ARCHITECTURE** (string) - CPU architecture (e.g., "x64", "aarch64", "arm")
+1. **VARIANT** (string) - Build variant (e.g., "temurin", "dragonwell")
+1. **CONFIG_REPO_URL** (string) - Configuration repository URL
+1. **CONFIG_REPO_BRANCH** (string) - Configuration repository branch
+1. Other build configuration parameters...
 
 ## Implementation Details
 
 ### 1. Job DSL Script (`openjdk_build_pipeline_job_dsl.groovy`)
 
 The Job DSL now:
+
 1. Receives `PLATFORM` parameter from launch job (e.g., "x64Linux")
-2. Loads the platform-specific configuration from `jdk${version}_pipeline_config.json`
-3. Extracts `os`, `arch`, and `variant` from the platform configuration
-4. Creates job parameters using these extracted values
+1. Loads the platform-specific configuration from `jdk${version}_pipeline_config.json`
+1. Extracts `os`, `arch`, and `variant` from the platform configuration
+1. Creates job parameters using these extracted values
 
 **Example:**
+
 ```groovy
 // Platform configuration for "x64Linux" in jdk21_pipeline_config.json:
 {
@@ -66,12 +69,14 @@ stringParam('VARIANT', 'temurin', 'Build variant (temurin, dragonwell, etc.)')
 ### 2. Launch Job Parameters
 
 Launch jobs still use:
+
 - `VARIANT` (renamed from `BUILD_VARIANT`)
 - `PLATFORMS` (comma-separated list like "x64Linux,aarch64Mac")
 
 ### 3. Configuration Files
 
 **jenkins_job_config.json:**
+
 ```json
 {
   "jobConfiguration": {
@@ -84,6 +89,7 @@ Launch jobs still use:
 ```
 
 **jdk${version}_pipeline_config.json:**
+
 ```json
 {
   "buildConfigurations": {
@@ -105,24 +111,24 @@ Launch jobs still use:
    - Extracts `os`, `arch`, and `variant` from platform config
    - Creates `TARGET_OS`, `ARCHITECTURE`, and `VARIANT` parameters
 
-2. **ci/jenkins/job-dsl/seed/seed_job_dsl.groovy**
+1. **ci/jenkins/job-dsl/seed/seed_job_dsl.groovy**
    - Renamed `BUILD_VARIANT` to `VARIANT`
    - Added platform loading logic
    - Changed `PLATFORMS` parameter from string to choice dropdown
 
 ### ci-temurin-config Repository
 
-4. **jenkins_job_config.json**
+1. **jenkins_job_config.json**
    - Renamed `BUILD_VARIANT` to `VARIANT` in defaultParameters
 
 ### Tools
 
-5. **tools/convert-legacy-configs-to-new-architecture.py**
+1. **tools/convert-legacy-configs-to-new-architecture.py**
    - Updated to generate `VARIANT` instead of `BUILD_VARIANT` in jenkins_job_config.json
 
 ### UI Improvements
 
-6. **Launch Job PLATFORMS Parameter**
+1. **Launch Job PLATFORMS Parameter**
    - Changed from string input to choice dropdown
    - Dynamically populated with all available platforms for that JDK version
    - "all" option appears at the top of the list
@@ -146,9 +152,9 @@ sh """
 ## Benefits
 
 1. **Consistency**: Parameters match across Job DSL, Jenkinsfile, and Python scripts
-2. **Clarity**: Separate OS and architecture parameters are more explicit than combined platform
-3. **Flexibility**: Easier to filter or query jobs by specific OS or architecture
-4. **Maintainability**: Reduces confusion and potential errors from parameter mismatches
+1. **Clarity**: Separate OS and architecture parameters are more explicit than combined platform
+1. **Flexibility**: Easier to filter or query jobs by specific OS or architecture
+1. **Maintainability**: Reduces confusion and potential errors from parameter mismatches
 
 ## Migration Notes
 
@@ -161,9 +167,9 @@ sh """
 To verify the changes:
 
 1. Run a launch job with `REGENERATE_JOBS=true`
-2. Check that platform-specific build jobs are created with correct parameters
-3. Trigger a build and verify parameters are passed correctly to `load-json-config.py`
-4. Confirm the pipeline executes successfully
+1. Check that platform-specific build jobs are created with correct parameters
+1. Trigger a build and verify parameters are passed correctly to `load-json-config.py`
+1. Confirm the pipeline executes successfully
 
 ## Related Documentation
 

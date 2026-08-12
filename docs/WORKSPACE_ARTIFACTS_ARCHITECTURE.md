@@ -30,7 +30,7 @@ Every stage script receives the same five environment variables regardless of wh
 
 Every stage begins with a fresh workspace — `cleanWs()` wipes the entire `WORKSPACE` root. The orchestration layer then re-populates it:
 
-```
+```text
 ${WORKSPACE}/                         # Jenkins workspace root — wiped by cleanWs() at stage start
 ├── ci/                               # ← checked out from ci-adoptium-pipelines (checkout scm)
 │   └── jenkins/lib/
@@ -43,14 +43,14 @@ ${WORKSPACE}/                         # Jenkins workspace root — wiped by clea
 ├── pipeline-config.json              # ← copyArtifacts pulls here (target: '.', i.e. WORKSPACE root)
 └── <previous stage outputs>          #   INPUT_ARTIFACTS_DIR == WORKSPACE
 
-# Stage outputs:
+# Stage outputs
 ${WORKSPACE}/build_output/            # TARGET_DIR — stage writes here
                                       # archiveArtifacts uploads to Jenkins artifact store
 ```
 
 ### How artifacts flow (Jenkins)
 
-```
+```text
 Initialize stage
   ConfigHelper.generatePipelineConfig()
   → writes pipeline-config.json to WORKSPACE root
@@ -91,7 +91,7 @@ Build stage (and every subsequent stage)
 
 The local runner uses a persistent root (`pipeline_workspace`) containing three purpose-specific sub-directories that map precisely onto Jenkins concepts:
 
-```
+```text
 <pipeline_workspace>/                 # Root — persists for the life of the pipeline run
 │                                     # (default: ~/openjdk-build)
 │
@@ -120,7 +120,7 @@ The local runner uses a persistent root (`pipeline_workspace`) containing three 
 
 ### How artifacts flow (Local)
 
-```
+```text
 Initialize stage
   workspace_mgr.cleanup_stage_workspace('pre')      ← wipe stage_workspace/
   git clone config-repo → pipeline_workspace/config-repo/
@@ -231,7 +231,8 @@ python3 run-pipeline.py \
 ### Error messages reference
 
 **Workspace already exists (fresh build, no `--clean-workspace`):**
-```
+
+```text
 ERROR: Workspace already exists: /Users/user/openjdk-build
 
 For a fresh build, you must either:
@@ -243,7 +244,8 @@ This ensures workspace cleanliness and prevents pollution from previous runs.
 ```
 
 **Restart but workspace missing:**
-```
+
+```text
 ERROR: Cannot restart from stage '13-smoke-tests' - workspace does not exist: /Users/user/openjdk-build
 
 When restarting from a stage, the workspace must exist with artifacts from previous stages.
@@ -251,7 +253,8 @@ Run a full build first (without --start-from-stage) to create the workspace.
 ```
 
 **Restart but `build_artifacts/` missing (older runner version):**
-```
+
+```text
 ERROR: Cannot restart from stage '13-smoke-tests' - build_artifacts/ does not exist: /Users/user/openjdk-build/build_artifacts
 
 The build_artifacts/ directory is required for stage restarts — it holds outputs
@@ -260,7 +263,8 @@ Run a full build first (without --start-from-stage) to create the workspace.
 ```
 
 **Option conflict:**
-```
+
+```text
 ERROR: Option conflict - cannot use --clean-workspace with --start-from-stage
 
 When restarting from a stage, the workspace must be preserved to access
@@ -295,10 +299,10 @@ artifacts from previous stages. Remove --clean-workspace to continue.
 Because `INPUT_ARTIFACTS_DIR`, `TARGET_DIR`, and `CONFIG_FILE` are always provided via environment variables and have consistent semantics across both systems, stage scripts should:
 
 1. **Never hardcode paths** — always use `${WORKSPACE}`, `${CONFIG_FILE}`, `${INPUT_ARTIFACTS_DIR}`, `${TARGET_DIR}`
-2. **Write all outputs to `${TARGET_DIR}`** — the orchestration layer handles archiving
-3. **Read all inputs from `${INPUT_ARTIFACTS_DIR}`** — they are copied/restored there before the stage starts
-4. **Use `${WORKSPACE}` only for ephemeral scratch** — it will be clean at stage start on both systems
-5. **Call `validate_standard_environment`** — it verifies `WORKSPACE` and `CONFIG_FILE` are set and provides the `TARGET_DIR` default
+1. **Write all outputs to `${TARGET_DIR}`** — the orchestration layer handles archiving
+1. **Read all inputs from `${INPUT_ARTIFACTS_DIR}`** — they are copied/restored there before the stage starts
+1. **Use `${WORKSPACE}` only for ephemeral scratch** — it will be clean at stage start on both systems
+1. **Call `validate_standard_environment`** — it verifies `WORKSPACE` and `CONFIG_FILE` are set and provides the `TARGET_DIR` default
 
 ```bash
 # Correct — works on both Jenkins and local
@@ -311,8 +315,8 @@ local output_dir="${TARGET_DIR}"
 local scratch="${WORKSPACE}/my-stage-scratch"
 
 mkdir -p "${scratch}" "${output_dir}"
-# read inputs from ${input_dir}/...
-# write outputs to ${output_dir}/...
+# read inputs from ${input_dir}/
+# write outputs to ${output_dir}/
 # temp files under ${scratch}/... (cleaned before next stage)
 ```
 
@@ -343,6 +347,7 @@ The stage must call `archiveArtifacts` for its `TARGET_DIR` output, and the next
 ### Restart fails with "build_artifacts/ does not exist"
 
 This means the workspace was created by an older version of the local runner (which used `artifacts/` rather than `build_artifacts/`). Remove the existing workspace and run a fresh full build:
+
 ```bash
 python3 run-pipeline.py --jdk-version jdk21 --config-repo-url https://github.com/adoptium/ci-temurin-config.git ... --clean-workspace
 ```

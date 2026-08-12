@@ -19,14 +19,14 @@ When adding or modifying a stage, ensure all four artefacts are present and cons
 #!/bin/bash
 # <NN>-<stage-name>.sh — <one-line description>
 #
-# Required Environment Variables:
+# Required Environment Variables
 #   WORKSPACE           - Stage working directory
 #   CONFIG_FILE         - Path to pipeline-config.json
 #   TARGET_DIR          - Where to write output artifacts
 #   INPUT_ARTIFACTS_DIR - Where to read input artifacts from (if needed)
 #   BUILD_NUMBER        - Build identifier (optional, defaults to 'local')
 #
-# Outputs:
+# Outputs
 #   ${TARGET_DIR}/**/*  - Stage output artifacts
 
 set -euo pipefail
@@ -222,7 +222,7 @@ In `ci/local/run-pipeline.py`:
 NN_MY_STAGE = 'NN-my-stage'
 ```
 
-2. Add it to the `_LOCAL_STAGES` list in execution order (only if the stage should run locally — CI-only stages such as signing and publishing are excluded):
+1. Add it to the `_LOCAL_STAGES` list in execution order (only if the stage should run locally — CI-only stages such as signing and publishing are excluded):
 
 ```python
 _LOCAL_STAGES = [
@@ -234,7 +234,7 @@ _LOCAL_STAGES = [
 ]
 ```
 
-3. Add a guarded call in `PipelineRunner.run()`:
+1. Add a guarded call in `PipelineRunner.run()`:
 
 ```python
 if NN_MY_STAGE in self.stages_to_run and self._stage_condition_met(NN_MY_STAGE):

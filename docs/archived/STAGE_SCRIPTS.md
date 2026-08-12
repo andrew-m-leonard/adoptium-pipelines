@@ -13,7 +13,7 @@ default implementations for stages that are universal (e.g. build, smoke tests).
 A single Jenkinsfile helper function `runStageScript(stem, config)` resolves the
 implementation to run using a fixed priority chain:
 
-```
+```text
 1. config-repo/vendor-scripts/<stem>.sh      ← vendor override (sh)
 2. config-repo/vendor-scripts/<stem>.groovy  ← vendor override (groovy)
 3. config-repo/vendor-scripts/<stem>.py      ← vendor override (python)
@@ -156,7 +156,7 @@ deciding whether a stage should run at all.
 ```bash
 #!/bin/bash
 # DEFAULT STUB: 03-internal-sign.sh
-# This is a no-op placeholder. Override by placing a script at:
+# This is a no-op placeholder. Override by placing a script at
 #   config-repo/vendor-scripts/03-internal-sign.{sh,groovy,py}
 echo "ℹ️  Internal Sign: no vendor implementation configured — skipping"
 ```
@@ -165,7 +165,7 @@ echo "ℹ️  Internal Sign: no vendor implementation configured — skipping"
 
 ## Config Repo Layout for Vendor Overrides
 
-```
+```text
 config-repo/                          ← checked out by Initialize stage
   configurations/
     jdk21_pipeline_config.json
@@ -239,7 +239,7 @@ set -euo pipefail
 # ... actual curl signing logic ...
 ```
 
-2. No changes to `ci-adoptium-pipelines` are required. The next pipeline run
+1. No changes to `ci-adoptium-pipelines` are required. The next pipeline run
    picks up the vendor script automatically.
 
 ---
@@ -265,7 +265,7 @@ inside a dedicated `stage_<name>()` method. The same pluggable model applies her
 with two simplifications:
 
 1. **No Groovy** — only `.sh` and `.py` scripts can run locally.
-2. **No Jenkins artifacts** — stages communicate via the filesystem
+1. **No Jenkins artifacts** — stages communicate via the filesystem
    (`INPUT_ARTIFACTS_DIR`, `TARGET_DIR`) rather than `archiveArtifacts`.
 
 ### Stage Enablement via `pipeline-config.json`
@@ -295,7 +295,7 @@ script.
 
 For each stage, `run-pipeline.py` resolves the script to run in this order:
 
-```
+```text
 1. config-repo/vendor-scripts/<stem>.sh   ← vendor override (sh)
 2. config-repo/vendor-scripts/<stem>.py   ← vendor override (python)
 3. scripts/stages/<stem>.sh               ← default (sh)
@@ -417,7 +417,7 @@ available.
 
 ### Config Repo Layout (combined view)
 
-```
+```text
 config-repo/
   configurations/
     jdk21_pipeline_config.json        ← CI-agnostic build config (unchanged)

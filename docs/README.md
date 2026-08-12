@@ -4,7 +4,7 @@ This directory contains reference documentation for the Adoptium CI pipeline inf
 
 ## Quick Navigation
 
-### I want to...
+### I want to
 
 | Goal | Start here |
 |---|---|

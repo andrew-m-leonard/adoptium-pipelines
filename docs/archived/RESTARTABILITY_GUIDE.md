@@ -9,6 +9,7 @@ This approach prioritizes **reliability and consistency** over performance optim
 ## Why Reliability Matters
 
 When building critical software like OpenJDK:
+
 - **Build failures are expensive** - JDK builds can take hours
 - **Debugging is critical** - need to inspect artifacts between stages
 - **Reproducibility is essential** - must be able to restart from any point
@@ -47,6 +48,7 @@ stage('Stage Name') {
 ```
 
 **This pattern works reliably:**
+
 - ✅ On first run
 - ✅ On restart from any stage
 - ✅ On any agent/node
@@ -55,26 +57,33 @@ stage('Stage Name') {
 ## Why This Approach is Reliable
 
 ### 1. **Predictable Behavior**
+
 Same code path every time - no conditional logic based on run state.
 
 ### 2. **No Hidden Dependencies**
+
 Each stage explicitly declares what it needs via `copyArtifacts`.
 
 ### 3. **Persistent State**
+
 Artifacts survive pipeline completion, node failures, Jenkins restarts.
 
 ### 4. **Inspectable**
+
 Can download and examine artifacts between stages for debugging.
 
 ### 5. **Testable**
+
 Can test each stage independently by providing archived inputs.
 
 ### 6. **Auditable**
+
 Clear record of what each stage produced and when.
 
 ## OpenJDK Pipeline: Reliable Stage Design
 
 ### Stage 1: Build JDK
+
 ```groovy
 stage('Build') {
     agent { label "${buildConfig.NODE_LABEL}" }
@@ -113,12 +122,14 @@ stage('Build') {
 ```
 
 **Reliability guarantees:**
+
 - All outputs explicitly archived
 - Metadata persisted to JSON
 - Fingerprinting enabled for tracking
 - Will fail if no artifacts produced
 
 ### Stage 2: Sign Artifacts
+
 ```groovy
 stage('Sign Artifacts') {
     agent { label 'worker' }
@@ -176,12 +187,14 @@ stage('Sign Artifacts') {
 ```
 
 **Reliability guarantees:**
+
 - Explicitly retrieves all needed inputs
 - Works identically on first run or restart
 - Persists signing metadata
 - Downstream stages can verify signing occurred
 
 ### Stage 3: Build Installers
+
 ```groovy
 stage('Build Installers') {
     agent { label 'worker' }
@@ -234,11 +247,13 @@ stage('Build Installers') {
 ```
 
 **Reliability guarantees:**
+
 - Independent of previous stage execution state
 - Can be restarted days later
 - Metadata chain preserved (build → signing → installer)
 
 ### Stage 4: Run Tests
+
 ```groovy
 stage('Smoke Tests') {
     agent { label 'worker' }
@@ -297,13 +312,14 @@ stage('Smoke Tests') {
 ```
 
 **Reliability guarantees:**
+
 - Tests run against exact archived binary
 - Test results preserved for analysis
 - Can rerun tests without rebuilding
 
 ## Complete Reliable Stage Flow
 
-```
+```text
 ┌────────────────────────────────────────────────────────────┐
 │ Build Stage                                                │
 │ • Compiles JDK                                             │
@@ -379,6 +395,7 @@ Each stage adds to the metadata chain:
 ```
 
 This metadata chain provides:
+
 - **Traceability**: Track artifacts through entire pipeline
 - **Auditability**: Know exactly what was done when
 - **Debuggability**: Understand state at each stage
@@ -396,7 +413,7 @@ For each stage, verify:
    - [ ] Metadata files are created and archived
    - [ ] Next stage can retrieve artifacts
 
-2. **Restart Test**
+1. **Restart Test**
    - [ ] Add `error("Test")` to stage
    - [ ] Run pipeline - stage fails
    - [ ] Remove error
@@ -405,14 +422,14 @@ For each stage, verify:
    - [ ] Stage completes successfully
    - [ ] Produces same outputs as first run
 
-3. **Delayed Restart Test**
+1. **Delayed Restart Test**
    - [ ] Run pipeline to completion
    - [ ] Wait 24 hours
    - [ ] Restart from middle stage
    - [ ] Verify artifacts still available
    - [ ] Verify stage completes successfully
 
-4. **Cross-Node Test**
+1. **Cross-Node Test**
    - [ ] Run pipeline on node A
    - [ ] Restart stage on node B
    - [ ] Verify artifacts retrieved correctly
@@ -421,6 +438,7 @@ For each stage, verify:
 ## Common Reliability Pitfalls
 
 ### ❌ Unreliable: Workspace Dependencies
+
 ```groovy
 stage('Build') {
     steps {
@@ -440,6 +458,7 @@ stage('Sign') {
 **Problem**: Workspace may be cleaned, on different node, or unavailable.
 
 ### ✅ Reliable: Archived Dependencies
+
 ```groovy
 stage('Build') {
     steps {
@@ -459,6 +478,7 @@ stage('Sign') {
 **Benefit**: Works on any node, any time, after any failure.
 
 ### ❌ Unreliable: Pipeline Variables
+
 ```groovy
 def version = ""
 
@@ -482,6 +502,7 @@ stage('Sign') {
 **Problem**: Variables don't persist across restarts.
 
 ### ✅ Reliable: JSON Metadata
+
 ```groovy
 stage('Build') {
     steps {
@@ -524,13 +545,15 @@ For reliable, restartable stages:
 ## Summary: The Reliability Contract
 
 **Each stage promises:**
+
 1. I will archive everything I produce
-2. I will retrieve everything I need from archives
-3. I will not depend on previous stage execution state
-4. I will persist all important data to JSON files
-5. I will work the same way on first run and restart
+1. I will retrieve everything I need from archives
+1. I will not depend on previous stage execution state
+1. I will persist all important data to JSON files
+1. I will work the same way on first run and restart
 
 **This contract ensures:**
+
 - ✅ Predictable behavior
 - ✅ Debuggable failures
 - ✅ Restartable from any point

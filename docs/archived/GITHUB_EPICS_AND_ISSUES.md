@@ -11,24 +11,27 @@ This document provides ready-to-use templates for creating GitHub EPICs and issu
 The current OpenJDK build pipeline uses a monolithic scripted pipeline architecture that has become increasingly difficult to maintain, debug, and extend. This refactoring addresses critical operational challenges:
 
 **Current Pain Points:**
+
 1. **No Restart Capability**: Pipeline failures require complete rebuilds from scratch, wasting hours of compute time and developer productivity
-2. **Monolithic Design**: All logic embedded in a single large Groovy script makes changes risky and testing difficult
-3. **Configuration Complexity**: Build configurations mixed with pipeline code makes it hard to add new platforms or variants
-4. **Debugging Challenges**: When builds fail, identifying the root cause requires navigating thousands of lines of Groovy code
-5. **Vendor Lock-in**: Heavy reliance on Jenkins-specific features and shared libraries limits portability
-6. **Limited Reusability**: Other vendors cannot easily adapt the pipeline for their needs
+1. **Monolithic Design**: All logic embedded in a single large Groovy script makes changes risky and testing difficult
+1. **Configuration Complexity**: Build configurations mixed with pipeline code makes it hard to add new platforms or variants
+1. **Debugging Challenges**: When builds fail, identifying the root cause requires navigating thousands of lines of Groovy code
+1. **Vendor Lock-in**: Heavy reliance on Jenkins-specific features and shared libraries limits portability
+1. **Limited Reusability**: Other vendors cannot easily adapt the pipeline for their needs
 
 **Benefits of New Architecture:**
+
 1. **Stage-Level Restart**: Failed stages can be restarted individually, saving hours of rebuild time
-2. **Modular Design**: Each stage is an independent script, making changes safer and testing easier
-3. **Code/Config Separation**: Pipeline code (ci-adoptium-pipelines) separated from vendor configurations (ci-temurin-config)
-4. **Better Debugging**: Clear stage boundaries and structured logging make troubleshooting straightforward
-5. **CI-Agnostic**: 90% of code is portable shell scripts, reducing Jenkins dependency
-6. **Vendor-Friendly**: Other vendors can use the pipeline code with their own configuration repositories
-7. **Improved Reliability**: Declarative syntax with explicit stage dependencies reduces runtime errors
-8. **Faster Iteration**: Developers can test individual stages locally without full Jenkins setup
+1. **Modular Design**: Each stage is an independent script, making changes safer and testing easier
+1. **Code/Config Separation**: Pipeline code (ci-adoptium-pipelines) separated from vendor configurations (ci-temurin-config)
+1. **Better Debugging**: Clear stage boundaries and structured logging make troubleshooting straightforward
+1. **CI-Agnostic**: 90% of code is portable shell scripts, reducing Jenkins dependency
+1. **Vendor-Friendly**: Other vendors can use the pipeline code with their own configuration repositories
+1. **Improved Reliability**: Declarative syntax with explicit stage dependencies reduces runtime errors
+1. **Faster Iteration**: Developers can test individual stages locally without full Jenkins setup
 
 **Business Impact:**
+
 - **Reduced Downtime**: Restart capability eliminates hours of wasted rebuild time
 - **Faster Releases**: Modular design enables parallel development and faster iteration
 - **Lower Costs**: Efficient resource usage and reduced compute waste
@@ -36,6 +39,7 @@ The current OpenJDK build pipeline uses a monolithic scripted pipeline architect
 - **Vendor Adoption**: Other organizations can adopt Adoptium's build infrastructure
 
 **Migration Strategy:**
+
 - Gradual rollout with parallel execution (old and new pipelines run side-by-side)
 - Byte-by-byte comparison ensures identical outputs
 - Start with pilot platform (Linux x64 JDK21u) before expanding
@@ -58,6 +62,7 @@ The new pipeline architecture separates code from configuration:
   - Checked out via CONFIG_REPO_URL parameter
 
 This separation allows:
+
 - Vendors to maintain their own configuration repositories
 - Shared pipeline code across all vendors
 - Independent versioning of code and configurations
@@ -73,6 +78,7 @@ This separation allows:
 Establish the foundational CI-agnostic pipeline architecture as described in [`CI_AGNOSTIC_ARCHITECTURE.md`](CI_AGNOSTIC_ARCHITECTURE.md). This phase focuses on creating a working framework with core stages that can run in both Jenkins and local environments, validated on a private Jenkins instance.
 
 **Core Architecture Components**:
+
 - **Code/Config Separation**: ci-adoptium-pipelines (code) + ci-temurin-config (configurations)
 - **CI-Agnostic Design**: 90% portable shell scripts, minimal Jenkins-specific code
 - **Modular Stages**: Independent, restartable stage scripts
@@ -80,12 +86,14 @@ Establish the foundational CI-agnostic pipeline architecture as described in [`C
 - **Artifact Management**: Clear INPUT_ARTIFACTS_DIR vs TARGET_DIR pattern
 
 **Core Stages Implemented**:
+
 1. **Initialize** - Load configuration, set up environment
-2. **Build** - Compile JDK from source
-3. **Validate SBOM** - Verify Software Bill of Materials
-4. **Reproducible Compare** - Byte-by-byte comparison of builds
+1. **Build** - Compile JDK from source
+1. **Validate SBOM** - Verify Software Bill of Materials
+1. **Reproducible Compare** - Byte-by-byte comparison of builds
 
 **Goals**:
+
 - Create ci-adoptium-pipelines repository with CI-agnostic architecture
 - Create ci-temurin-config repository for Temurin configurations
 - Implement core pipeline stages as portable shell scripts
@@ -95,6 +103,7 @@ Establish the foundational CI-agnostic pipeline architecture as described in [`C
 - Validate on private Jenkins instance with JDK21u Linux x64
 
 **Success Criteria**:
+
 - [ ] Both repositories created with proper structure
 - [ ] CI-agnostic architecture documented (CI_AGNOSTIC_ARCHITECTURE.md)
 - [ ] Core stages implemented as portable shell scripts
@@ -122,6 +131,7 @@ Establish the foundational CI-agnostic pipeline architecture as described in [`C
 Create the ci-adoptium-pipelines repository with proper structure to support CI-agnostic pipeline execution in both Jenkins and local environments.
 
 **Tasks**:
+
 - [x] Create ci-adoptium-pipelines repository
   - [x] Create `ci/jenkins/` directory for Jenkins-specific code
   - [x] Create `ci/jenkins/scripts/stages/` for stage scripts
@@ -140,6 +150,7 @@ Create the ci-adoptium-pipelines repository with proper structure to support CI-
 - [x] Document CI-agnostic architecture
 
 **Acceptance Criteria**:
+
 - [x] Both repositories created with proper structure
 - [x] CI-agnostic separation (ci/jenkins vs ci/local)
 - [x] File permissions correct (scripts executable)
@@ -161,6 +172,7 @@ Create the ci-adoptium-pipelines repository with proper structure to support CI-
 Implement the four core pipeline stages as portable shell scripts that work in both Jenkins and local environments.
 
 **Tasks**:
+
 - [x] Create Initialize stage (01-initialize.sh)
   - [x] Load configuration from JSON
   - [x] Set up environment variables
@@ -181,6 +193,7 @@ Implement the four core pipeline stages as portable shell scripts that work in b
   - [x] Generate comparison report
 
 **Acceptance Criteria**:
+
 - [x] All four stages implemented as shell scripts
 - [x] Scripts use INPUT_ARTIFACTS_DIR for input
 - [x] Scripts use TARGET_DIR for output
@@ -203,6 +216,7 @@ Implement the four core pipeline stages as portable shell scripts that work in b
 Implement the Jenkins execution framework using declarative pipeline syntax with support for stage-level restart.
 
 **Tasks**:
+
 - [x] Create Jenkinsfile.declarative
   - [x] Implement declarative pipeline structure
   - [x] Add stage definitions (Initialize, Build, Validate SBOM, Reproducible Compare)
@@ -220,6 +234,7 @@ Implement the Jenkins execution framework using declarative pipeline syntax with
   - [x] Platform-specific parameters
 
 **Acceptance Criteria**:
+
 - [x] Declarative pipeline syntax used
 - [x] Stages are independently restartable
 - [x] Workspace cleanup works correctly
@@ -242,6 +257,7 @@ Implement the Jenkins execution framework using declarative pipeline syntax with
 Implement the local execution framework that allows developers to test pipeline stages locally without Jenkins.
 
 **Tasks**:
+
 - [x] Create run-pipeline.py
   - [x] Implement CLI argument parsing
   - [x] Add stage execution methods
@@ -258,6 +274,7 @@ Implement the local execution framework that allows developers to test pipeline 
   - [x] Validate configuration schema
 
 **Acceptance Criteria**:
+
 - [x] Local pipeline execution works
 - [x] All four core stages can run locally
 - [x] Workspace management works correctly
@@ -280,6 +297,7 @@ Implement the local execution framework that allows developers to test pipeline 
 Implement the artifact directory pattern that clearly separates stage inputs from outputs, supporting restartability.
 
 **Tasks**:
+
 - [x] Update all stage scripts to use INPUT_ARTIFACTS_DIR
   - [x] 12-validate-sbom.sh
   - [x] 13-smoke-tests.sh
@@ -298,6 +316,7 @@ Implement the artifact directory pattern that clearly separates stage inputs fro
   - [x] Create ARTIFACT_DIRECTORY_PATTERN.md
 
 **Acceptance Criteria**:
+
 - [x] All stages use INPUT_ARTIFACTS_DIR for input
 - [x] All stages use TARGET_DIR for output
 - [x] Pattern works in both Jenkins and local
@@ -319,6 +338,7 @@ Implement the artifact directory pattern that clearly separates stage inputs fro
 Implement workspace cleanup architecture that supports stage-level restart while maintaining clean workspace state.
 
 **Tasks**:
+
 - [x] Design cleanup architecture
   - [x] Pre-stage cleanup (cleanWs before stage)
   - [x] Post-stage cleanup (optional, controlled by parameter)
@@ -334,6 +354,7 @@ Implement workspace cleanup architecture that supports stage-level restart while
   - [x] Create WORKSPACE_CLEANUP_ARCHITECTURE.md
 
 **Acceptance Criteria**:
+
 - [x] Workspace cleanup works in Jenkins
 - [x] Workspace cleanup works locally
 - [x] Stages can be restarted cleanly
@@ -355,6 +376,7 @@ Implement workspace cleanup architecture that supports stage-level restart while
 Create tool to convert existing Groovy configuration to JSON format and convert the pilot platform configuration.
 
 **Tasks**:
+
 - [x] Create convert-groovy-to-json.py
   - [x] Implement Groovy parser
   - [x] Handle nested maps and lists
@@ -366,6 +388,7 @@ Create tool to convert existing Groovy configuration to JSON format and convert 
 - [x] Document conversion process
 
 **Acceptance Criteria**:
+
 - [x] Conversion tool works correctly
 - [x] JDK21u Linux x64 config converted
 - [x] JSON validates correctly
@@ -387,6 +410,7 @@ Create tool to convert existing Groovy configuration to JSON format and convert 
 Deploy the new pipeline to a private Jenkins instance and validate with JDK21u Linux x64 Temurin build.
 
 **Tasks**:
+
 - [ ] Set up private Jenkins instance
   - [ ] Install required plugins
   - [ ] Configure credentials
@@ -409,6 +433,7 @@ Deploy the new pipeline to a private Jenkins instance and validate with JDK21u L
   - [ ] Performance metrics
 
 **Acceptance Criteria**:
+
 - [ ] Private Jenkins instance configured
 - [ ] Pipeline deployed successfully
 - [ ] JDK21u Linux x64 build completes
@@ -432,6 +457,7 @@ Deploy the new pipeline to a private Jenkins instance and validate with JDK21u L
 Create comprehensive documentation covering all aspects of the Phase 1 implementation.
 
 **Tasks**:
+
 - [x] Create CI_AGNOSTIC_ARCHITECTURE.md
 - [x] Create CODE_CONFIG_SEPARATION.md
 - [x] Create ARTIFACT_DIRECTORY_PATTERN.md
@@ -442,6 +468,7 @@ Create comprehensive documentation covering all aspects of the Phase 1 implement
 - [ ] Create Phase 1 completion report
 
 **Acceptance Criteria**:
+
 - [x] All architecture documents created
 - [x] Implementation guides complete
 - [x] Examples provided
@@ -466,20 +493,23 @@ Implement the remaining build pipeline stages to complete the full build workflo
 To properly implement and test the Internal Sign and Assemble stages, we need to build on Windows and Mac platforms since these stages have platform-specific requirements (MSI installers for Windows, PKG installers for Mac, DEB/RPM for Linux). Including all three platforms in Phase 2 ensures the stage implementations are truly portable and work across all major platforms.
 
 **Target Platforms**:
+
 - JDK21u Linux x64 Temurin (from Phase 1)
 - JDK21u Windows x64 Temurin (new)
 - JDK21u Mac aarch64 Temurin (new)
 
 **Additional Stages to Implement**:
+
 1. **Internal Sign** - Internal artifact signing for testing (platform-specific)
-2. **Assemble** - Assemble build artifacts into distribution packages (platform-specific)
-3. **Sign Artifacts** - Sign JDK artifacts with production certificates
-4. **Build Installers** - Create platform-specific installers (MSI, PKG, DEB, RPM)
-5. **Sign Installers** - Sign installer packages (platform-specific)
-6. **GPG Sign** - Create GPG signatures for artifacts
-7. **Verify Signing** - Validate all signatures are correct
+1. **Assemble** - Assemble build artifacts into distribution packages (platform-specific)
+1. **Sign Artifacts** - Sign JDK artifacts with production certificates
+1. **Build Installers** - Create platform-specific installers (MSI, PKG, DEB, RPM)
+1. **Sign Installers** - Sign installer packages (platform-specific)
+1. **GPG Sign** - Create GPG signatures for artifacts
+1. **Verify Signing** - Validate all signatures are correct
 
 **Goals**:
+
 - Implement all 7 remaining stages as portable shell scripts
 - Ensure stages work across Linux, Windows, and Mac platforms
 - Integrate stages into Jenkins declarative pipeline
@@ -489,6 +519,7 @@ To properly implement and test the Internal Sign and Assemble stages, we need to
 - Validate complete pipeline on private Jenkins instance for all three platforms
 
 **Success Criteria**:
+
 - [ ] All 7 stages implemented as shell scripts
 - [ ] All stages work on Linux, Windows, and Mac
 - [ ] All stages integrated into Jenkinsfile.declarative
@@ -520,6 +551,7 @@ To properly implement and test the Internal Sign and Assemble stages, we need to
 Implement the Internal Sign stage that signs artifacts with internal/test certificates for validation purposes.
 
 **Tasks**:
+
 - [ ] Create 05-internal-sign.sh script
   - [ ] Read artifacts from INPUT_ARTIFACTS_DIR
   - [ ] Sign with internal certificates
@@ -538,6 +570,7 @@ Implement the Internal Sign stage that signs artifacts with internal/test certif
 - [ ] Document stage behavior
 
 **Acceptance Criteria**:
+
 - [ ] Script works in both Jenkins and local
 - [ ] Artifacts signed correctly
 - [ ] Stage is restartable
@@ -558,6 +591,7 @@ Implement the Internal Sign stage that signs artifacts with internal/test certif
 Implement the Assemble stage that packages build artifacts into distribution-ready formats.
 
 **Tasks**:
+
 - [ ] Create 08-assemble.sh script
   - [ ] Read artifacts from INPUT_ARTIFACTS_DIR
   - [ ] Assemble into distribution packages
@@ -576,6 +610,7 @@ Implement the Assemble stage that packages build artifacts into distribution-rea
 - [ ] Document stage behavior
 
 **Acceptance Criteria**:
+
 - [ ] Script works in both Jenkins and local
 - [ ] Packages assembled correctly
 - [ ] Checksums generated
@@ -597,6 +632,7 @@ Implement the Assemble stage that packages build artifacts into distribution-rea
 Implement the Sign Artifacts stage that signs JDK artifacts with production certificates.
 
 **Tasks**:
+
 - [ ] Create 06-sign.sh script (already exists, may need updates)
   - [ ] Read artifacts from INPUT_ARTIFACTS_DIR
   - [ ] Sign with production certificates
@@ -616,6 +652,7 @@ Implement the Sign Artifacts stage that signs JDK artifacts with production cert
 - [ ] Document stage behavior
 
 **Acceptance Criteria**:
+
 - [ ] Script works in both Jenkins and local
 - [ ] Artifacts signed with production certs
 - [ ] Credentials handled securely
@@ -637,6 +674,7 @@ Implement the Sign Artifacts stage that signs JDK artifacts with production cert
 Implement the Build Installers stage that creates platform-specific installers (MSI, PKG, DEB, RPM).
 
 **Tasks**:
+
 - [ ] Create 07-installer.sh script (already exists, may need updates)
   - [ ] Read signed JDK from INPUT_ARTIFACTS_DIR
   - [ ] Build platform-specific installers
@@ -655,6 +693,7 @@ Implement the Build Installers stage that creates platform-specific installers (
 - [ ] Document stage behavior
 
 **Acceptance Criteria**:
+
 - [ ] Script works in both Jenkins and local
 - [ ] Installers created correctly
 - [ ] All installer types supported
@@ -676,6 +715,7 @@ Implement the Build Installers stage that creates platform-specific installers (
 Implement the Sign Installers stage that signs installer packages with appropriate certificates.
 
 **Tasks**:
+
 - [ ] Create 09-sign-installers.sh script
   - [ ] Read installers from INPUT_ARTIFACTS_DIR
   - [ ] Sign with platform-specific certificates
@@ -695,6 +735,7 @@ Implement the Sign Installers stage that signs installer packages with appropria
 - [ ] Document stage behavior
 
 **Acceptance Criteria**:
+
 - [ ] Script works in both Jenkins and local
 - [ ] Installers signed correctly
 - [ ] Platform-specific signing handled
@@ -716,6 +757,7 @@ Implement the Sign Installers stage that signs installer packages with appropria
 Implement the GPG Sign stage that creates GPG signatures for all artifacts.
 
 **Tasks**:
+
 - [ ] Create 10-gpg-sign.sh script
   - [ ] Read artifacts from INPUT_ARTIFACTS_DIR
   - [ ] Create GPG signatures (.asc files)
@@ -735,6 +777,7 @@ Implement the GPG Sign stage that creates GPG signatures for all artifacts.
 - [ ] Document stage behavior
 
 **Acceptance Criteria**:
+
 - [ ] Script works in both Jenkins and local
 - [ ] GPG signatures created correctly
 - [ ] Keys handled securely
@@ -756,6 +799,7 @@ Implement the GPG Sign stage that creates GPG signatures for all artifacts.
 Implement the Verify Signing stage that validates all signatures are correct and complete.
 
 **Tasks**:
+
 - [ ] Create 11-verify-signing.sh script
   - [ ] Read signed artifacts from INPUT_ARTIFACTS_DIR
   - [ ] Verify artifact signatures
@@ -775,6 +819,7 @@ Implement the Verify Signing stage that validates all signatures are correct and
 - [ ] Document stage behavior
 
 **Acceptance Criteria**:
+
 - [ ] Script works in both Jenkins and local
 - [ ] All signature types verified
 - [ ] Verification report generated
@@ -796,6 +841,7 @@ Implement the Verify Signing stage that validates all signatures are correct and
 Integrate all new stages into the complete pipeline and validate end-to-end execution.
 
 **Tasks**:
+
 - [ ] Update Jenkinsfile.declarative
   - [ ] Add all 7 new stages in correct order
   - [ ] Configure stage dependencies
@@ -820,6 +866,7 @@ Integrate all new stages into the complete pipeline and validate end-to-end exec
   - [ ] Optimize if needed
 
 **Acceptance Criteria**:
+
 - [ ] All 11 stages integrated (4 from Phase 1 + 7 new)
 - [ ] Complete pipeline runs successfully locally
 - [ ] Complete pipeline runs successfully in Jenkins
@@ -842,6 +889,7 @@ Integrate all new stages into the complete pipeline and validate end-to-end exec
 Update all documentation to reflect the complete pipeline with all stages.
 
 **Tasks**:
+
 - [ ] Update CI_AGNOSTIC_ARCHITECTURE.md
   - [ ] Add all 7 new stages
   - [ ] Update stage flow diagrams
@@ -860,6 +908,7 @@ Update all documentation to reflect the complete pipeline with all stages.
   - [ ] Update examples
 
 **Acceptance Criteria**:
+
 - [ ] All documentation updated
 - [ ] Examples provided for all stages
 - [ ] Phase 2 report complete
@@ -880,12 +929,14 @@ Update all documentation to reflect the complete pipeline with all stages.
 Expand migration to all Tier 1 platforms (Linux x64 for all JDK versions). These are the most common platforms with the highest usage.
 
 **Platforms**:
+
 - Linux x64 JDK21u Temurin ✓ (Pilot)
 - Linux x64 JDK17u Temurin
 - Linux x64 JDK11u Temurin
 - Linux x64 JDK8u Temurin
 
 **Success Criteria**:
+
 - [ ] All Tier 1 platforms migrated
 - [ ] 100% comparison success
 - [ ] No performance regression
@@ -905,6 +956,7 @@ Expand migration to all Tier 1 platforms (Linux x64 for all JDK versions). These
 Migrate Linux x64 JDK17u Temurin following the established pilot process.
 
 **Tasks**:
+
 - [ ] Convert configuration
 - [ ] Set up parallel execution
 - [ ] Run 5 parallel builds
@@ -913,6 +965,7 @@ Migrate Linux x64 JDK17u Temurin following the established pilot process.
 - [ ] Document findings
 
 **Acceptance Criteria**:
+
 - Configuration converted
 - 5 builds successful
 - All comparisons pass
@@ -933,6 +986,7 @@ Migrate Linux x64 JDK17u Temurin following the established pilot process.
 Migrate Linux x64 JDK11u Temurin following the established pilot process.
 
 **Tasks**:
+
 - [ ] Convert configuration
 - [ ] Set up parallel execution
 - [ ] Run 5 parallel builds
@@ -941,6 +995,7 @@ Migrate Linux x64 JDK11u Temurin following the established pilot process.
 - [ ] Document findings
 
 **Acceptance Criteria**:
+
 - Configuration converted
 - 5 builds successful
 - All comparisons pass
@@ -961,6 +1016,7 @@ Migrate Linux x64 JDK11u Temurin following the established pilot process.
 Migrate Linux x64 JDK8u Temurin following the established pilot process. Note: JDK8 may have unique requirements.
 
 **Tasks**:
+
 - [ ] Convert configuration
 - [ ] Handle JDK8-specific requirements
 - [ ] Set up parallel execution
@@ -970,6 +1026,7 @@ Migrate Linux x64 JDK8u Temurin following the established pilot process. Note: J
 - [ ] Document JDK8 quirks
 
 **Acceptance Criteria**:
+
 - Configuration converted
 - JDK8 requirements handled
 - 5 builds successful
@@ -991,6 +1048,7 @@ Migrate Linux x64 JDK8u Temurin following the established pilot process. Note: J
 Perform final validation across all Tier 1 platforms to ensure consistency and reliability.
 
 **Tasks**:
+
 - [ ] Run simultaneous builds on all Tier 1
 - [ ] Compare results across versions
 - [ ] Validate performance metrics
@@ -998,6 +1056,7 @@ Perform final validation across all Tier 1 platforms to ensure consistency and r
 - [ ] Get team sign-off
 
 **Acceptance Criteria**:
+
 - All Tier 1 platforms validated
 - No regressions found
 - Performance acceptable
@@ -1013,6 +1072,7 @@ Perform final validation across all Tier 1 platforms to ensure consistency and r
 ## Additional EPICs (Summary)
 
 ### EPIC 4: Tier 2 Rollout
+
 - Linux aarch64 platforms
 - Mac x64 platforms
 - Timeline: Weeks 9-10
@@ -1020,14 +1080,15 @@ Perform final validation across all Tier 1 platforms to ensure consistency and r
 **Note**: Mac aarch64 JDK21u and Windows x64 JDK21u moved to Phase 2 (EPIC 2) to support proper implementation and testing of Internal Sign and Assemble stages.
 
 ### EPIC 5: Tier 3 Rollout
+
 - Linux aarch64 platforms
 - Mac x64 platforms
 - AIX platforms
 - Linux s390x platforms
 - Timeline: Weeks 12-13
 
-
 ### EPIC 7: Edge Cases
+
 - Docker container builds
 - Cross-compilation
 - Custom build arguments
@@ -1035,12 +1096,14 @@ Perform final validation across all Tier 1 platforms to ensure consistency and r
 - Timeline: Weeks 16-17
 
 ### EPIC 8: Final Migration
+
 - Complete all platforms
 - Cutover execution
 - Decommission old pipeline
 - Timeline: Weeks 20-25
 
 ### EPIC 9: Documentation & Training
+
 - User documentation
 - Training materials
 - Runbooks
@@ -1099,18 +1162,21 @@ Migrate [Platform/Version/Variant] to the new modular pipeline architecture.
 Create these labels in GitHub:
 
 **Priority**:
+
 - `P0` - Critical/Blocker (red)
 - `P1` - High Priority (orange)
 - `P2` - Medium Priority (yellow)
 - `P3` - Low Priority (green)
 
 **Phase**:
+
 - `phase-1` - Foundation (blue)
 - `phase-2` - Pilot (blue)
 - `phase-3` - Gradual Rollout (blue)
 - `phase-4` - Full Migration (blue)
 
 **Type**:
+
 - `epic` - Epic issue (purple)
 - `infrastructure` - Infrastructure work (gray)
 - `migration` - Platform migration (green)
@@ -1120,6 +1186,7 @@ Create these labels in GitHub:
 - `bugfix` - Bug fix (red)
 
 **Platform**:
+
 - `tier-1` - Tier 1 platform (gold)
 - `tier-2` - Tier 2 platform (silver)
 - `tier-3` - Tier 3 platform (bronze)
@@ -1129,6 +1196,7 @@ Create these labels in GitHub:
 - `aix` - AIX platform (brown)
 
 **Component**:
+
 - `jenkins` - Jenkins-specific (red)
 - `dashboard` - Dashboard work (purple)
 - `conversion` - Config conversion (green)
@@ -1144,15 +1212,15 @@ Create these milestones in GitHub:
    - Due: [3 weeks from start]
    - Description: Establish infrastructure and tooling
 
-2. **Phase 2: Pilot** (Weeks 4-7)
+1. **Phase 2: Pilot** (Weeks 4-7)
    - Due: [7 weeks from start]
    - Description: Validate approach with pilot platform
 
-3. **Phase 3: Gradual Rollout** (Weeks 8-19)
+1. **Phase 3: Gradual Rollout** (Weeks 8-19)
    - Due: [19 weeks from start]
    - Description: Migrate all platforms incrementally
 
-4. **Phase 4: Full Migration** (Weeks 20-25)
+1. **Phase 4: Full Migration** (Weeks 20-25)
    - Due: [25 weeks from start]
    - Description: Complete migration and decommission old pipeline
 
@@ -1163,11 +1231,11 @@ Create these milestones in GitHub:
 Create a GitHub Project board with these columns:
 
 1. **Backlog** - Not yet started
-2. **Ready** - Ready to work on
-3. **In Progress** - Currently being worked on
-4. **Review** - Awaiting review
-5. **Testing** - In testing phase
-6. **Done** - Completed
+1. **Ready** - Ready to work on
+1. **In Progress** - Currently being worked on
+1. **Review** - Awaiting review
+1. **Testing** - In testing phase
+1. **Done** - Completed
 
 ---
 

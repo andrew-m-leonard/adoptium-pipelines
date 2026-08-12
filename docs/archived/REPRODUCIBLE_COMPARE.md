@@ -7,12 +7,12 @@ The reproducible build comparison stage validates that locally built JDK binarie
 ## How It Works
 
 1. **Clean Workspace**: Removes any existing comparison workspace to prevent pollution from previous runs
-2. **Clone temurin-build**: Clones the temurin-build repository to access the comparison tools
-3. **Download Production Binary**: Fetches the official Adoptium JDK binary from the Adoptium API using the specified SCM reference
-4. **Download SBOM**: Retrieves the Software Bill of Materials (SBOM) for the production binary
-5. **Unpack Both JDKs**: Extracts both the production binary and the locally built JDK
-6. **Run Comparison**: Uses the `repro_compare.sh` tool from temurin-build to perform byte-by-byte comparison
-7. **Report Results**: Outputs detailed comparison results showing any differences
+1. **Clone temurin-build**: Clones the temurin-build repository to access the comparison tools
+1. **Download Production Binary**: Fetches the official Adoptium JDK binary from the Adoptium API using the specified SCM reference
+1. **Download SBOM**: Retrieves the Software Bill of Materials (SBOM) for the production binary
+1. **Unpack Both JDKs**: Extracts both the production binary and the locally built JDK
+1. **Run Comparison**: Uses the `repro_compare.sh` tool from temurin-build to perform byte-by-byte comparison
+1. **Report Results**: Outputs detailed comparison results showing any differences
 
 ## Usage
 
@@ -93,7 +93,8 @@ The stage script uses the following environment variables:
 ## Output
 
 The comparison results are written to:
-```
+
+```text
 ${WORKSPACE}/reproducible-compare/
 ├── temurin-build/          # Cloned temurin-build repository
 ├── jdk-upstream/           # Unpacked production JDK
@@ -112,19 +113,21 @@ ${WORKSPACE}/reproducible-compare/
 The stage constructs API URLs based on the build type:
 
 **Release builds:**
-```
+
+```text
 https://api.adoptium.net/v3/binary/version/{scm_ref}/{os}/{arch}/jdk/hotspot/normal/eclipse?project=jdk
 ```
 
 **EA builds:**
-```
+
+```text
 https://api.adoptium.net/v3/binary/version/{scm_ref}-ea-beta/{os}/{arch}/jdk/hotspot/normal/eclipse?project=jdk
 ```
 
 ### SCM Reference Handling
 
 1. **Strip `_adopt` suffix**: If the SCM reference contains `_adopt` (e.g., `jdk-21.0.2+13_adopt`), it's removed before querying the API
-2. **Add EA suffix**: For non-release builds, `-ea-beta` is appended to the SCM reference
+1. **Add EA suffix**: For non-release builds, `-ea-beta` is appended to the SCM reference
 
 ### Platform Mapping
 
@@ -159,15 +162,17 @@ The stage uses `repro_compare.sh` from the temurin-build repository, which:
 **Cause**: The specified SCM reference doesn't exist in the Adoptium API
 
 **Solution**:
+
 - Verify the SCM reference is correct
 - Check if it's a release or EA build and adjust the `--release` flag accordingly
-- Visit https://api.adoptium.net/v3/info/available_releases to see available versions
+- Visit <https://api.adoptium.net/v3/info/available_releases> to see available versions
 
 ### Error: "Local JDK tarball not found"
 
 **Cause**: The build stage didn't complete successfully or the tarball is in an unexpected location
 
 **Solution**:
+
 - Ensure the build stage completed successfully
 - Check that `${TARGET_DIR}` contains the expected JDK tarball
 - Verify the tarball naming matches the expected pattern
@@ -177,6 +182,7 @@ The stage uses `repro_compare.sh` from the temurin-build repository, which:
 **Cause**: The locally built JDK differs from the production binary
 
 **Solution**:
+
 - Review the comparison results in `${TARGET_DIR}/reproducible-compare/comparison-results.txt`
 - Check for non-deterministic build issues (timestamps, random values, etc.)
 - Verify build environment matches production (compiler versions, build flags, etc.)

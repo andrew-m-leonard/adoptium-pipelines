@@ -2,7 +2,7 @@
 
 ## The Critical Problem
 
-```
+```text
 Build #100 (original run):
   Build: Creates workspace, BUILD_UID=abc123
   Sign: Uses workspace from #100, BUILD_UID=abc123
@@ -421,7 +421,8 @@ pipeline {
 ## How BUILD_UID Solves the Problem
 
 ### Scenario 1: Normal Run
-```
+
+```text
 Build #100:
   Initialize: BUILD_UID=abc123
   Build: Creates workspace with BUILD_UID=abc123
@@ -429,7 +430,8 @@ Build #100:
 ```
 
 ### Scenario 2: Restart from Sign
-```
+
+```text
 Build #101 (restart from Sign of #100):
   Initialize: Reuses BUILD_UID=abc123
   Sign: Looks for workspace with BUILD_UID=abc123
@@ -437,7 +439,8 @@ Build #101 (restart from Sign of #100):
 ```
 
 ### Scenario 3: Rebuild (Different Pipeline)
-```
+
+```text
 Build #100:
   BUILD_UID=abc123
 
@@ -464,10 +467,10 @@ Build #102 (restart from Sign of #101):
 ### The Pattern
 
 1. **Generate BUILD_UID** at pipeline start (or reuse for restart)
-2. **Store BUILD_UID** in workspace metadata
-3. **Validate BUILD_UID** when retrieving workspace
-4. **Walk back through builds** until matching BUILD_UID found
-5. **Reject mismatched BUILD_UID** - fail with clear error
+1. **Store BUILD_UID** in workspace metadata
+1. **Validate BUILD_UID** when retrieving workspace
+1. **Walk back through builds** until matching BUILD_UID found
+1. **Reject mismatched BUILD_UID** - fail with clear error
 
 ### Key Insight
 

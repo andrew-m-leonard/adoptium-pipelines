@@ -9,27 +9,32 @@ This document outlines the step-by-step migration strategy from the current mono
 The current Jenkins-specific scripted pipeline has served well but faces significant limitations as the project scales. This refactoring delivers substantial benefits:
 
 **Operational Excellence:**
+
 - **Restartability**: Declarative pipelines support "Restart from Stage" - eliminating costly full rebuilds when late-stage failures occur (e.g., restart from signing instead of rebuilding JDK)
 - **Faster Debugging**: Modular shell scripts can be tested locally without Jenkins, reducing iteration time from minutes to seconds
 - **Reduced CI Lock-in**: 90% of build logic moves to portable shell scripts, making future CI platform migrations trivial
 
 **Maintainability & Quality:**
+
 - **Clear Separation of Concerns**: Build logic (shell), configuration (JSON), and orchestration (Jenkinsfile) are cleanly separated
 - **Easier Testing**: Each stage script can be unit tested independently; `run-pipeline.py` enables full local pipeline execution
 - **Better Code Review**: Smaller, focused files are easier to review than a 2000+ line Groovy monolith
 - **Reduced Complexity**: Eliminates deeply nested Groovy closures and implicit Jenkins dependencies
 
 **Team Productivity:**
+
 - **Lower Barrier to Entry**: New contributors can understand and modify shell scripts without learning Jenkins/Groovy
 - **Parallel Development**: Multiple team members can work on different stages without merge conflicts
 - **Reusable Components**: Stage scripts become building blocks for other pipelines (e.g., nightly builds, release candidates)
 
 **Risk Mitigation:**
+
 - **Incremental Migration**: Parallel execution validates new pipeline against production before cutover
 - **Easy Rollback**: Old pipeline remains available during migration
 - **Platform Independence**: Reduces vendor lock-in risk if Jenkins becomes unsuitable
 
 **Key Principles:**
+
 - ✅ Zero downtime migration
 - ✅ Parallel execution for validation
 - ✅ Incremental rollout by platform/version
@@ -40,7 +45,7 @@ The current Jenkins-specific scripted pipeline has served well but faces signifi
 
 ## Migration Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                    MIGRATION TIMELINE (ACCELERATED)              │
 │                                                                  │
@@ -72,7 +77,8 @@ The current Jenkins-specific scripted pipeline has served well but faces signifi
 
 ## Phase 1: Foundation (Week 1)
 
-### Objectives
+### Phase 1 Objectives
+
 - Establish infrastructure for new pipeline
 - Create tooling for parallel execution
 - Set up comparison framework
@@ -80,7 +86,8 @@ The current Jenkins-specific scripted pipeline has served well but faces signifi
 ### Deliverables
 
 #### 1.1 Infrastructure Setup
-```
+
+```text
 Repository Structure:
 ci-jenkins-pipelines/
 ├── pipelines/
@@ -109,18 +116,21 @@ ci-jenkins-pipelines/
 ```
 
 #### 1.2 Conversion Tools
+
 - **Config Converter**: Groovy → JSON configuration converter (already exists)
 - **Build Comparator**: Use existing `repro_compare.sh` tool
 - **Validation Framework**: Automated checks for build equivalence
 
 #### 1.3 Testing Infrastructure
+
 - **Parallel Job Setup**: Jenkins jobs that run both pipelines
 - **Artifact Storage**: Separate storage for old/new builds
 - **Comparison Dashboard**: Visual comparison of results
 
-### Tasks (GitHub Issues)
+### Phase 1 Tasks (GitHub Issues)
 
 **EPIC 1: Foundation Infrastructure** (Week 1)
+
 - [ ] Issue #1.1: Create new repository structure (2 days)
 - [ ] Issue #1.2: Implement config conversion tool (1 day - already exists)
 - [ ] Issue #1.3: Integrate existing repro_compare.sh tool (1 day)
@@ -131,16 +141,18 @@ ci-jenkins-pipelines/
 
 ## Phase 2: Pilot (Weeks 2-3)
 
-### Objectives
+### Phase 2 Objectives
+
 - Validate new pipeline with single platform
 - Identify and document edge cases
 - Establish confidence in new approach
 
 ### Pilot Selection Criteria
 
-**Recommended Pilot: Linux x64 JDK21u Temurin**
+#### Recommended Pilot: Linux x64 JDK21u Temurin
 
 Rationale:
+
 - ✅ Most common platform
 - ✅ Well-tested configuration
 - ✅ Fastest build times
@@ -149,7 +161,7 @@ Rationale:
 
 ### Parallel Execution Strategy
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                    PARALLEL EXECUTION                            │
 │                                                                  │
@@ -188,21 +200,24 @@ Rationale:
 
 ### Comparison Criteria
 
-#### Must Match Exactly:
-1. **JDK Binary**: Byte-for-byte identical (excluding timestamps)
-2. **Checksums**: SHA256 sums must match
-3. **Version Strings**: Identical version output
-4. **Test Results**: Same pass/fail status
+#### Must Match Exactly
 
-#### Acceptable Differences:
+1. **JDK Binary**: Byte-for-byte identical (excluding timestamps)
+1. **Checksums**: SHA256 sums must match
+1. **Version Strings**: Identical version output
+1. **Test Results**: Same pass/fail status
+
+#### Acceptable Differences
+
 1. **Build Timestamps**: Different build times
-2. **Log Format**: Different logging structure
-3. **Intermediate Files**: Different temp file names
-4. **Build Duration**: Performance may vary
+1. **Log Format**: Different logging structure
+1. **Intermediate Files**: Different temp file names
+1. **Build Duration**: Performance may vary
 
 ### Edge Case Discovery
 
 During pilot, document:
+
 - Platform-specific quirks
 - Docker container builds
 - Cross-compilation scenarios
@@ -210,9 +225,10 @@ During pilot, document:
 - Special signing requirements
 - Network/firewall issues
 
-### Tasks (GitHub Issues)
+### Phase 2 Tasks (GitHub Issues)
 
 **EPIC 2: Pilot Execution** (Weeks 2-3)
+
 - [ ] Issue #2.1: Set up Linux x64 JDK21u pilot (2 days)
 - [ ] Issue #2.2: Configure parallel execution (1 day)
 - [ ] Issue #2.3: Run 5 parallel validation builds (3 days)
@@ -225,14 +241,15 @@ During pilot, document:
 
 ## Phase 3: Rapid Rollout (Weeks 4-10)
 
-### Objectives
+### Phase 3 Objectives
+
 - Expand to all platforms incrementally
 - Handle platform-specific edge cases
 - Build confidence across all configurations
 
 ### Rollout Strategy
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                    ACCELERATED ROLLOUT SEQUENCE                  │
 │                                                                  │
@@ -266,21 +283,25 @@ During pilot, document:
 ### Platform-Specific Considerations
 
 #### Linux
+
 - **Standard**: Straightforward migration
 - **Docker**: May need container-specific scripts
 - **Cross-compile**: Requires toolchain setup
 
 #### macOS
+
 - **Code Signing**: Apple Developer certificates
 - **Notarization**: Apple notarization process
 - **Rosetta**: x64 on aarch64 considerations
 
 #### Windows
+
 - **Visual Studio**: Compiler setup
 - **Code Signing**: Windows Authenticode
 - **MSI Building**: WiX toolset requirements
 
 #### AIX
+
 - **Toolchain**: IBM XL compiler
 - **Limited Resources**: Fewer build machines
 - **Testing**: Limited test infrastructure
@@ -294,37 +315,39 @@ For each platform/version combination:
    - [ ] Verify all dependencies available
    - [ ] Set up parallel execution job
 
-2. **Execution**
+1. **Execution**
    - [ ] Run 5 parallel builds
    - [ ] Compare all artifacts
    - [ ] Validate test results
    - [ ] Check performance metrics
 
-3. **Validation**
+1. **Validation**
    - [ ] Binary comparison passes
    - [ ] Checksums match
    - [ ] Tests pass identically
    - [ ] No regressions found
 
-4. **Documentation**
+1. **Documentation**
    - [ ] Document any edge cases
    - [ ] Update platform-specific notes
    - [ ] Record performance data
 
-5. **Sign-off**
+1. **Sign-off**
    - [ ] Team review
    - [ ] Stakeholder approval
    - [ ] Mark platform as migrated
 
-### Tasks (GitHub Issues)
+### Phase 3 Tasks (GitHub Issues)
 
 **EPIC 3: Tier 1 Rollout** (Week 4)
+
 - [ ] Issue #3.1: Migrate Linux x64 JDK17u (2 days)
 - [ ] Issue #3.2: Migrate Linux x64 JDK11u (2 days)
 - [ ] Issue #3.3: Migrate Linux x64 JDK8u (2 days)
 - [ ] Issue #3.4: Validate all Tier 1 platforms (1 day)
 
 **EPIC 4: Tier 2 Rollout** (Weeks 5-6)
+
 - [ ] Issue #4.1: Migrate Mac aarch64 JDK21u + JDK17u (3 days)
 - [ ] Issue #4.2: Migrate Mac x64 JDK21u + JDK17u (3 days)
 - [ ] Issue #4.3: Migrate Windows x64 JDK21u + JDK17u (3 days)
@@ -332,12 +355,14 @@ For each platform/version combination:
 - [ ] Issue #4.5: Validate all Tier 2 platforms (1 day)
 
 **EPIC 5: Tier 3 Rollout** (Weeks 7-8)
+
 - [ ] Issue #5.1: Migrate Linux aarch64 (all versions - 3 days)
 - [ ] Issue #5.2: Migrate Linux ppc64le (all versions - 3 days)
 - [ ] Issue #5.3: Migrate Linux s390x (all versions - 3 days)
 - [ ] Issue #5.4: Validate all Tier 3 platforms (1 day)
 
 **EPIC 6: Final Platforms & Edge Cases** (Weeks 9-10)
+
 - [ ] Issue #6.1: Migrate AIX ppc64 (all versions - 3 days)
 - [ ] Issue #6.2: Handle Docker container builds (2 days)
 - [ ] Issue #6.3: Handle cross-compilation scenarios (2 days)
@@ -348,14 +373,15 @@ For each platform/version combination:
 
 ## Phase 4: Completion (Weeks 11-14)
 
-### Objectives
+### Phase 4 Objectives
+
 - Complete migration of all platforms
 - Decommission old pipeline
 - Finalize documentation
 
 ### Cutover Strategy
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                    ACCELERATED CUTOVER PROCESS                   │
 │                                                                  │
@@ -396,19 +422,20 @@ If critical issues arise:
    - All builds continue with old pipeline
    - New pipeline disabled but not removed
 
-2. **Investigation** (1-3 days)
+1. **Investigation** (1-3 days)
    - Analyze root cause
    - Develop fix
    - Test fix in isolation
 
-3. **Re-attempt** (1 week)
+1. **Re-attempt** (1 week)
    - Deploy fix
    - Re-enable new pipeline
    - Monitor closely
 
-### Success Criteria
+### Phase 4 Success Criteria
 
 Migration is complete when:
+
 - ✅ All platforms migrated
 - ✅ 100% artifact comparison success
 - ✅ No performance regressions
@@ -416,9 +443,10 @@ Migration is complete when:
 - ✅ Documentation complete
 - ✅ Old pipeline decommissioned
 
-### Tasks (GitHub Issues)
+### Phase 4 Tasks (GitHub Issues)
 
 **EPIC 7: Completion** (Weeks 11-14)
+
 - [ ] Issue #8.1: Complete final platform migrations
 - [ ] Issue #8.2: Achieve 100% comparison success
 - [ ] Issue #8.3: Prepare cutover plan
@@ -436,29 +464,37 @@ Migration is complete when:
 ### High-Risk Areas
 
 #### 1. Build Reproducibility
+
 **Risk**: New pipeline produces different binaries
 **Mitigation**:
+
 - Extensive comparison testing
 - Byte-level diff analysis
 - Parallel execution for validation
 
 #### 2. Platform-Specific Issues
+
 **Risk**: Edge cases not discovered until production
 **Mitigation**:
+
 - Comprehensive pilot phase
 - Gradual rollout by platform
 - Easy rollback capability
 
 #### 3. Performance Regression
+
 **Risk**: New pipeline slower than old
 **Mitigation**:
+
 - Performance benchmarking
 - Optimization phase
 - Acceptable threshold defined
 
 #### 4. Team Adoption
+
 **Risk**: Team unfamiliar with new approach
 **Mitigation**:
+
 - Comprehensive documentation
 - Training sessions
 - Gradual transition period
@@ -466,6 +502,7 @@ Migration is complete when:
 ### Rollback Triggers
 
 Immediate rollback if:
+
 - ❌ Binary differences detected
 - ❌ Test failures increase
 - ❌ Build time increases >20%
@@ -479,23 +516,26 @@ Immediate rollback if:
 ### Key Performance Indicators (KPIs)
 
 #### Build Quality
+
 - **Artifact Comparison Success Rate**: Target 100%
 - **Test Pass Rate**: Must match old pipeline
 - **Binary Reproducibility**: Byte-for-byte match
 
 #### Performance
+
 - **Build Duration**: Within 10% of old pipeline
 - **Resource Usage**: CPU/Memory comparable
 - **Artifact Size**: Identical to old pipeline
 
 #### Reliability
+
 - **Build Success Rate**: ≥ old pipeline
 - **Restart Success Rate**: >95%
 - **Failure Recovery Time**: <30 minutes
 
 ### Monitoring Dashboard
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                    MIGRATION DASHBOARD                           │
 │                                                                  │
@@ -523,10 +563,10 @@ Immediate rollback if:
 ### Stakeholders
 
 1. **Development Team**: Weekly updates
-2. **QA Team**: Test result comparisons
-3. **Release Team**: Migration timeline
-4. **Management**: Monthly progress reports
-5. **Community**: Public announcements
+1. **QA Team**: Test result comparisons
+1. **Release Team**: Migration timeline
+1. **Management**: Monthly progress reports
+1. **Community**: Public announcements
 
 ### Communication Channels
 
@@ -543,14 +583,15 @@ Immediate rollback if:
 ### Expected Benefits
 
 1. **Restartability**: Save hours on failed builds
-2. **CI Independence**: Easier to migrate CI systems
-3. **Maintainability**: Clearer code organization
-4. **Testability**: Local testing capability
-5. **Reliability**: Reproducible builds
+1. **CI Independence**: Easier to migrate CI systems
+1. **Maintainability**: Clearer code organization
+1. **Testability**: Local testing capability
+1. **Reliability**: Reproducible builds
 
 ### Post-Migration Review
 
 After completion, document:
+
 - What went well
 - What could be improved
 - Unexpected challenges
@@ -621,6 +662,7 @@ This accelerated migration plan provides a structured, low-risk approach to tran
 **Risk Level**: Low-Medium (with proper execution and monitoring)
 
 **Key Acceleration Factors:**
+
 - Existing conversion tools and scripts
 - Proven repro_compare.sh for validation
 - Parallel migration of multiple platforms
@@ -630,8 +672,8 @@ This accelerated migration plan provides a structured, low-risk approach to tran
 
 ---
 
-*Document Version: 1.0*
-*Last Updated: 2026-05-12*
+Document Version: 1.0
+Last Updated: 2026-05-12
 
 ---
 
@@ -674,13 +716,14 @@ cd temurin-build/tooling/reproducible
 ### What It Compares
 
 1. **File Structure**: Verifies same files exist in both builds
-2. **File Count**: Ensures no missing or extra files
-3. **Binary Content**: Byte-by-byte comparison after preprocessing
-4. **Metadata**: Checks file permissions and attributes
+1. **File Count**: Ensures no missing or extra files
+1. **Binary Content**: Byte-by-byte comparison after preprocessing
+1. **Metadata**: Checks file permissions and attributes
 
 ### Preprocessing Steps
 
 The tool automatically removes expected differences:
+
 - Build timestamps
 - Build IDs and UUIDs
 - Absolute paths in debug info
@@ -725,9 +768,10 @@ stage('Compare Builds') {
 }
 ```
 
-### Success Criteria
+### Validation Success Criteria
 
 For migration validation, builds must achieve:
+
 - **100% ReproduciblePercent** (all files identical)
 - **Exit code 0** (no differences found)
 - **Empty reprotest.diff** (no files listed as different)
@@ -737,14 +781,14 @@ For migration validation, builds must achieve:
 If builds don't match:
 
 1. **Check reprotest.diff**: Lists which files differ
-2. **Review reproducible_evidence.log**: Shows detailed comparison
-3. **Verify preprocessing**: Ensure platform-specific preprocessing ran
-4. **Check build environment**: Verify same compiler versions, flags, etc.
-5. **Compare build logs**: Look for differences in build process
+1. **Review reproducible_evidence.log**: Shows detailed comparison
+1. **Verify preprocessing**: Ensure platform-specific preprocessing ran
+1. **Check build environment**: Verify same compiler versions, flags, etc.
+1. **Compare build logs**: Look for differences in build process
 
 ### Example Output
 
-```
+```text
 Comparing builds...
 Platform: Linux
 Old build: /tmp/old-jdk/jdk-21.0.12+1
@@ -763,4 +807,5 @@ Result: IDENTICAL ✓
 - Tool location: `temurin-build/tooling/reproducible/repro_compare.sh`
 - Documentation: `temurin-build/tooling/reproducible/README.md`
 - Issue tracker: Use for reporting comparison tool issues
-*Next Review: Start of Phase 2*
+
+Next Review: Start of Phase 2
