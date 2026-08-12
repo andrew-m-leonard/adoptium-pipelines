@@ -26,7 +26,7 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, cast
 
 
 class GroovyParser:
@@ -243,7 +243,7 @@ class GroovyParser:
 
         return result
 
-    def parse_build_configurations(self) -> Union[List, Dict]:
+    def parse_build_configurations(self) -> Dict:
         """Parse the buildConfigurations map from Groovy file."""
         # Find buildConfigurations = [
         pattern = r"buildConfigurations\s*=\s*\["
@@ -254,7 +254,9 @@ class GroovyParser:
 
         self.pos = match.end() - 1  # Position at '['
 
-        return self.parse_collection()
+        result = self.parse_collection()
+        # buildConfigurations is always a map of platform-name → config
+        return cast(Dict, result)
 
 
 def compact_test_arrays(json_str: str) -> str:
