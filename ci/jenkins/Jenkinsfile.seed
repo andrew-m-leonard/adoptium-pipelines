@@ -43,27 +43,20 @@ limitations under the License.
  *      CONFIG_REPO_BRANCH — Branch of this vendor config repository (e.g. main)
  *
  * 5. Run the seed job with those parameters set.  It will:
+ *      - Read PIPELINES_REPO_URL and PIPELINES_REPO_BRANCH from
+ *        adoptium_pipeline_config.json (repository.url / repository.branch)
  *      - Check out ci-adoptium-pipelines into a 'pipelines/' subdirectory
  *      - Run the Job DSL script to create all launch jobs, reading all
  *        configuration directly from the workspace
  *
  * CUSTOMISATION
  * -------------
- * - Change PIPELINES_REPO_URL / PIPELINES_REPO_BRANCH below to pin to a
- *   specific fork or branch of ci-adoptium-pipelines.
+ * - Set repository.url and repository.branch in adoptium_pipeline_config.json
+ *   to pin to a specific fork or branch of ci-adoptium-pipelines.
  * - The Job DSL script reads vendor-scripts/*.params.json from this repo's
  *   workspace (already checked out by the Pipeline SCM step) — no extra
  *   checkout is needed for vendor stage parameter overrides.
  */
-
-// ---------------------------------------------------------------------------
-// Configuration — adjust these for your environment
-// ---------------------------------------------------------------------------
-
-// ci-adoptium-pipelines repository containing the Job DSL scripts.
-// Override these to pin to a fork or specific branch.
-String PIPELINES_REPO_URL    = 'https://github.com/adoptium/ci-adoptium-pipelines.git'
-String PIPELINES_REPO_BRANCH = 'main'
 
 // ---------------------------------------------------------------------------
 // Pipeline
@@ -83,6 +76,20 @@ pipeline {
     }
 
     stages {
+        stage('Read pipeline config') {
+            steps {
+                script {
+                    // The config repo is already checked out in the workspace root by the
+                    // Pipeline SCM step.  Read the pipelines repo coordinates from it so
+                    // that no hardcoded values need to exist in this Jenkinsfile.
+                    def cfg = readJSON file: 'adoptium_pipeline_config.json'
+                    env.PIPELINES_REPO_URL    = cfg.repository.url
+                    env.PIPELINES_REPO_BRANCH = cfg.repository.branch
+                    echo "✓ Pipelines repo : ${env.PIPELINES_REPO_URL} @ ${env.PIPELINES_REPO_BRANCH}"
+                }
+            }
+        }
+
         stage('Checkout pipeline repo') {
             steps {
                 // Check out ci-adoptium-pipelines into pipelines/ so that the
@@ -90,8 +97,8 @@ pipeline {
                 // The vendor config repo is already in the workspace root
                 // (checked out by the Pipeline SCM step above).
                 dir('pipelines') {
-                    git url:    PIPELINES_REPO_URL,
-                        branch: PIPELINES_REPO_BRANCH
+                    git url:    env.PIPELINES_REPO_URL,
+                        branch: env.PIPELINES_REPO_BRANCH
                 }
                 // Capture the SHA so it can be stamped into every generated job.
                 // GIT_COMMIT is set by the git step above but scoped to the dir()
