@@ -558,7 +558,8 @@ Examples:
       --release-type RELEASE \\
       --scm-ref jdk-21.0.7+6_adopt \\
       --run-reproducible-compare true
-""" + stage_params_epilog,
+"""
+        + stage_params_epilog,
     )
 
     # ── Required ─────────────────────────────────────────────────────────────
