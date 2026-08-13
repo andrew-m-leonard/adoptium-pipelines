@@ -37,13 +37,8 @@ This project follows the [Adoptium Code of Conduct](https://github.com/adoptium/
 git clone https://github.com/adoptium/ci-adoptium-pipelines.git
 cd ci-adoptium-pipelines
 
-# Make scripts executable
-chmod +x scripts/**/*.sh
-chmod +x tools/*.sh
-chmod +x run-pipeline.py
-
 # Verify setup
-./run-pipeline.py --help
+python3 ci/local/run-pipeline.py --help
 ```
 
 ### Local Testing
@@ -57,10 +52,11 @@ Quick test:
 ./scripts/stages/01-initialize.sh
 
 # Test full pipeline locally
-python3 run-pipeline.py \
-  --config configurations/jdk21u_pipeline_config.json \
-  --platform x64Mac \
-  --variant temurin
+python3 ci/local/run-pipeline.py \
+  --jdk-version jdk21 \
+  --target-os linux \
+  --architecture x64 \
+  --config-repo-url https://github.com/adoptium/ci-temurin-config.git
 ```
 
 ---
@@ -144,10 +140,11 @@ echo $?  # Should be 0 for success
 
 ```bash
 # Full pipeline test
-python3 run-pipeline.py \
-  --config configurations/jdk21u_pipeline_config.json \
-  --platform x64Mac \
-  --variant temurin
+python3 ci/local/run-pipeline.py \
+  --jdk-version jdk21 \
+  --target-os linux \
+  --architecture x64 \
+  --config-repo-url https://github.com/adoptium/ci-temurin-config.git
 ```
 
 #### Level 5: CI Validation (Automatic)
