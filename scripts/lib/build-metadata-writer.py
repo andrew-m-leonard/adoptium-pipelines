@@ -95,13 +95,11 @@ class BuildMetadataWriter(object):
         metadata = self._collect()
         try:
             content = json.dumps(metadata, indent=2, ensure_ascii=True)
+            if not isinstance(content, type(u"")):
+                content = content.decode("utf-8")
             with io.open(self._output, "w", encoding="utf-8") as fh:
-                fh.write(
-                    content
-                    if isinstance(content, type(""))
-                    else content.decode("utf-8")
-                )
-                fh.write("\n")
+                fh.write(content)
+                fh.write(u"\n")
         except (IOError, OSError) as exc:
             print(
                 "ERROR: could not write {0}: {1}".format(self._output, exc),
