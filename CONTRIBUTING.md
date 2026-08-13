@@ -35,24 +35,17 @@ For a full local pipeline run, see [docs/PIPELINE_RUNNER_GUIDE.md](docs/PIPELINE
 ## Development Workflow
 
 1. **Branch** — create a feature or fix branch from `main`:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
+   `git checkout -b feature/your-feature-name`
 
 2. **Change** — follow the architecture and code style guidelines in [docs/DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md).
 
 3. **Test** — run linters and unit tests locally before pushing (see [docs/DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md)). Linting is also enforced automatically on every PR via GitHub Actions.
 
-4. **Commit** — use [Conventional Commits](https://www.conventionalcommits.org/) format:
-   ```text
-   <type>(<scope>): <subject>
-   ```
+4. **Commit** — use [Conventional Commits](https://www.conventionalcommits.org/) format: `<type>(<scope>): <subject>`.
    Common types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`.
 
 5. **Push and open a PR** against `main`:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
+   `git push origin feature/your-feature-name`
 
 ---
 
