@@ -200,14 +200,14 @@ Each stage passes a glob pattern telling the restore step which files to copy fr
 
 ```bash
 # Fresh build (workspace must not exist, or use --clean-workspace)
-python3 run-pipeline.py \
+python3 ci/local/run-pipeline.py \
     --jdk-version jdk21 \
     --target-os mac \
     --architecture aarch64 \
     --config-repo-url https://github.com/adoptium/ci-temurin-config.git
 
 # Fresh build cleaning a previous workspace
-python3 run-pipeline.py \
+python3 ci/local/run-pipeline.py \
     --jdk-version jdk21 \
     --target-os mac \
     --architecture aarch64 \
@@ -215,7 +215,7 @@ python3 run-pipeline.py \
     --clean-workspace
 
 # Restart from a specific stage (workspace + build_artifacts/ must exist)
-python3 run-pipeline.py \
+python3 ci/local/run-pipeline.py \
     --jdk-version jdk21 \
     --target-os mac \
     --architecture aarch64 \
@@ -223,7 +223,7 @@ python3 run-pipeline.py \
     --start-from-stage 13-smoke-tests
 
 # ERROR: these two flags are mutually exclusive
-python3 run-pipeline.py \
+python3 ci/local/run-pipeline.py \
     --start-from-stage 13-smoke-tests \
     --clean-workspace   # ❌ option conflict
 ```
@@ -349,7 +349,8 @@ The stage must call `archiveArtifacts` for its `TARGET_DIR` output, and the next
 This means the workspace was created by an older version of the local runner (which used `artifacts/` rather than `build_artifacts/`). Remove the existing workspace and run a fresh full build:
 
 ```bash
-python3 run-pipeline.py --jdk-version jdk21 --config-repo-url https://github.com/adoptium/ci-temurin-config.git ... --clean-workspace
+python3 ci/local/run-pipeline.py --jdk-version jdk21 --target-os mac --architecture aarch64 \
+    --config-repo-url https://github.com/adoptium/ci-temurin-config.git --clean-workspace
 ```
 
 ---

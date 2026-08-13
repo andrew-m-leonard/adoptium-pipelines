@@ -446,14 +446,14 @@ CONFIG_REPO_BRANCH: feature/jdk25-platforms
 ```bash
 # From the ci-adoptium-pipelines root
 python3 ci/local/run-pipeline.py \
-  --jdk-version jdk21u \
+  --jdk-version jdk21 \
   --target-os mac \
   --architecture aarch64 \
   --config-repo-url https://github.com/adoptium/ci-temurin-config.git
 
 # Or with a local config repo checkout
 python3 ci/local/run-pipeline.py \
-  --jdk-version jdk21u \
+  --jdk-version jdk21 \
   --target-os linux \
   --architecture x64 \
   --config-repo-url /path/to/local/ci-temurin-config

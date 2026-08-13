@@ -69,10 +69,10 @@ Python-based tools for running the pipeline locally without a CI server.
 
 ```bash
 python3 ci/local/run-pipeline.py \
-  --jdk-version jdk21u \
-  --variant temurin \
+  --jdk-version jdk21 \
   --target-os linux \
-  --architecture x64
+  --architecture x64 \
+  --config-repo-url https://github.com/adoptium/ci-temurin-config.git
 ```
 
 See [`local/README.md`](local/README.md) for full usage.

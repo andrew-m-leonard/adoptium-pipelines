@@ -196,23 +196,22 @@ The seed job creates all launch and platform build jobs automatically.
 ```bash
 # Full build locally
 python3 ci/local/run-pipeline.py \
-  --jdk-version jdk21u \
-  --variant temurin \
+  --jdk-version jdk21 \
   --target-os linux \
-  --architecture x64
+  --architecture x64 \
+  --config-repo-url https://github.com/adoptium/ci-temurin-config.git
 
 # Resume from a specific stage
 python3 ci/local/run-pipeline.py \
-  --jdk-version jdk21u \
-  --variant temurin \
+  --jdk-version jdk21 \
   --target-os linux \
   --architecture x64 \
-  --start-from-stage smoke-tests
+  --config-repo-url https://github.com/adoptium/ci-temurin-config.git \
+  --start-from-stage 13-smoke-tests
 
 # Use a custom config repo
 python3 ci/local/run-pipeline.py \
-  --jdk-version jdk21u \
-  --variant temurin \
+  --jdk-version jdk21 \
   --target-os mac \
   --architecture aarch64 \
   --config-repo-url https://github.com/myorg/my-jdk-configs.git
