@@ -97,6 +97,88 @@ ci-adoptium-pipelines/
 └── docs/                            # Extended documentation (see docs/README.md)
 ```
 
+## Shared Concepts
+
+### Configuration Repository
+
+Both the Jenkins and local pipelines read build configuration from a separately maintained config repository supplied at runtime (`CONFIG_REPO_URL` / `--config-repo-url`). The config repository must contain:
+
+```text
+<config-repo>/
+├── adoptium_pipeline_config.json      # CI-agnostic defaults (repo URLs, branches, variant)
+├── jenkins_job_config.json            # Jenkins-only: job DSL settings, stage agent labels
+├── configurations/
+│   ├── jdk21_pipeline_config.json     # Per-version platform matrix
+│   ├── jdk17_pipeline_config.json
+│   └── ...
+└── vendor-scripts/                    # Optional vendor-specific stage script overrides
+    ├── 02-build.sh
+    └── ...
+```
+
+`scripts/lib/load-pipeline-config-json.py` merges the per-version platform JSON with runtime parameters to produce `pipeline-config.json` — the single source of truth passed to every subsequent stage via `$CONFIG_FILE`. `jenkins_job_config.json` is Jenkins-specific and is not read by the local runner.
+
+See [`docs/CODE_CONFIG_SEPARATION.md`](docs/CODE_CONFIG_SEPARATION.md) for a full breakdown of each config file and how it flows through the pipeline.
+
+### Pipeline Stages
+
+Stage execution is controlled by two mechanisms:
+
+- **`stageDisabled`** (in `scripts/stages/NN-stem.params.json`): when `true`, the stage is entirely skipped and its parameters are excluded from the Jenkins job UI. Vendors can override this per stage in their config repository. See [`docs/STAGE_DEFINITION_REFERENCE.md`](docs/STAGE_DEFINITION_REFERENCE.md).
+- **`stageCondition`**: a list of `{ param, value }` pairs that must all be satisfied at runtime for the stage to execute. Evaluated by `stageConditionMet()` in `Jenkinsfile.declarative` and `_stage_condition_met()` in `run-pipeline.py`.
+
+| # | Stage | Script | Owns parameter | stageCondition gates on | stageDisabled default |
+|---|---|---|---|---|---|
+| — | Initialize | _(ConfigHelper / run-pipeline.py)_ | — | always | — |
+| 02 | Build | `02-build.sh` | — | always | false |
+| 03 | Internal Code Sign | `03-internal-code-sign.sh` | `SIGN_ARTIFACTS` | `SIGN_ARTIFACTS=true`, macOS/Win, JDK≥11 | false |
+| 04 | Assemble Images | `04-assemble-images.sh` | — | `SIGN_ARTIFACTS=true`, macOS/Win, JDK≥11 | false |
+| 06 | Post-Build Code Sign | `06-post-build-code-sign.sh` | — | `SIGN_ARTIFACTS=true` | false |
+| 07 | Build Installer | `07-installer.sh` | `ENABLE_INSTALLERS` | `ENABLE_INSTALLERS=true` | false |
+| 08 | Code Sign Installer | `08-code-sign-installer.sh` | — | `ENABLE_INSTALLERS=true`, `SIGN_ARTIFACTS=true` | false |
+| 09 | SBOM Sign | `09-sbom-sign.sh` | — | `SIGN_ARTIFACTS=true`, `CREATE_SBOM=true` | false |
+| 10 | Digital Artifact Sign | `10-digital-artifact-sign.sh` | — | `SIGN_ARTIFACTS=true`, non-PR | false |
+| 11 | Verify Signing | `11-verify-signing.sh` | — | `SIGN_ARTIFACTS=true`, non-PR | false |
+| 12 | Validate SBOM | `12-validate-sbom.sh` | — | `CREATE_SBOM=true` (vendor impl required) | false |
+| 13 | Smoke Tests | `13-smoke-tests.sh` | — | `RUN_TESTS=true`, build succeeded | false |
+| 14 | AQA Tests | `14-aqa-tests.sh` | `RUN_TESTS` | `RUN_TESTS=true`, smoke tests passed | false |
+| 15 | TCK Tests | `15-tck-tests.sh` | `ENABLE_TCK` | `ENABLE_TCK=true`, Temurin, smoke tests passed | false |
+| 16 | Publish Artifacts | `16-publish.sh` | `PUBLISH_ARTIFACTS` | `PUBLISH_ARTIFACTS=true` | false |
+| 20 | Reproducible Compare | `20-reproducible-compare.sh` | `RUN_REPRODUCIBLE_COMPARE` | `RUN_REPRODUCIBLE_COMPARE=true`, `SCM_REF` set | false |
+
+### Vendor Script Override
+
+Any stage script in `scripts/stages/` can be replaced per-vendor by placing a script of the same stem in the config repository's `vendor-scripts/` directory. Both orchestrators resolve scripts in the same priority order, with a minor difference: Jenkins also supports `.groovy` vendor scripts; the local runner does not.
+
+| Priority | Jenkins (`StageScriptRunner.groovy`) | Local (`stage_resolver.py`) |
+|---|---|---|
+| 1 | `config-repo/vendor-scripts/<stem>.sh` | `config-repo/vendor-scripts/<stem>.sh` |
+| 2 | `config-repo/vendor-scripts/<stem>.groovy` | `config-repo/vendor-scripts/<stem>.py` |
+| 3 | `config-repo/vendor-scripts/<stem>.py` | `scripts/stages/<stem>.sh` ← default |
+| 4 | `scripts/stages/<stem>.sh` ← default | `scripts/stages/<stem>.py` |
+| 5 | `scripts/stages/<stem>.groovy` | No-op (stage skipped) |
+| 6 | `scripts/stages/<stem>.py` | |
+| 7 | No-op (stage skipped) | |
+
+### Shared Stage Libraries (`scripts/lib/`)
+
+These files are sourced or invoked by every stage script regardless of whether it runs on Jenkins or locally. They are the only place shared logic lives — stage scripts must not duplicate what is here.
+
+| File | Responsibility |
+|---|---|
+| [`logging-utils.sh`](scripts/lib/logging-utils.sh) | Timestamped `log_info` / `log_warn` / `log_error` / `log_section` functions written to stderr |
+| [`config-utils.sh`](scripts/lib/config-utils.sh) | `validate_standard_environment()` (checks `WORKSPACE`, `CONFIG_FILE`, defaults `TARGET_DIR`); `get_config_value()` / `get_config_bool()` JSON helpers via `jq` |
+| [`artifact-utils.sh`](scripts/lib/artifact-utils.sh) | `prepare_output_dir()`, `copy_artifacts()`, `verify_artifact()`, `create_checksums()`, `create_stage_metadata()`, `determine_filename()` |
+| [`load-pipeline-config-json.py`](scripts/lib/load-pipeline-config-json.py) | Merges `adoptium_pipeline_config.json` + per-version platform JSON + runtime params → writes `pipeline-config.json` |
+| [`load-adoptium-pipeline-config-json.py`](scripts/lib/load-adoptium-pipeline-config-json.py) | Standalone reader for `adoptium_pipeline_config.json`; used by tools and the seed job |
+| [`collect-stage-params.py`](scripts/lib/collect-stage-params.py) | Collates all `*.params.json` sidecars (default + vendor) into a single document consumed by Job DSL and the local runner |
+| [`build-metadata-writer.py`](scripts/lib/build-metadata-writer.py) | Writes `build-metadata.json` after a successful build stage |
+| [`sbom-workspace-extractor.py`](scripts/lib/sbom-workspace-extractor.py) | Extracts the `Build Workspace Directory` path from an SBOM JSON file; used for reproducible build path padding |
+| [`python-runner.sh`](scripts/lib/python-runner.sh) | Resolves `python3`/`python` and execs a given `.py` script; used as the single shell-context Python entry point |
+| [`workspace-cleanup.sh`](scripts/lib/workspace-cleanup.sh) | Standalone script; cleans the ephemeral stage workspace pre/post stage based on `CLEANUP_TYPE` and `cleanWorkspaceAfterStage` config |
+
+See [`docs/SHELL_SCRIPTS_SUMMARY.md`](docs/SHELL_SCRIPTS_SUMMARY.md) for the full function-level reference.
+
 ## Jenkins Pipeline Architecture
 
 ### Two-Pipeline Model
@@ -134,34 +216,6 @@ Each lib file is a plain CPS script loaded with `load()` — it calls pipeline s
 | [`PipelineHelper.groovy`](ci/jenkins/lib/PipelineHelper.groovy) | `initializeStage()` (cleanWs, checkout, config-repository clone, BUILD_UID init, copyArtifacts); `finalizeStage()`; `executeStageWithTracking()` |
 | [`ConfigHelper.groovy`](ci/jenkins/lib/ConfigHelper.groovy) | Calls `load-pipeline-config-json.py` to produce `pipeline-config.json`; sets `CONFIG_*` env vars used by `when {}` blocks |
 | [`StageScriptRunner.groovy`](ci/jenkins/lib/StageScriptRunner.groovy) | Resolves and runs a stage script with vendor-override support (tries `config-repo/vendor-scripts/` before `scripts/stages/`) |
-
-## Pipeline Stages
-
-Stage execution is controlled by two mechanisms:
-
-- **`stageDisabled`** (in `scripts/stages/NN-stem.params.json`): when `true`, the stage is entirely skipped and its parameters are excluded from the Jenkins job UI. Vendors can override this per stage in their config repository. See [`docs/STAGE_DEFINITION_REFERENCE.md`](docs/STAGE_DEFINITION_REFERENCE.md).
-- **`stageCondition`**: a list of `{ param, value }` pairs that must all be satisfied at runtime for the stage to execute. Evaluated by `stageConditionMet()` in `Jenkinsfile.declarative` and `_stage_condition_met()` in `run-pipeline.py`.
-
-| # | Stage | Script | Owns parameter | stageCondition gates on | stageDisabled default |
-|---|---|---|---|---|---|
-| — | Initialize | _(ConfigHelper)_ | — | always | — |
-| 02 | Build | `02-build.sh` | — | always | false |
-| 03 | Internal Code Sign | `03-internal-code-sign.sh` | `SIGN_ARTIFACTS` | `SIGN_ARTIFACTS=true`, macOS/Win, JDK≥11 | false |
-| 04 | Assemble Images | `04-assemble-images.sh` | — | `SIGN_ARTIFACTS=true`, macOS/Win, JDK≥11 | false |
-| 06 | Post-Build Code Sign | `06-post-build-code-sign.sh` | — | `SIGN_ARTIFACTS=true` | false |
-| 07 | Build Installer | `07-installer.sh` | `ENABLE_INSTALLERS` | `ENABLE_INSTALLERS=true` | false |
-| 08 | Code Sign Installer | `08-code-sign-installer.sh` | — | `ENABLE_INSTALLERS=true`, `SIGN_ARTIFACTS=true` | false |
-| 09 | SBOM Sign | `09-sbom-sign.sh` | — | `SIGN_ARTIFACTS=true`, `CREATE_SBOM=true` | false |
-| 10 | Digital Artifact Sign | `10-digital-artifact-sign.sh` | — | `SIGN_ARTIFACTS=true`, non-PR | false |
-| 11 | Verify Signing | `11-verify-signing.sh` | — | `SIGN_ARTIFACTS=true`, non-PR | false |
-| 12 | Validate SBOM | `12-validate-sbom.sh` | — | `CREATE_SBOM=true` (vendor impl required) | false |
-| 13 | Smoke Tests | `13-smoke-tests.sh` | — | `RUN_TESTS=true`, build succeeded | false |
-| 14 | AQA Tests | `14-aqa-tests.sh` | `RUN_TESTS` | `RUN_TESTS=true`, smoke tests passed | false |
-| 15 | TCK Tests | `15-tck-tests.sh` | `ENABLE_TCK` | `ENABLE_TCK=true`, Temurin, smoke tests passed | false |
-| 16 | Publish Artifacts | `16-publish.sh` | `PUBLISH_ARTIFACTS` | `PUBLISH_ARTIFACTS=true` | false |
-| 20 | Reproducible Compare | `20-reproducible-compare.sh` | `RUN_REPRODUCIBLE_COMPARE` | `RUN_REPRODUCIBLE_COMPARE=true`, `SCM_REF` set | false |
-
-Each stage calls `initializeStage()` which: cleans the workspace, checks out this repository, clones the config repository (sparse), initialises/reuses `BUILD_UID`, validates prerequisites, and copies required artifacts from the current build.
 
 ## Jenkins Setup
 
@@ -267,62 +321,6 @@ python3 ci/local/run-pipeline.py \
 ```
 
 See [`ci/local/README.md`](ci/local/README.md) for the full CLI reference, workspace validation rules, and stage parameter documentation.
-
-## Shared Concepts
-
-### Configuration Repository
-
-Both the Jenkins and local pipelines read build configuration from a separately maintained config repository supplied at runtime (`CONFIG_REPO_URL` / `--config-repo-url`). The config repository must contain:
-
-```text
-<config-repo>/
-├── adoptium_pipeline_config.json      # CI-agnostic defaults (repo URLs, branches, variant)
-├── jenkins_job_config.json            # Jenkins-only: job DSL settings, stage agent labels
-├── configurations/
-│   ├── jdk21_pipeline_config.json     # Per-version platform matrix
-│   ├── jdk17_pipeline_config.json
-│   └── ...
-└── vendor-scripts/                    # Optional vendor-specific stage script overrides
-    ├── 02-build.sh
-    └── ...
-```
-
-`scripts/lib/load-pipeline-config-json.py` merges the per-version platform JSON with runtime parameters to produce `pipeline-config.json` — the single source of truth passed to every subsequent stage via `$CONFIG_FILE`. `jenkins_job_config.json` is Jenkins-specific and is not read by the local runner.
-
-See [`docs/CODE_CONFIG_SEPARATION.md`](docs/CODE_CONFIG_SEPARATION.md) for a full breakdown of each config file and how it flows through the pipeline.
-
-### Vendor Script Override
-
-Any stage script in `scripts/stages/` can be replaced per-vendor by placing a script of the same stem in the config repository's `vendor-scripts/` directory. Both orchestrators resolve scripts in the same priority order, with a minor difference: Jenkins also supports `.groovy` vendor scripts; the local runner does not.
-
-| Priority | Jenkins (`StageScriptRunner.groovy`) | Local (`stage_resolver.py`) |
-|---|---|---|
-| 1 | `config-repo/vendor-scripts/<stem>.sh` | `config-repo/vendor-scripts/<stem>.sh` |
-| 2 | `config-repo/vendor-scripts/<stem>.groovy` | `config-repo/vendor-scripts/<stem>.py` |
-| 3 | `config-repo/vendor-scripts/<stem>.py` | `scripts/stages/<stem>.sh` ← default |
-| 4 | `scripts/stages/<stem>.sh` ← default | `scripts/stages/<stem>.py` |
-| 5 | `scripts/stages/<stem>.groovy` | No-op (stage skipped) |
-| 6 | `scripts/stages/<stem>.py` | |
-| 7 | No-op (stage skipped) | |
-
-### Shared Stage Libraries (`scripts/lib/`)
-
-These files are sourced or invoked by every stage script regardless of whether it runs on Jenkins or locally. They are the only place shared logic lives — stage scripts must not duplicate what is here.
-
-| File | Responsibility |
-|---|---|
-| [`logging-utils.sh`](scripts/lib/logging-utils.sh) | Timestamped `log_info` / `log_warn` / `log_error` / `log_section` functions written to stderr |
-| [`config-utils.sh`](scripts/lib/config-utils.sh) | `validate_standard_environment()` (checks `WORKSPACE`, `CONFIG_FILE`, defaults `TARGET_DIR`); `get_config_value()` / `get_config_bool()` JSON helpers via `jq` |
-| [`artifact-utils.sh`](scripts/lib/artifact-utils.sh) | `prepare_output_dir()`, `copy_artifacts()`, `verify_artifact()`, `create_checksums()`, `create_stage_metadata()`, `determine_filename()` |
-| [`load-pipeline-config-json.py`](scripts/lib/load-pipeline-config-json.py) | Merges `adoptium_pipeline_config.json` + per-version platform JSON + runtime params → writes `pipeline-config.json` |
-| [`load-adoptium-pipeline-config-json.py`](scripts/lib/load-adoptium-pipeline-config-json.py) | Standalone reader for `adoptium_pipeline_config.json`; used by tools and the seed job |
-| [`collect-stage-params.py`](scripts/lib/collect-stage-params.py) | Collates all `*.params.json` sidecars (default + vendor) into a single document consumed by Job DSL and the local runner |
-| [`build-metadata-writer.py`](scripts/lib/build-metadata-writer.py) | Writes `build-metadata.json` after a successful build stage |
-| [`sbom-workspace-extractor.py`](scripts/lib/sbom-workspace-extractor.py) | Extracts the `Build Workspace Directory` path from an SBOM JSON file; used for reproducible build path padding |
-| [`python-runner.sh`](scripts/lib/python-runner.sh) | Resolves `python3`/`python` and execs a given `.py` script; used as the single shell-context Python entry point |
-| [`workspace-cleanup.sh`](scripts/lib/workspace-cleanup.sh) | Standalone script; cleans the ephemeral stage workspace pre/post stage based on `CLEANUP_TYPE` and `cleanWorkspaceAfterStage` config |
-
-See [`docs/SHELL_SCRIPTS_SUMMARY.md`](docs/SHELL_SCRIPTS_SUMMARY.md) for the full function-level reference.
 
 ## Documentation
 
