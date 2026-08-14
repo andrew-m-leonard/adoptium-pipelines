@@ -1,0 +1,40 @@
+{
+  "stageId": "14-aqa-tests",
+  "stageDisabled": false,
+  "stageCondition": [
+    { "param": "RUN_TESTS", "value": true }
+  ],
+  "description": "Parameters for the AQA test stage. Vendor overrides may suppress, replace, or extend these via a vendor-scripts/14-aqa-tests.params.json in the config repo.",
+  "parameterGroups": [
+    {
+      "name": "Stage Selections",
+      "description": "Boolean flags that control which pipeline stages are enabled. All stage-gate parameters are collected here so operators can see and adjust the full execution plan in one place.",
+      "parameters": [
+        {
+          "name": "RUN_TESTS",
+          "type": "boolean",
+          "default": true,
+          "description": "Enable test stages."
+        }
+      ]
+    },
+    {
+      "name": "Source Control",
+      "description": "Refs that pin exactly what source is checked out for this stage. Leave empty to use the defaults defined in adoptium_pipeline_config.json.",
+      "parameters": [
+        {
+          "name": "AQA_REF",
+          "type": "string",
+          "default": "",
+          "description": "Git branch or tag for the aqa-tests repository. Empty = default branch defined in adoptium_pipeline_config.json."
+        },
+        {
+          "name": "BUILD_REF",
+          "type": "string",
+          "default": "",
+          "description": "Git branch or tag for the build-scripts repository. Empty = default defined in adoptium_pipeline_config.json."
+        }
+      ]
+    }
+  ]
+}

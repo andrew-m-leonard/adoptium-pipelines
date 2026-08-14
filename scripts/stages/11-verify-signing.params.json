@@ -1,0 +1,8 @@
+{
+  "stageId": "11-verify-signing",
+  "stageDisabled": false,
+  "stageCondition": [
+    { "param": "SIGN_ARTIFACTS", "value": true }
+  ],
+  "description": "Gate-only params.json for the verify-signing stage. Runs only when SIGN_ARTIFACTS is true."
+}

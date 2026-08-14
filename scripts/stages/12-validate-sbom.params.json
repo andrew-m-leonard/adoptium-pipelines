@@ -1,0 +1,8 @@
+{
+  "stageId": "12-validate-sbom",
+  "stageDisabled": false,
+  "stageCondition": [
+    { "param": "CREATE_SBOM", "value": true }
+  ],
+  "description": "Gate-only params.json for the validate-sbom stage. Runs only when CREATE_SBOM is true. CREATE_SBOM is defined in 09-sbom-sign.params.json."
+}

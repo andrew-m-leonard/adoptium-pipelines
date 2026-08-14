@@ -1,0 +1,396 @@
+/*
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+/**
+ * Launch Pipeline for OpenJDK Builds
+ *
+ * This pipeline orchestrates builds across multiple platforms for a specific JDK version.
+ * It dynamically creates platform-specific build jobs and launches them in parallel.
+ *
+ * Job Name Pattern: Build_openjdk_launchers/Build_openjdk<version>_launch
+ * Creates:          Build_openjdk/Build_openjdk<version>_<distro>_<arch>_<os>
+ */
+
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+
+// ── Helper functions ────────────────────────────────────────────────────────
+
+/**
+ * Return the label for launch-pipeline worker stages.
+ * Reads the '__any__' sentinel from CONFIG_STAGE_AGENT_LABELS (set by the
+ * Fetch Configuration stage) so the same label map used by Jenkinsfile.declarative
+ * also controls which node runs python3-dependent steps in this pipeline.
+ * Falls back to 'ci.role.worker' — the mandatory base label every vendor Jenkins
+ * instance must provide.
+ */
+String getWorkerLabel() {
+    String labelsJson = env.CONFIG_STAGE_AGENT_LABELS
+    if (labelsJson) {
+        Map labels = new JsonSlurper().parseText(labelsJson)
+        String label = labels['__any__']
+        if (label?.trim()) { return label.trim() }
+    }
+    return 'ci.role.worker'
+}
+
+/**
+ * Resolve GROUP_UID: use the supplied parameter value or auto-generate a unique one.
+ */
+void resolveGroupUid() {
+    final int UID_LENGTH = 8
+    if (params.GROUP_UID?.trim()) {
+        env.GROUP_UID = params.GROUP_UID.trim()
+        echo "Using supplied GROUP_UID: ${env.GROUP_UID}"
+    } else {
+        String ts     = new Date().format('yyyyMMdd-HHmmss')
+        String random = UUID.randomUUID().toString().take(UID_LENGTH)
+        env.GROUP_UID = "group-${ts}-${random}"
+        echo "Generated GROUP_UID: ${env.GROUP_UID}"
+    }
+    currentBuild.description = "GROUP_UID: ${env.GROUP_UID}"
+}
+
+/**
+ * Parse the collated-stage-params.json produced by collect-stage-params.py
+ * and apply the cross-stem group merge (same group name across stages → single
+ * entry with a stageIds list).  Returns an ordered List of group maps:
+ *   [ name, stageIds: List<String>, parameters: List<Map> ]
+ *
+ * Stores env.COLLATED_PARAMS_JSON (raw JSON) for the jobDsl step.
+ * Stores env.SEPARATOR_NAMES (comma list) for reference/debugging.
+ */
+List collateAndMergeGroups() {
+    // Load the canonical stage list so --orchestrated-stages is never duplicated here.
+    def ps = load('ci/jenkins/lib/PipelineStages.groovy')
+    sh(script: """\
+        python3 scripts/lib/collect-stage-params.py \\
+            --default-stages-dir scripts/stages \\
+            --vendor-scripts-dir config-repo/vendor-scripts \\
+            --orchestrated-stages ${ps.orchestratedStages()} \\
+            --output collated-stage-params.json
+        """.stripIndent())
+
+    String collatedJson = readFile('collated-stage-params.json')
+    env.COLLATED_PARAMS_JSON = collatedJson
+
+    List rawGroups    = new JsonSlurper().parseText(collatedJson).groups ?: []
+    Map mergedMap     = [:] as LinkedHashMap
+    rawGroups.each { Map grp ->
+        // Priority groups (e.g. "Stage Selections") are already merged by
+        // collect-stage-params.py and carry stageIds (list); non-priority groups
+        // carry only stageId (scalar) — normalise to a list in both cases.
+        List incomingIds = grp.stageIds instanceof List ? grp.stageIds : [grp.stageId]
+        if (mergedMap.containsKey(grp.name)) {
+            incomingIds.each { String id -> if (id && !mergedMap[grp.name].stageIds.contains(id)) { mergedMap[grp.name].stageIds << id } }
+            mergedMap[grp.name].parameters.addAll(grp.parameters ?: [])
+        } else {
+            mergedMap[grp.name] = [
+                name:       grp.name,
+                stageIds:   new ArrayList(incomingIds),
+                parameters: new ArrayList(grp.parameters ?: [])
+            ]
+        }
+    }
+
+    List orderedGroups = mergedMap.values().toList()
+    echo "✓ Collated ${rawGroups.size()} group(s) → ${orderedGroups.size()} merged group(s)"
+    return orderedGroups
+}
+
+/**
+ * Build the forwardedParams list for a platform build trigger in the exact
+ * order the platform job defines its parameters, with separators interleaved.
+ *
+ * Separators must be passed as ParameterSeparatorValue (the plugin's own type),
+ * not as StringParameterValue — the [$class:...] map syntax lets us specify the
+ * fully-qualified class name so the build() step stores the correct type in the
+ * triggered build's ParametersAction, which Jenkins uses when rendering the
+ * build sidebar.
+ *
+ * @param orderedGroups  output of collateAndMergeGroups()
+ * @param platformCfg    the platform entry from buildConfigurations (provides arch and os)
+ */
+List buildForwardedParams(List orderedGroups, Map platformCfg) {
+    // Order must exactly match the parameter declaration order in
+    // openjdk_build_pipeline_job_dsl.groovy so that the triggered build's sidebar
+    // renders parameters in the correct grouped sequence.
+
+    // ── Build Configuration separator ────────────────────────────────────────
+    // TARGET_OS and ARCHITECTURE are resolved from the platform config entry —
+    // they are not parameters on the launch job and must never be read from
+    // params (which would produce an empty string and break ConfigHelper).
+    List fwd = [
+        [$class: 'jenkins.plugins.parameter_separator.ParameterSeparatorValue',
+         name: '__sep_build_configuration', sectionHeader: 'Build Configuration'],
+        string(name: 'JDK_VERSION',        value: env.JDK_VERSION),
+        string(name: 'TARGET_OS',          value: platformCfg.os),
+        string(name: 'ARCHITECTURE',       value: platformCfg.arch),
+        string(name: 'RELEASE_TYPE',       value: params.RELEASE_TYPE       ?: 'NIGHTLY'),
+        string(name: 'GROUP_UID',          value: env.GROUP_UID),
+        booleanParam(name: 'CLEAN_WORKSPACE_AFTER_STAGE', value: params.CLEAN_WORKSPACE_AFTER_STAGE ?: true),
+        string(name: 'PIPELINE_TIMEOUT_HOURS', value: env.PIPELINE_TIMEOUT_HOURS ?: '8'),
+    ]
+
+    // ── Collated stage params ─────────────────────────────────────────────────
+    // Separator first, then param values — matches declaration order in the build job.
+    // Groups where stageDisabled=true are skipped (no params forwarded for them).
+    orderedGroups.each { Map grp ->
+        if (grp.stageDisabled == true) { return }
+        String stageLabel  = grp.stageIds.join('_').replaceAll(/\W+/, '_')
+        String stageHeader = grp.stageIds.size() == 1
+            ? "stage: ${grp.stageIds[0]}"
+            : "stages: ${grp.stageIds.join(', ')}"
+        String sepName = "__sep_${stageLabel}_${grp.name.replaceAll(/\W+/, '_')}"
+        fwd << [$class: 'jenkins.plugins.parameter_separator.ParameterSeparatorValue',
+                name: sepName, sectionHeader: "${grp.name}  [${stageHeader}]"]
+        grp.parameters.each { Map p ->
+            def val = params[p.name]
+            if (p.type == 'boolean') {
+                fwd << booleanParam(name: p.name, value: val == true || val == 'true')
+            } else {
+                fwd << string(name: p.name, value: val?.toString() ?: p.default?.toString() ?: '')
+            }
+        }
+    }
+
+    // ── Config Repository separator ───────────────────────────────────────────
+    fwd << [$class: 'jenkins.plugins.parameter_separator.ParameterSeparatorValue',
+            name: '__sep_config_repo', sectionHeader: 'Config Repository']
+    fwd << string(name: 'CONFIG_REPO_URL',    value: params.CONFIG_REPO_URL    ?: '')
+    fwd << string(name: 'CONFIG_REPO_BRANCH', value: params.CONFIG_REPO_BRANCH ?: '')
+    return fwd
+}
+
+// ── Pipeline ────────────────────────────────────────────────────────────────
+
+pipeline {
+    agent none
+
+    // NOTE: Parameters and build discarder are defined by the seed job via Job DSL, not here.
+    // Defining them in the Jenkinsfile would override the seed job's settings.
+    // See: ci/jenkins/job-dsl/seed/seed_job_dsl.groovy
+
+    options {
+        timestamps()
+    }
+
+    stages {
+        stage('Initialize') {
+            agent any
+            steps {
+                script {
+                    env.JDK_VERSION = params.JDK_VERSION
+                    resolveGroupUid()
+                    echo "=== Launch Pipeline for JDK ${env.JDK_VERSION} ==="
+                    echo "Config Repo: ${params.CONFIG_REPO_URL} @ ${params.CONFIG_REPO_BRANCH}"
+                    echo "Pipeline SHA: ${env.GIT_COMMIT} | Platforms: ${params.PLATFORMS}"
+                }
+            }
+        }
+
+        stage('Fetch Configuration') {
+            agent any
+            steps {
+                script {
+                    String configFile = "configurations/jdk${env.JDK_VERSION}_pipeline_config.json"
+                    dir('config-repo') {
+                        git url: params.CONFIG_REPO_URL, branch: params.CONFIG_REPO_BRANCH
+                        if (!fileExists(configFile)) {
+                            error("Configuration file not found: ${configFile}")
+                        }
+                        String configText = readFile(configFile)
+                        env.VERSION_CONFIG       = configText
+                        env.AVAILABLE_PLATFORMS  = new JsonSlurper()
+                            .parseText(configText).buildConfigurations.keySet().join(',')
+                        echo "✓ Available platforms: ${env.AVAILABLE_PLATFORMS}"
+                    }
+                    // Populate CONFIG_STAGE_AGENT_LABELS from jenkins_job_config.json so
+                    // that getWorkerLabel() (and downstream stages) can resolve '__any__'.
+                    String jenkinsJobConfigFile = 'config-repo/jenkins_job_config.json'
+                    if (fileExists(jenkinsJobConfigFile)) {
+                        Map jenkinsJobConfig = new JsonSlurper().parseText(readFile(jenkinsJobConfigFile))
+                        Map stageLabels = jenkinsJobConfig?.stageAgentLabels
+                        if (stageLabels) {
+                            env.CONFIG_STAGE_AGENT_LABELS = JsonOutput.toJson(stageLabels)
+                            String anyLabel = stageLabels?.'__any__'
+                            if (anyLabel?.trim()) {
+                                echo "✓ Worker label for launch stages: ${anyLabel.trim()}"
+                            }
+                        }
+                        env.PIPELINE_TIMEOUT_HOURS = (jenkinsJobConfig?.pipelineTimeoutHours ?: 8).toString()
+                        // Capture the optional base folder so downstream stages can
+                        // build the correct job path when triggering platform builds.
+                        env.PIPELINE_BASE_FOLDER = ((jenkinsJobConfig?.pipelineBaseFolder ?: '') as String).trim().replaceAll(/\/+$/, '')
+                        if (env.PIPELINE_BASE_FOLDER) {
+                            echo "✓ Pipeline base folder: ${env.PIPELINE_BASE_FOLDER}"
+                        }
+                    }
+                    // Resolve worker label now that CONFIG_STAGE_AGENT_LABELS is populated.
+                    env.WORKER_LABEL = getWorkerLabel()
+                    echo "✓ Worker label resolved: ${env.WORKER_LABEL}"
+                }
+            }
+        }
+
+        stage('Collate Stage Parameters') {
+            // Always runs — ordered groups and separator names must be available
+            // for the 'Create/Update Platform Jobs' stage on every run.
+            agent {
+                label env.WORKER_LABEL
+            }
+            steps {
+                script {
+                    collateAndMergeGroups()
+                }
+            }
+        }
+
+        stage('Determine Platforms') {
+            agent {
+                label env.WORKER_LABEL
+            }
+            steps {
+                script {
+                    List available = env.AVAILABLE_PLATFORMS.split(',') as List
+                    List selected  = (params.PLATFORMS == 'all')
+                        ? available
+                        : params.PLATFORMS.split(',').collect { it.trim() }
+
+                    List invalid = selected.findAll { String p -> !available.contains(p) }
+                    if (invalid) {
+                        error("Invalid platforms: ${invalid.join(', ')}\nAvailable: ${available.join(', ')}")
+                    }
+                    env.SELECTED_PLATFORMS = selected.join(',')
+                    echo "✓ Platforms: ${env.SELECTED_PLATFORMS}"
+                }
+            }
+        }
+
+        stage('Create/Update Platform Jobs') {
+            agent {
+                label env.WORKER_LABEL
+            }
+            steps {
+                script {
+                    echo "Checking platform jobs against pipeline SHA: ${env.GIT_COMMIT}"
+
+                    env.SELECTED_PLATFORMS.split(',').each { String platform ->
+                        echo "  → ${platform}"
+                        // Read the DSL file and execute it inline via scriptText so it
+                        // inherits this pipeline's trusted context rather than requiring
+                        // separate script approval for the external DSL file.
+                        String dslScript = readFile('ci/jenkins/job-dsl/openjdk_build_pipeline_job_dsl.groovy')
+                        jobDsl(
+                            scriptText:            dslScript,
+                            removedJobAction:      'IGNORE',
+                            removedViewAction:     'IGNORE',
+                            ignoreExisting:        false,
+                            lookupStrategy:        'JENKINS_ROOT',
+                            additionalParameters: [
+                                JDK_VERSION:          env.JDK_VERSION,
+                                PLATFORM:             platform,
+                                COLLATED_PARAMS_JSON: env.COLLATED_PARAMS_JSON,
+                                PIPELINE_COMMIT_SHA:  env.GIT_COMMIT,
+                                CONFIG_REPO_URL:      params.CONFIG_REPO_URL,
+                                CONFIG_REPO_BRANCH:   params.CONFIG_REPO_BRANCH
+                            ]
+                        )
+                    }
+                    echo '✓ Platform jobs created/updated'
+                }
+            }
+        }
+
+        stage('Launch Platform Builds') {
+            // No agent needed — build() triggers run on the lightweight executor,
+            // so this stage does not hold a worker node while waiting for downstream jobs.
+            agent none
+            steps {
+                script {
+                    Map versionConfig = new JsonSlurper().parseText(env.VERSION_CONFIG)
+                    // Re-derive the merged groups from the raw collated JSON that
+                    // collateAndMergeGroups() already stored in env.COLLATED_PARAMS_JSON —
+                    // avoids needing JsonOutput.toJson() to round-trip through an env var.
+                    List rawGroups2  = new JsonSlurper().parseText(env.COLLATED_PARAMS_JSON).groups ?: []
+                    Map mergedMap2   = [:] as LinkedHashMap
+                    rawGroups2.each { Map grp ->
+                        // Priority groups (e.g. "Stage Selections") are already merged by
+                        // collect-stage-params.py and carry stageIds (list); non-priority groups
+                        // carry only stageId (scalar) — normalise to a list in both cases.
+                        List incomingIds = grp.stageIds instanceof List ? grp.stageIds : [grp.stageId]
+                        if (mergedMap2.containsKey(grp.name)) {
+                            incomingIds.each { String id -> if (id && !mergedMap2[grp.name].stageIds.contains(id)) { mergedMap2[grp.name].stageIds << id } }
+                            mergedMap2[grp.name].parameters.addAll(grp.parameters ?: [])
+                        } else {
+                            mergedMap2[grp.name] = [
+                                name:          grp.name,
+                                stageIds:      new ArrayList(incomingIds),
+                                stageDisabled: grp.stageDisabled ?: false,
+                                parameters:    new ArrayList(grp.parameters ?: [])
+                            ]
+                        }
+                    }
+                    List orderedGroups = mergedMap2.values().toList()
+                    Map buildJobs      = [:]
+                    Map buildResults   = [:]
+
+                    String baseFolder = env.PIPELINE_BASE_FOLDER ?: ''
+                    env.SELECTED_PLATFORMS.split(',').each { String platform ->
+                        Map cfg     = versionConfig.buildConfigurations[platform]
+                        String jobPath  = "Build_openjdk/Build_openjdk${env.JDK_VERSION}_${cfg?.variant ?: 'temurin'}_${cfg?.arch ?: platform}_${cfg?.os ?: platform}"
+                        String jobName  = baseFolder ? "/${baseFolder}/${jobPath}" : "/${jobPath}"
+
+                        // Capture cfg in a local variable so the closure does not
+                        // capture the loop variable (Groovy late-binding gotcha).
+                        Map platformCfg = cfg
+                        buildJobs[platform] = {
+                            stage("Build ${platform}") {
+                                List fwd = buildForwardedParams(orderedGroups, platformCfg)
+                                def result = build(
+                                    job:        jobName,
+                                    parameters: fwd,
+                                    wait:       true,
+                                    propagate:  false
+                                )
+                                buildResults[platform] = result.result
+                                echo "✓ ${platform}: ${result.result}"
+                            }
+                        }
+                    }
+
+                    parallel buildJobs
+
+                    Map failed = buildResults.findAll { String k, String r -> r != 'SUCCESS' }
+                    if (failed) { error("Platform builds failed: ${failed.keySet().join(', ')}") }
+                    echo '✓ All platform builds completed successfully'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                echo '=== Launch Pipeline Summary ==='
+                echo "JDK: ${env.JDK_VERSION} | Platforms: ${env.SELECTED_PLATFORMS} | Result: ${currentBuild.result ?: 'SUCCESS'}"
+            }
+        }
+        success  { echo '✓ Launch pipeline completed successfully' }
+        failure  { echo '✗ Launch pipeline failed' }
+        unstable { echo '⚠ Launch pipeline unstable' }
+        aborted  { echo '✗ Launch pipeline aborted' }
+    }
+}
+
+// Made with Bob

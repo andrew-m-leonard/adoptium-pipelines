@@ -1,0 +1,35 @@
+[MESSAGES CONTROL]
+disable=
+    # Design warnings — legitimate in this codebase
+    too-many-arguments,
+    too-many-locals,
+    too-many-branches,
+    too-many-statements,
+    too-many-nested-blocks,
+    too-many-return-statements,
+    too-many-instance-attributes,
+    too-few-public-methods,
+    # Naming — module filenames use hyphens (CLI scripts, not importable modules)
+    invalid-name,
+    # Style — line length managed by black
+    line-too-long,
+    # Docstrings — not required for all functions in this codebase
+    missing-function-docstring,
+    missing-class-docstring,
+    # False positive: pylint can't trace assignment through try/except/finally
+    possibly-used-before-assignment,
+    # Broad exceptions are intentional in top-level CLI error handlers
+    broad-exception-caught,
+    # Import style — intentional in some scripts
+    import-outside-toplevel,
+    wrong-import-position,
+    # Duplicate code across scripts — intentional shared data tables
+    duplicate-code,
+    # Misc style
+    consider-using-f-string,
+    useless-object-inheritance,
+    raise-missing-from,
+    no-else-return,
+    consider-iterating-dictionary,
+    protected-access,
+    unused-argument

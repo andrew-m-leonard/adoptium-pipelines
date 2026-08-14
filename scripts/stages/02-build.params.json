@@ -1,0 +1,62 @@
+{
+  "stageId": "02-build",
+  "stageDisabled": false,
+  "stageCondition": [],
+  "description": "Parameters consumed by the build stage script. Vendor overrides may suppress, replace, or extend these via a vendor-scripts/02-build.params.json in the config repo.",
+  "parameterGroups": [
+    {
+      "name": "Source Control",
+      "description": "Refs that pin exactly what source is checked out for this build. Leave empty to use the defaults defined in adoptium_pipeline_config.json.",
+      "parameters": [
+        {
+          "name": "VARIANT",
+          "type": "string",
+          "default": "temurin",
+          "description": "Build variant / distribution name (e.g. temurin, dragonwell, corretto, openj9)"
+        },
+        {
+          "name": "SCM_REF",
+          "type": "string",
+          "default": "",
+          "description": "Git tag or branch for the upstream JDK source checkout (e.g. jdk-21.0.12+6_adopt). Empty = repository default branch."
+        },
+        {
+          "name": "BUILD_REF",
+          "type": "string",
+          "default": "",
+          "description": "Git branch or tag for the build-scripts repository. Empty = default defined in adoptium_pipeline_config.json."
+        }
+      ]
+    },
+    {
+      "name": "Build Options",
+      "description": "Fine-grained overrides for the configure, make, and source-fetch steps. All fields are optional — leave empty to use the defaults from the build configuration.",
+      "parameters": [
+        {
+          "name": "EXTRA_BUILD_ARGS",
+          "type": "string",
+          "default": "",
+          "description": "Additional arguments appended to the config-file buildArgs when invoking the build stage script. Leave empty to use only the platform config defaults."
+        },
+        {
+          "name": "EXTRA_CONFIGURE_ARGS",
+          "type": "string",
+          "default": "",
+          "description": "Extra options appended to the configure invocation (e.g. --with-vendor-name=MyOrg)"
+        },
+        {
+          "name": "EXTRA_MAKE_OPTIONS",
+          "type": "string",
+          "default": "",
+          "description": "Extra options appended to the make invocation (e.g. LOG=debug JOBS=4)"
+        },
+        {
+          "name": "CREATE_SBOM",
+          "type": "boolean",
+          "default": true,
+          "description": "Generate a Software Bill of Materials (SBOM) during the build stage, and run the SBOM sign and validate-SBOM stages."
+        }
+      ]
+    }
+  ]
+}

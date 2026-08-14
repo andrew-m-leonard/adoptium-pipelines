@@ -1,0 +1,23 @@
+{
+  "stageId": "09-sbom-sign",
+  "stageDisabled": false,
+  "stageCondition": [
+    { "param": "SIGN_ARTIFACTS", "value": true },
+    { "param": "CREATE_SBOM",    "value": true }
+  ],
+  "description": "Gate-only params.json for the SBOM sign stage. Runs only when SIGN_ARTIFACTS and CREATE_SBOM are both true.",
+  "parameterGroups": [
+    {
+      "name": "Stage Selections",
+      "description": "Boolean flags that control which pipeline stages are enabled. All stage-gate parameters are collected here so operators can see and adjust the full execution plan in one place.",
+      "parameters": [
+        {
+          "name": "SIGN_ARTIFACTS",
+          "type": "boolean",
+          "default": false,
+          "description": "Enable artifact signing."
+        }
+      ]
+    }
+  ]
+}

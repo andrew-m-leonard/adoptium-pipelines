@@ -1,0 +1,22 @@
+{
+  "stageId": "03-internal-code-sign",
+  "stageDisabled": false,
+  "stageCondition": [
+    { "param": "SIGN_ARTIFACTS", "value": true }
+  ],
+  "description": "Parameters for the internal-code-sign stage.",
+  "parameterGroups": [
+    {
+      "name": "Stage Selections",
+      "description": "Boolean flags that control which pipeline stages are enabled. All stage-gate parameters are collected here so operators can see and adjust the full execution plan in one place.",
+      "parameters": [
+        {
+          "name": "SIGN_ARTIFACTS",
+          "type": "boolean",
+          "default": false,
+          "description": "Enable artifact signing."
+        }
+      ]
+    }
+  ]
+}

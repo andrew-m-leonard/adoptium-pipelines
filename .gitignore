@@ -1,0 +1,98 @@
+# Build artifacts
+*.tar.gz
+*.zip
+*.jar
+*.war
+*.ear
+*.class
+
+# JDK build outputs
+jdk-*/
+openjdk-*/
+workspace/
+target/
+build/
+dist/
+
+# Logs
+*.log
+logs/
+*.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.cache
+
+# Test outputs
+test-results/
+test-reports/
+coverage/
+
+# Jenkins workspace artifacts
+.jenkins/
+jenkins-workspace/
+
+# Signing keys and credentials
+*.key
+*.pem
+*.p12
+*.jks
+credentials/
+secrets/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Compiled scripts
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Package files
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build metadata
+build-uid.txt
+build-metadata.json
+workspace-info.txt
+
+# Made with Bob

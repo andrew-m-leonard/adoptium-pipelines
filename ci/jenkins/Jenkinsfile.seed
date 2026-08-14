@@ -1,0 +1,134 @@
+/*
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+/**
+ * Seed Pipeline — template for vendors to copy into their config repo.
+ *
+ * PURPOSE
+ * -------
+ * This Jenkinsfile is the entry point for the seed Pipeline job that creates
+ * all OpenJDK build launch jobs on a Jenkins instance.  It is intentionally
+ * minimal: check out the ci-adoptium-pipelines repo, then run the Job DSL
+ * script that generates the launch (and platform build) jobs.
+ *
+ * VENDOR SETUP
+ * ------------
+ * 1. Copy this file into your vendor config repository:
+ *      <config-repo-root>/Jenkinsfile.seed
+ *
+ * 2. In Jenkins, create a new Pipeline job named "openjdk-build-seed-job".
+ *
+ * 3. Under "Pipeline":
+ *      - Definition : Pipeline script from SCM
+ *      - SCM        : Git
+ *      - Repository URL : <your config repo URL>
+ *      - Credentials    : <Jenkins credential for your config repo if private>
+ *      - Branch         : <your config repo branch, e.g. main>
+ *      - Script Path    : Jenkinsfile.seed   (or wherever you placed this file)
+ *
+ * 4. In the Jenkins job configuration UI, click "This project is parameterized"
+ *    and add two String Parameters (do NOT declare them in this Jenkinsfile —
+ *    Jenkins overwrites Jenkinsfile defaults on every run):
+ *      CONFIG_REPO_URL    — URL of this vendor config repository
+ *      CONFIG_REPO_BRANCH — Branch of this vendor config repository (e.g. main)
+ *
+ * 5. Run the seed job with those parameters set.  It will:
+ *      - Read PIPELINES_REPO_URL and PIPELINES_REPO_BRANCH from
+ *        adoptium_pipeline_config.json (repository.url / repository.branch)
+ *      - Check out ci-adoptium-pipelines into a 'pipelines/' subdirectory
+ *      - Run the Job DSL script to create all launch jobs, reading all
+ *        configuration directly from the workspace
+ *
+ * CUSTOMISATION
+ * -------------
+ * - Set repository.url and repository.branch in adoptium_pipeline_config.json
+ *   to pin to a specific fork or branch of ci-adoptium-pipelines.
+ * - The Job DSL script reads vendor-scripts/*.params.json from this repo's
+ *   workspace (already checked out by the Pipeline SCM step) — no extra
+ *   checkout is needed for vendor stage parameter overrides.
+ */
+
+// ---------------------------------------------------------------------------
+// Pipeline
+// ---------------------------------------------------------------------------
+
+pipeline {
+    agent any
+
+    // NOTE: Do NOT declare CONFIG_REPO_URL / CONFIG_REPO_BRANCH here.
+    // A parameters{} block in the Jenkinsfile causes Jenkins to reset parameter
+    // values to the Jenkinsfile defaults on every run, wiping the operator's values.
+    // Define these two String Parameters in the Jenkins job configuration UI instead.
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('Read pipeline config') {
+            steps {
+                script {
+                    // The config repo is already checked out in the workspace root by the
+                    // Pipeline SCM step.  Read the pipelines repo coordinates from it so
+                    // that no hardcoded values need to exist in this Jenkinsfile.
+                    def cfg = readJSON file: 'adoptium_pipeline_config.json'
+                    env.PIPELINES_REPO_URL    = cfg.repository.url
+                    env.PIPELINES_REPO_BRANCH = cfg.repository.branch
+                    echo "✓ Pipelines repo : ${env.PIPELINES_REPO_URL} @ ${env.PIPELINES_REPO_BRANCH}"
+                }
+            }
+        }
+
+        stage('Checkout pipeline repo') {
+            steps {
+                // Check out ci-adoptium-pipelines into pipelines/ so that the
+                // Job DSL script and stage *.params.json files are available.
+                // The vendor config repo is already in the workspace root
+                // (checked out by the Pipeline SCM step above).
+                dir('pipelines') {
+                    git url:    env.PIPELINES_REPO_URL,
+                        branch: env.PIPELINES_REPO_BRANCH
+                }
+                // Capture the SHA so it can be stamped into every generated job.
+                // GIT_COMMIT is set by the git step above but scoped to the dir()
+                // block; reading it here via shell is reliable across all Git plugin versions.
+                script {
+                    env.PIPELINES_COMMIT_SHA = sh(
+                        script: 'git -C pipelines rev-parse HEAD',
+                        returnStdout: true
+                    ).trim()
+                    echo "✓ Pipeline repo SHA: ${env.PIPELINES_COMMIT_SHA}"
+                }
+            }
+        }
+
+        stage('Generate jobs') {
+            steps {
+                script {
+                    def seedHelper = load('pipelines/ci/jenkins/lib/SeedHelper.groovy')
+                    seedHelper.generateJobs(
+                        params.CONFIG_REPO_URL,
+                        params.CONFIG_REPO_BRANCH,
+                        env.PIPELINES_COMMIT_SHA
+                    )
+                }
+            }
+        }
+    }
+
+    post {
+        success { echo '✓ Seed job completed — launch jobs created/updated.' }
+        failure { echo '✗ Seed job failed — check the Job DSL output above.' }
+    }
+}
