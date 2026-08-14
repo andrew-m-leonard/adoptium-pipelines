@@ -148,7 +148,7 @@ Stage execution is controlled by two mechanisms:
 
 ### Vendor Script Override
 
-Any stage script in `scripts/stages/` can be replaced per-vendor by placing a script of the same stem in the config repository's `vendor-scripts/` directory. Both orchestrators resolve scripts in the same priority order, with a minor difference: Jenkins also supports `.groovy` vendor scripts; the local runner does not.
+Each stage has a `scripts/stages/<stem>.params.json` sidecar that declares its parameters, gate conditions, and enabled state. Vendors can place a matching `config-repo/vendor-scripts/<stem>.params.json` to add or override parameters without replacing the script itself. When a vendor also wants to replace the script, they place a script of the same stem in `vendor-scripts/`. Both orchestrators resolve scripts in the same priority order, with a minor difference: Jenkins also supports `.groovy` vendor scripts; the local runner does not.
 
 | Priority | Jenkins (`StageScriptRunner.groovy`) | Local (`stage_resolver.py`) |
 |---|---|---|
@@ -159,6 +159,8 @@ Any stage script in `scripts/stages/` can be replaced per-vendor by placing a sc
 | 5 | `scripts/stages/<stem>.groovy` | No-op (stage skipped) |
 | 6 | `scripts/stages/<stem>.py` | |
 | 7 | No-op (stage skipped) | |
+
+See [`docs/STAGE_DEFINITION_REFERENCE.md`](docs/STAGE_DEFINITION_REFERENCE.md) for the full `params.json` schema.
 
 ### Shared Stage Libraries (`scripts/lib/`)
 
