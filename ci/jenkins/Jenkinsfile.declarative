@@ -224,6 +224,10 @@ pipeline {
     }
 
     stages {
+
+        // #########################################################################
+        // Stage: 01-initialize
+        // #########################################################################
         stage(INITIALIZE) {
             agent {
                 label getStageLabel(INITIALIZE)
@@ -255,6 +259,9 @@ pipeline {
             }
         }
 
+        // #########################################################################
+        // Stage: 02-build
+        // #########################################################################
         stage(BUILD) {
             // agent none: the correct agent (plain node or Docker container) is
             // selected at runtime by nodeAgentHelper.withBuildAgent(), because
@@ -287,6 +294,9 @@ pipeline {
             }
         }
 
+        // #########################################################################
+        // Stage: 03-internal-code-sign
+        // #########################################################################
         stage(INTERNAL_CODE_SIGN) {
             agent {
                 label getStageLabel(INTERNAL_CODE_SIGN)
@@ -317,6 +327,9 @@ pipeline {
             }
         }
 
+        // #########################################################################
+        // Stage: 04-assemble-images
+        // #########################################################################
         stage(ASSEMBLE_IMAGES) {
             agent {
                 label getStageLabel(ASSEMBLE_IMAGES)
@@ -347,6 +360,9 @@ pipeline {
             }
         }
 
+        // #########################################################################
+        // Stage: 06-post-build-code-sign
+        // #########################################################################
         stage(POST_BUILD_CODE_SIGN) {
             agent {
                 label getStageLabel(POST_BUILD_CODE_SIGN)
@@ -371,6 +387,9 @@ pipeline {
             }
         }
 
+        // #########################################################################
+        // Stage: 07-installer
+        // #########################################################################
         stage(BUILD_INSTALLERS) {
             agent {
                 label getStageLabel(BUILD_INSTALLERS)
@@ -395,6 +414,9 @@ pipeline {
             }
         }
 
+        // #########################################################################
+        // Stage: 08-code-sign-installer
+        // #########################################################################
         stage(CODE_SIGN_INSTALLER) {
             agent {
                 label getStageLabel(CODE_SIGN_INSTALLER)
@@ -419,6 +441,9 @@ pipeline {
             }
         }
 
+        // #########################################################################
+        // Stage: 09-sbom-sign
+        // #########################################################################
         stage(SBOM_SIGN) {
             agent {
                 label getStageLabel(SBOM_SIGN)
@@ -443,6 +468,9 @@ pipeline {
             }
         }
 
+        // #########################################################################
+        // Stage: 10-digital-artifact-sign
+        // #########################################################################
         stage(DIGITAL_ARTIFACT_SIGN) {
             agent {
                 label getStageLabel(DIGITAL_ARTIFACT_SIGN)
@@ -467,6 +495,9 @@ pipeline {
             }
         }
 
+        // #########################################################################
+        // Stage: 11-verify-signing
+        // #########################################################################
         stage(VERIFY_SIGNING) {
             agent {
                 label getStageLabel(VERIFY_SIGNING)
@@ -491,6 +522,9 @@ pipeline {
             }
         }
 
+        // #########################################################################
+        // Stage: 12-validate-sbom
+        // #########################################################################
         stage(VALIDATE_SBOM) {
             agent {
                 label getStageLabel(VALIDATE_SBOM)
@@ -517,6 +551,9 @@ pipeline {
             }
         }
 
+        // #########################################################################
+        // Stage: 13-smoke-tests
+        // #########################################################################
         stage(SMOKE_TESTS) {
             agent {
                 label getStageLabel(SMOKE_TESTS)
@@ -545,6 +582,9 @@ pipeline {
             }
         }
 
+        // #########################################################################
+        // Stage: 20-reproducible-compare
+        // #########################################################################
         stage(REPRODUCIBLE_COMPARE) {
             agent {
                 label getStageLabel(REPRODUCIBLE_COMPARE)
@@ -583,6 +623,9 @@ pipeline {
             }
         }
 
+        // #########################################################################
+        // Stage: 14-aqa-tests
+        // #########################################################################
         stage(AQA_TESTS) {
             agent {
                 label getStageLabel(AQA_TESTS)
@@ -607,6 +650,9 @@ pipeline {
             }
         }
 
+        // #########################################################################
+        // Stage: 15-tck-tests
+        // #########################################################################
         stage(TCK_TESTS) {
             agent {
                 label getStageLabel(TCK_TESTS)
@@ -631,6 +677,9 @@ pipeline {
             }
         }
 
+        // #########################################################################
+        // Stage: 16-publish
+        // #########################################################################
         stage(PUBLISH_ARTIFACTS) {
             agent {
                 label getStageLabel(PUBLISH_ARTIFACTS)

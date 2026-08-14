@@ -328,6 +328,32 @@ def build_stage_params_help(
     if not collated.get("paramNames"):
         return ""
 
+    # Merge groups that share the same name so that params sourced from
+    # different *.params.json files but belonging to the same logical group
+    # (e.g. "Source Control" across build and aqa-tests stages) are shown
+    # as a single block.  Insertion order is preserved; the first occurrence
+    # of each group name determines its position in the output.
+    merged: dict[str, dict] = {}  # name → { stage_ids: list, params: list }
+    seen_param_names: dict[str, set] = {}  # name → set of param names already added
+    for group in collated.get("groups", []):
+        params = group.get("parameters", [])
+        if not params:
+            continue
+        name = group["name"]
+        stage_ids = group.get("stageIds") or [group.get("stageId", "?")]
+        if name not in merged:
+            merged[name] = {"stage_ids": list(stage_ids), "params": list(params)}
+            seen_param_names[name] = {p["name"] for p in params}
+        else:
+            # Append any stageIds not already present
+            existing_ids = set(merged[name]["stage_ids"])
+            merged[name]["stage_ids"] += [s for s in stage_ids if s not in existing_ids]
+            # Append any params not already present (dedup by param name)
+            for p in params:
+                if p["name"] not in seen_param_names[name]:
+                    merged[name]["params"].append(p)
+                    seen_param_names[name].add(p["name"])
+
     lines = [
         "",
         f"Stage parameters {source_note}:",
@@ -336,15 +362,10 @@ def build_stage_params_help(
         "",
     ]
 
-    for group in collated.get("groups", []):
-        params = group.get("parameters", [])
-        if not params:
-            continue
-        # Prefer stageIds list; fall back to scalar stageId
-        stage_ids = group.get("stageIds") or [group.get("stageId", "?")]
-        stage_str = ", ".join(stage_ids)
-        lines.append(f"  [{stage_str}]  {group['name']}")
-        for p in params:
+    for name, entry in merged.items():
+        stage_str = ", ".join(entry["stage_ids"])
+        lines.append(f"  [{stage_str}]  {name}")
+        for p in entry["params"]:
             flag = param_name_to_cli_flag(p["name"])
             default = (
                 str(p.get("default", "")).lower()
