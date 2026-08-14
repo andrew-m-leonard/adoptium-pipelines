@@ -49,7 +49,7 @@ Shared Groovy helpers loaded at runtime with `load()`. Each file is a plain CPS 
 |---|---|
 | `BuildUidHelper.groovy` | `BUILD_UID` / `GROUP_UID` generation and reuse; `BUILD_STAGE_RESULTS` serialisation; prerequisite validation |
 | `PipelineHelper.groovy` | `initializeStage()`, `finalizeStage()`, `executeStageWithTracking()`, `ensureBuildDescriptionSet()` |
-| `ConfigHelper.groovy` | Generates `pipeline-config.json` by calling `load-json-config.py`; sets `CONFIG_*` env vars |
+| `ConfigHelper.groovy` | Generates `pipeline-config.json` by calling `load-pipeline-config-json.py`; sets `CONFIG_*` env vars |
 | `StageScriptRunner.groovy` | Resolves and executes per-stage scripts with vendor-override support |
 
 ### job-dsl/

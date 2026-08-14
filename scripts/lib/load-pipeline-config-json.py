@@ -29,7 +29,7 @@ Architecture:
   injected by the orchestrator (Jenkins: params→env; ci/local: _stage_env()).
 
 Usage:
-    python3 load-json-config.py \
+    python3 load-pipeline-config-json.py \
         --jdk-version jdk21u \
         --variant temurin \
         --target-os mac \
@@ -386,7 +386,7 @@ def main():
         epilog="""
 Examples:
   # Nightly build
-  python3 load-json-config.py \\
+  python3 load-pipeline-config-json.py \\
       --jdk-version jdk21u \\
       --variant temurin \\
       --target-os mac \\
@@ -394,7 +394,7 @@ Examples:
       --config-repo-path ./config-repo
 
   # Release build
-  python3 load-json-config.py \\
+  python3 load-pipeline-config-json.py \\
       --jdk-version jdk17u \\
       --variant temurin \\
       --target-os linux \\

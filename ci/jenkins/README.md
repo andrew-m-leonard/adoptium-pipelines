@@ -44,7 +44,7 @@ Shared Groovy helpers loaded with `load()` at the start of each stage. These are
 
 #### ConfigHelper.groovy
 
-- `generatePipelineConfig(configDir)` — invokes `scripts/lib/load-json-config.py` with parameters resolved from job params and `adoptium_pipeline_config.json`; writes `pipeline-config.json`; sets all `CONFIG_*` env vars used by `when {}` blocks
+- `generatePipelineConfig(configDir)` — invokes `scripts/lib/load-pipeline-config-json.py` with parameters resolved from job params and `adoptium_pipeline_config.json`; writes `pipeline-config.json`; sets all `CONFIG_*` env vars used by `when {}` blocks
 - `summarizePipelineConfig(config)` — logs the key build configuration values
 
 #### StageScriptRunner.groovy

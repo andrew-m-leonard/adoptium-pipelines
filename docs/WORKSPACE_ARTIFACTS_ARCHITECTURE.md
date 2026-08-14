@@ -124,7 +124,7 @@ The local runner uses a persistent root (`pipeline_workspace`) containing three 
 Initialize stage
   workspace_mgr.cleanup_stage_workspace('pre')      ← wipe stage_workspace/
   git clone config-repo → pipeline_workspace/config-repo/
-  load-json-config.py → writes pipeline_workspace/pipeline-config.json
+  load-pipeline-config-json.py → writes pipeline_workspace/pipeline-config.json
   workspace_mgr.archive_file(pipeline-config.json)  ← pipeline-config.json → build_artifacts/
   workspace_mgr.cleanup_stage_workspace('post')     ← optional
 

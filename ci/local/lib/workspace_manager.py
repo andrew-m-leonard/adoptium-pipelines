@@ -249,7 +249,7 @@ class WorkspaceManager:
         Archive a single file directly into build_artifacts/.
 
         Used by the Initialize stage to archive pipeline-config.json, which
-        is written to pipeline_workspace root (not TARGET_DIR) by load-json-config.py.
+        is written to pipeline_workspace root (not TARGET_DIR) by load-pipeline-config-json.py.
 
         Args:
             src_path: Path to the file to archive

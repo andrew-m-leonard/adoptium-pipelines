@@ -45,7 +45,7 @@ ci-adoptium-pipelines/
 │   │   ├── config-utils.sh          # JSON config helpers
 │   │   ├── logging-utils.sh         # Logging utilities
 │   │   ├── artifact-utils.sh        # Artifact management helpers
-│   │   ├── load-json-config.py      # Generates pipeline-config.json
+│   │   ├── load-pipeline-config-json.py      # Generates pipeline-config.json
 │   │   └── load-adoptium-pipeline-config-json.py
 │   └── stages/
 │       ├── 02-build.sh                    # JDK compilation
@@ -111,7 +111,7 @@ Each lib file is a plain CPS script loaded with `load()` — it calls pipeline s
 |---|---|
 | [`BuildUidHelper.groovy`](ci/jenkins/lib/BuildUidHelper.groovy) | Generates/reuses `BUILD_UID` and `GROUP_UID`; serialises per-stage results into `BUILD_STAGE_RESULTS` for prerequisite validation across restarts |
 | [`PipelineHelper.groovy`](ci/jenkins/lib/PipelineHelper.groovy) | `initializeStage()` (cleanWs, checkout, config-repository clone, BUILD_UID init, copyArtifacts); `finalizeStage()`; `executeStageWithTracking()` |
-| [`ConfigHelper.groovy`](ci/jenkins/lib/ConfigHelper.groovy) | Calls `load-json-config.py` to produce `pipeline-config.json`; sets `CONFIG_*` env vars used by `when {}` blocks |
+| [`ConfigHelper.groovy`](ci/jenkins/lib/ConfigHelper.groovy) | Calls `load-pipeline-config-json.py` to produce `pipeline-config.json`; sets `CONFIG_*` env vars used by `when {}` blocks |
 | [`StageScriptRunner.groovy`](ci/jenkins/lib/StageScriptRunner.groovy) | Resolves and runs a stage script with vendor-override support (tries `config-repo/vendor-scripts/` before `scripts/stages/`) |
 
 ### Vendor Script Override
@@ -168,7 +168,7 @@ The pipeline reads build configuration from a separately maintained config repos
     └── ...
 ```
 
-At runtime, `ConfigHelper` calls `scripts/lib/load-json-config.py` which merges the platform-level JSON with job parameters to produce `pipeline-config.json` — the single source of truth for all subsequent stages.
+At runtime, `ConfigHelper` calls `scripts/lib/load-pipeline-config-json.py` which merges the platform-level JSON with job parameters to produce `pipeline-config.json` — the single source of truth for all subsequent stages.
 
 ## Jenkins Setup
 

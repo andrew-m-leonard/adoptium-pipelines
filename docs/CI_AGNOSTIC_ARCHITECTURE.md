@@ -145,7 +145,7 @@ Stage execution is controlled by `stageCondition` entries in each stage's `param
 
 | # | Stage | Script | Defines parameter | stageCondition gates on | Prerequisites | Key Outputs |
 |---|---|---|---|---|---|---|
-| 01 | Initialize | *(ConfigHelper + load-json-config.py)* | — | always | — | `pipeline-config.json`, `jenkins-config.json` |
+| 01 | Initialize | *(ConfigHelper + load-pipeline-config-json.py)* | — | always | — | `pipeline-config.json`, `jenkins-config.json` |
 | 02 | Build | `02-build.sh` | — | always | Initialize | JDK tarballs/zips, metadata, SBOMs |
 | 03 | Internal Code Sign | `03-internal-code-sign.sh` | `SIGN_ARTIFACTS` | `SIGN_ARTIFACTS=true`, macOS/Win, JDK≥11 | Build | Signed JMODs |
 | 04 | Assemble Images | `04-assemble-images.sh` | — | `SIGN_ARTIFACTS=true`, macOS/Win, JDK≥11 | Internal Code Sign | Assembled JDK image |
@@ -280,7 +280,7 @@ ci-adoptium-pipelines/
 │       ├── logging-utils.sh
 │       ├── config-utils.sh
 │       ├── artifact-utils.sh
-│       ├── load-json-config.py             # Generates pipeline-config.json
+│       ├── load-pipeline-config-json.py             # Generates pipeline-config.json
 │       └── load-adoptium-pipeline-config-json.py
 ├── tests/
 │   ├── test_determine_filename.sh

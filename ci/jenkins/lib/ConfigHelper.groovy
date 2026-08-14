@@ -22,7 +22,7 @@ limitations under the License.
  *
  * Public API:
  *   generatePipelineConfig(configRepoPath='./config-repo')
- *     → calls scripts/lib/load-json-config.py (CI-agnostic) to produce
+ *     → calls scripts/lib/load-pipeline-config-json.py (CI-agnostic) to produce
  *       pipeline-config.json from jdkNN_pipeline_config.json and
  *       adoptium_pipeline_config.json; sets CONFIG_* / AQA_REF / SMOKE_TESTS_PASSED
  *       env vars; returns the parsed pipelineConfig Map.
@@ -63,7 +63,7 @@ Map generatePipelineConfig(String configRepoPath = './config-repo') {
     }
 
     // Build Python command arguments.
-    // load-json-config.py reads adoptium_pipeline_config.json directly from the
+    // load-pipeline-config-json.py reads adoptium_pipeline_config.json directly from the
     // config repo root — no ref args needed here.  Stage params (SCM_REF,
     // RUN_TESTS, etc.) flow through the Jenkins job parameter environment
     // automatically and are NOT passed to this script.
@@ -88,7 +88,7 @@ Map generatePipelineConfig(String configRepoPath = './config-repo') {
 
     // Execute CI-agnostic Python script — produces pipeline-config.json.
     // python-runner.sh resolves python3/python once and execs the script.
-    sh "scripts/lib/python-runner.sh scripts/lib/load-json-config.py ${pythonArgs.join(' ')}"
+    sh "scripts/lib/python-runner.sh scripts/lib/load-pipeline-config-json.py ${pythonArgs.join(' ')}"
 
     // Read the generated pipeline-config.json
     Map pipelineConfig = readJSON(file: 'pipeline-config.json')

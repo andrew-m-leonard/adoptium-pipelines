@@ -23,7 +23,7 @@ echo ""
 
 # Test 1: Valid value - NIGHTLY
 echo "Test 1: Valid value - NIGHTLY"
-python3 ../scripts/lib/load-json-config.py \
+python3 ../scripts/lib/load-pipeline-config-json.py \
 	--jdk-version jdk21u \
 	--variant temurin \
 	--target-os linux \
@@ -36,7 +36,7 @@ echo ""
 
 # Test 2: Valid value - WEEKLY
 echo "Test 2: Valid value - WEEKLY"
-python3 ../scripts/lib/load-json-config.py \
+python3 ../scripts/lib/load-pipeline-config-json.py \
 	--jdk-version jdk21u \
 	--variant temurin \
 	--target-os linux \
@@ -49,7 +49,7 @@ echo ""
 
 # Test 3: Valid value - RELEASE
 echo "Test 3: Valid value - RELEASE"
-python3 ../scripts/lib/load-json-config.py \
+python3 ../scripts/lib/load-pipeline-config-json.py \
 	--jdk-version jdk21u \
 	--variant temurin \
 	--target-os linux \
@@ -62,7 +62,7 @@ echo ""
 
 # Test 4: Invalid value - lowercase
 echo "Test 4: Invalid value - 'nightly' (lowercase)"
-python3 ../scripts/lib/load-json-config.py \
+python3 ../scripts/lib/load-pipeline-config-json.py \
 	--jdk-version jdk21u \
 	--variant temurin \
 	--target-os linux \
@@ -75,7 +75,7 @@ echo ""
 
 # Test 5: Invalid value - typo
 echo "Test 5: Invalid value - 'RELASE' (typo)"
-python3 ../scripts/lib/load-json-config.py \
+python3 ../scripts/lib/load-pipeline-config-json.py \
 	--jdk-version jdk21u \
 	--variant temurin \
 	--target-os linux \
@@ -88,7 +88,7 @@ echo ""
 
 # Test 6: Invalid value - random string
 echo "Test 6: Invalid value - 'FOOBAR'"
-python3 ../scripts/lib/load-json-config.py \
+python3 ../scripts/lib/load-pipeline-config-json.py \
 	--jdk-version jdk21u \
 	--variant temurin \
 	--target-os linux \
@@ -101,7 +101,7 @@ echo ""
 
 # Test 7: No value provided (should use default NIGHTLY)
 echo "Test 7: No --release-type provided (should default to NIGHTLY)"
-python3 ../scripts/lib/load-json-config.py \
+python3 ../scripts/lib/load-pipeline-config-json.py \
 	--jdk-version jdk21u \
 	--variant temurin \
 	--target-os linux \

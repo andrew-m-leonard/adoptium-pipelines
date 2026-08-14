@@ -219,8 +219,8 @@ class StageExecutor:
 
         Raises:
             ValueError:       Invalid release-type value.
-            FileNotFoundError: pipeline-config.json not produced by load-json-config.py.
-            subprocess.CalledProcessError: load-json-config.py exited non-zero.
+            FileNotFoundError: pipeline-config.json not produced by load-pipeline-config-json.py.
+            subprocess.CalledProcessError: load-pipeline-config-json.py exited non-zero.
         """
         print("\n" + "=" * 80)
         print("STAGE: Initialize - Generate Configuration")
@@ -239,7 +239,7 @@ class StageExecutor:
 
         cmd = [
             sys.executable,
-            str(self._script_dir / "scripts" / "lib" / "load-json-config.py"),
+            str(self._script_dir / "scripts" / "lib" / "load-pipeline-config-json.py"),
             "--jdk-version", self._args.jdk_version,
             "--variant", pipeline_config.get("defaultVariant", "temurin"),
             "--target-os", self._args.target_os,

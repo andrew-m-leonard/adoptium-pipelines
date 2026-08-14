@@ -16,7 +16,7 @@
 Jenkins-specific configuration loader — generateJenkinsConfig().
 
 Reads jenkins_job_config.json from the config repository root and
-pipeline-config.json (produced by scripts/lib/load-json-config.py) from the
+pipeline-config.json (produced by scripts/lib/load-pipeline-config-json.py) from the
 working directory.  Resolves the stageAgentLabels {os}/{arch} placeholders to
 their sw.os.* / hw.arch.* schema label tokens and writes a new, separate
 jenkins-config.json containing:
@@ -27,7 +27,7 @@ jenkins-config.json containing:
 
 pipeline-config.json is read-only; it is never modified by this script.
 
-This script is intentionally separate from scripts/lib/load-json-config.py,
+This script is intentionally separate from scripts/lib/load-pipeline-config-json.py,
 which is CI-agnostic.  Only the Jenkins CI flow calls this script.
 
 Usage:
@@ -43,7 +43,7 @@ import sys
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Label-schema mappings (self-contained — no dependency on load-json-config.py)
+# Label-schema mappings (self-contained — no dependency on load-pipeline-config-json.py)
 # ---------------------------------------------------------------------------
 
 # Mapping from temurin-build arch values to the aqa-tests hw.arch suffix.
