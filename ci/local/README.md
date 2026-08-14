@@ -11,14 +11,6 @@ python3 ci/local/run-pipeline.py \
   --target-os mac \
   --architecture aarch64
 
-# Build without tests or SBOM
-python3 ci/local/run-pipeline.py \
-  --jdk-version jdk21 \
-  --target-os mac \
-  --architecture aarch64 \
-  --run-tests false \
-  --create-sbom false
-
 # Release build with reproducible compare, pinned source tag
 python3 ci/local/run-pipeline.py \
   --jdk-version jdk21 \
@@ -48,14 +40,12 @@ Pass them as `--<lower-kebab-case-name> <value>`:
 |---|---|
 | `--scm-ref jdk-21.0.7+6_adopt` | `02-build.params.json` `SCM_REF` |
 | `--create-sbom false` | `02-build.params.json` `CREATE_SBOM` |
-| `--run-tests false` | `14-aqa-tests.params.json` `RUN_TESTS` |
-| `--enable-installers false` | `07-installer.params.json` `ENABLE_INSTALLERS` |
-| `--sign-artifacts true` | `03-internal-code-sign.params.json` `SIGN_ARTIFACTS` |
+| `--run-tests false` | `13-smoke-tests.params.json` `RUN_TESTS` |
 | `--run-reproducible-compare true` | `20-reproducible-compare.params.json` `RUN_REPRODUCIBLE_COMPARE` |
 
 Boolean params accept `true` or `false`. String params accept any value.
 
-Any unrecognised parameter prints a warning and is ignored — it does not abort the run.
+Any unrecognised parameter causes an error and aborts the run. Run with `--help` to see all available parameters.
 
 ## Fixed CLI Options
 
@@ -80,7 +70,7 @@ These are pipeline-level controls, not stage params:
 
 ### Configuration repository
 
-- `--config-repo-url` — Config repository URL (default: `https://github.com/adoptium/ci-temurin-config.git`)
+- `--config-repo-url` — Config repository URL (**required**)
 - `--config-repo-branch` — Config repository branch (default: `main`)
 
 ## Architecture
@@ -131,18 +121,18 @@ and `jdkNN_pipeline_config.json`. Contains **only** init-time derived values:
 
 **Stage params** (`SCM_REF`, `BUILD_REF`, `CREATE_SBOM`, `RUN_TESTS`, etc.) are **not**
 stored in `pipeline-config.json`. They flow exclusively through the process environment —
-the orchestrator injects them via `_stage_env()` before each stage script runs.
+`StageExecutor._build_env()` injects them before each stage script runs.
 `repoDefaults` provides fallback values for stage scripts when their own stage param is empty
 (e.g. `02-build.sh` uses `$BUILD_REF` if set, otherwise falls back to `$CONFIG_BUILD_REF`).
 
-### Three-phase execution in main()
+### Two-phase execution in main()
 
-1. **Phase 1** — argparse fixed options only; extra tokens captured as raw list
-1. **Phase 2** — pre-parse extra tokens against *default* `scripts/stages/*.params.json`
-   (no config repository yet); inject into runner so `stage_initialize()` can use them;
-   clone config repository and run Initialize
-1. **Phase 3** — full collation with `config-repo/vendor-scripts/*.params.json`;
-   re-parse extra tokens against complete set; inject final stage params; run remaining stages
+1. **Phase 1** — argparse fixed options only; extra tokens captured as raw list;
+   workspace validated/cleaned; Initialize stage runs (clones config repo,
+   generates `pipeline-config.json`)
+2. **Phase 2** — full param collation from `scripts/stages/*.params.json` merged with
+   `config-repo/vendor-scripts/*.params.json`; extra tokens validated against complete
+   set; stage params injected into `StageExecutor`; remaining stages run
 
 ## Workspace validation
 
