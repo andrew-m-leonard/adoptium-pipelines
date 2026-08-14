@@ -9,19 +9,31 @@ ci/
 ├── jenkins/
 │   ├── Jenkinsfile.declarative          # Single-platform build pipeline
 │   ├── Jenkinsfile.launch               # Multi-platform launch pipeline
+│   ├── Jenkinsfile.seed                 # Seed job pipeline
 │   ├── lib/
 │   │   ├── BuildUidHelper.groovy
 │   │   ├── ConfigHelper.groovy
+│   │   ├── NodeAgentHelper.groovy
 │   │   ├── PipelineHelper.groovy
-│   │   └── StageScriptRunner.groovy
+│   │   ├── PipelineStages.groovy
+│   │   ├── SeedHelper.groovy
+│   │   ├── StageScriptRunner.groovy
+│   │   └── load-jenkins-json-config.py
 │   └── job-dsl/
 │       ├── openjdk_build_pipeline_job_dsl.groovy
 │       └── seed/
 │           └── seed_job_dsl.groovy
 ├── local/
 │   ├── run-pipeline.py
-│   ├── stage_resolver.py
-│   └── workspace_manager.py
+│   └── lib/
+│       ├── cli_parser.py
+│       ├── config_repo.py
+│       ├── stage_env.py
+│       ├── stage_executor.py
+│       ├── stage_params.py
+│       ├── stage_registry.py
+│       ├── stage_resolver.py
+│       └── workspace_manager.py
 └── README.md  (this file)
 ```
 

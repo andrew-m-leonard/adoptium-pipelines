@@ -361,5 +361,5 @@ python3 ci/local/run-pipeline.py --jdk-version jdk21 --target-os mac --architect
 - [CI_AGNOSTIC_ARCHITECTURE.md](./CI_AGNOSTIC_ARCHITECTURE.md) — artifact flow diagram (Jenkins `copyArtifacts` ↔ `archiveArtifacts`)
 - [UNIVERSAL_STAGE_PATTERN.md](./UNIVERSAL_STAGE_PATTERN.md) — stage script template using these env vars
 - [`scripts/lib/config-utils.sh`](../scripts/lib/config-utils.sh) — `validate_standard_environment()` implementation
-- [`ci/local/workspace_manager.py`](../ci/local/workspace_manager.py) — `WorkspaceManager` implementation
+- [`ci/local/lib/workspace_manager.py`](../ci/local/lib/workspace_manager.py) — `WorkspaceManager` implementation
 - [`ci/local/run-pipeline.py`](../ci/local/run-pipeline.py) — per-stage `restore_stage_inputs()` / `archive_stage_outputs()` calls

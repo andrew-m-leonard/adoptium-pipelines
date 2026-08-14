@@ -319,4 +319,4 @@ Resolution order (first match wins):
 1. `scripts/stages/<stem>.py`
 1. built-in no-op (logs skip, returns 0)
 
-See [`ci/jenkins/lib/StageScriptRunner.groovy`](../ci/jenkins/lib/StageScriptRunner.groovy) (Jenkins) and [`ci/local/stage_resolver.py`](../ci/local/stage_resolver.py) (local) for the implementation.
+See [`ci/jenkins/lib/StageScriptRunner.groovy`](../ci/jenkins/lib/StageScriptRunner.groovy) (Jenkins) and [`ci/local/lib/stage_resolver.py`](../ci/local/lib/stage_resolver.py) (local) for the implementation.

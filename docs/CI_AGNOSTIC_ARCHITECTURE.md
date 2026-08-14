@@ -245,20 +245,31 @@ ci-adoptium-pipelines/
 │   ├── jenkins/
 │   │   ├── Jenkinsfile.declarative         # Platform build pipeline
 │   │   ├── Jenkinsfile.launch              # Multi-platform launch pipeline
+│   │   ├── Jenkinsfile.seed                # Seed job pipeline
 │   │   ├── lib/
 │   │   │   ├── BuildUidHelper.groovy       # BUILD_UID tracking & stage results
 │   │   │   ├── ConfigHelper.groovy         # pipeline-config.json + jenkins-config.json generation
-│   │   │   ├── load-jenkins-json-config.py # Jenkins-specific: jenkins-config.json generation
+│   │   │   ├── NodeAgentHelper.groovy      # Node agent label resolution
 │   │   │   ├── PipelineHelper.groovy       # Stage lifecycle
-│   │   │   └── StageScriptRunner.groovy    # Vendor-override script resolution
+│   │   │   ├── PipelineStages.groovy       # Stage definitions & ordering
+│   │   │   ├── SeedHelper.groovy           # Job DSL seed helpers
+│   │   │   ├── StageScriptRunner.groovy    # Vendor-override script resolution
+│   │   │   └── load-jenkins-json-config.py # Jenkins-specific: jenkins-config.json generation
 │   │   └── job-dsl/
 │   │       ├── openjdk_build_pipeline_job_dsl.groovy
 │   │       └── seed/
 │   │           └── seed_job_dsl.groovy
 │   └── local/
 │       ├── run-pipeline.py
-│       ├── stage_resolver.py
-│       └── workspace_manager.py
+│       └── lib/
+│           ├── cli_parser.py
+│           ├── config_repo.py
+│           ├── stage_env.py
+│           ├── stage_executor.py
+│           ├── stage_params.py
+│           ├── stage_registry.py
+│           ├── stage_resolver.py
+│           └── workspace_manager.py
 ├── scripts/
 │   ├── stages/
 │   │   ├── 02-build.sh
@@ -277,18 +288,19 @@ ci-adoptium-pipelines/
 │   │   ├── 16-publish.sh
 │   │   └── 20-reproducible-compare.sh
 │   └── lib/
-│       ├── logging-utils.sh
-│       ├── config-utils.sh
 │       ├── artifact-utils.sh
+│       ├── config-utils.sh
+│       ├── load-adoptium-pipeline-config-json.py
 │       ├── load-pipeline-config-json.py             # Generates pipeline-config.json
-│       └── load-adoptium-pipeline-config-json.py
+│       └── logging-utils.sh
 ├── tests/
+│   ├── test_collect_stage_params.py
 │   ├── test_determine_filename.sh
 │   └── test_release_type_validation.sh
 ├── tools/
-│   ├── convert-groovy-to-json.py
-│   ├── convert-all-legacy-groovy-configs.py
-│   └── convert-legacy-configs-to-new-architecture.py
+│   ├── batch-convert-groovy-configs.py
+│   ├── groovy-pipeline-config-to-json.py
+│   └── migrate-groovy-pipeline-configs.py
 └── docs/
 ```
 

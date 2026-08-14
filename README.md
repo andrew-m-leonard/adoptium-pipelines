@@ -25,29 +25,47 @@ ci-adoptium-pipelines/
 │   ├── jenkins/
 │   │   ├── Jenkinsfile.declarative        # Platform build pipeline
 │   │   ├── Jenkinsfile.launch             # Multi-platform launch pipeline
+│   │   ├── Jenkinsfile.seed               # Seed job pipeline
 │   │   ├── lib/
 │   │   │   ├── BuildUidHelper.groovy      # BUILD_UID tracking & stage results
 │   │   │   ├── ConfigHelper.groovy        # pipeline-config.json generation
+│   │   │   ├── NodeAgentHelper.groovy     # Node agent label resolution
 │   │   │   ├── PipelineHelper.groovy      # Stage lifecycle (init/finalize/tracking)
-│   │   │   └── StageScriptRunner.groovy   # Vendor-overridable script resolution
+│   │   │   ├── PipelineStages.groovy      # Stage definitions & ordering
+│   │   │   ├── SeedHelper.groovy          # Job DSL seed helpers
+│   │   │   ├── StageScriptRunner.groovy   # Vendor-overridable script resolution
+│   │   │   └── load-jenkins-json-config.py  # Loads Jenkins job config JSON
 │   │   └── job-dsl/
 │   │       ├── openjdk_build_pipeline_job_dsl.groovy   # Job DSL: per-platform build job
 │   │       └── seed/
-│   │           └── seed_job_dsl.groovy # Job DSL: bootstrap seed job
+│   │           └── seed_job_dsl.groovy    # Job DSL: bootstrap seed job
 │   │
 │   └── local/
-│       ├── run-pipeline.py          # Local pipeline runner
-│       ├── stage_resolver.py        # Stage name/script resolution
-│       └── workspace_manager.py     # Local workspace lifecycle
+│       ├── run-pipeline.py          # Local pipeline runner entry point
+│       └── lib/
+│           ├── cli_parser.py        # CLI argument parsing
+│           ├── config_repo.py       # Config repository checkout
+│           ├── stage_env.py         # Stage environment variable management
+│           ├── stage_executor.py    # Stage execution logic
+│           ├── stage_params.py      # Stage parameter loading
+│           ├── stage_registry.py    # Stage registry & ordering
+│           ├── stage_resolver.py    # Stage name/script resolution
+│           └── workspace_manager.py # Local workspace lifecycle
 │
 ├── scripts/
 │   ├── lib/
-│   │   ├── config-utils.sh          # JSON config helpers
-│   │   ├── logging-utils.sh         # Logging utilities
 │   │   ├── artifact-utils.sh        # Artifact management helpers
+│   │   ├── build-metadata-writer.py # Writes build metadata JSON
+│   │   ├── collect-stage-params.py  # Collects stage parameter definitions
+│   │   ├── config-utils.sh          # JSON config helpers
+│   │   ├── load-adoptium-pipeline-config-json.py
 │   │   ├── load-pipeline-config-json.py      # Generates pipeline-config.json
-│   │   └── load-adoptium-pipeline-config-json.py
+│   │   ├── logging-utils.sh         # Logging utilities
+│   │   ├── python-runner.sh         # Wrapper to invoke Python scripts from shell
+│   │   ├── sbom-workspace-extractor.py  # Extracts SBOM artifacts from workspace
+│   │   └── workspace-cleanup.sh     # Workspace cleanup helper
 │   └── stages/
+│       ├── pipeline-stages.json     # Stage registry (names, order, conditions)
 │       ├── 02-build.sh                    # JDK compilation
 │       ├── 03-internal-code-sign.sh       # JMOD internal signing (Windows/Mac JDK 11+)
 │       ├── 04-assemble-images.sh          # OpenJDK make images after internal signing
@@ -57,23 +75,25 @@ ci-adoptium-pipelines/
 │       ├── 09-sbom-sign.sh                # SBOM JSF signing
 │       ├── 10-digital-artifact-sign.sh    # GPG digital artifact signing
 │       ├── 11-verify-signing.sh           # Signature verification
-│       ├── 12-validate-sbom.sh      # SBOM validation
-│       ├── 13-smoke-tests.sh        # Smoke tests
-│       ├── 14-aqa-tests.sh          # AQA test suite
-│       ├── 15-tck-tests.sh          # TCK tests
-│       ├── 16-publish.sh            # Artifact publication
-│       └── 20-reproducible-compare.sh # Reproducible build comparison
+│       ├── 12-validate-sbom.sh            # SBOM validation
+│       ├── 13-smoke-tests.sh              # Smoke tests
+│       ├── 14-aqa-tests.sh                # AQA test suite
+│       ├── 15-tck-tests.sh                # TCK tests
+│       ├── 16-publish.sh                  # Artifact publication
+│       └── 20-reproducible-compare.sh     # Reproducible build comparison
+│       (each stage also has a corresponding NN-stem.params.json)
 │
 ├── tests/
+│   ├── test_collect_stage_params.py
 │   ├── test_determine_filename.sh
 │   └── test_release_type_validation.sh
 │
 ├── tools/
-│   ├── convert-groovy-to-json.py
-│   ├── convert-all-legacy-groovy-configs.py
-│   └── convert-legacy-configs-to-new-architecture.py
+│   ├── batch-convert-groovy-configs.py
+│   ├── groovy-pipeline-config-to-json.py
+│   └── migrate-groovy-pipeline-configs.py
 │
-└── docs/                            # Extended documentation
+└── docs/                            # Extended documentation (see docs/README.md)
 ```
 
 ## Jenkins Pipeline Architecture
