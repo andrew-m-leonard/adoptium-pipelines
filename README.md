@@ -134,18 +134,6 @@ Each lib file is a plain CPS script loaded with `load()` — it calls pipeline s
 | [`ConfigHelper.groovy`](ci/jenkins/lib/ConfigHelper.groovy) | Calls `load-pipeline-config-json.py` to produce `pipeline-config.json`; sets `CONFIG_*` env vars used by `when {}` blocks |
 | [`StageScriptRunner.groovy`](ci/jenkins/lib/StageScriptRunner.groovy) | Resolves and runs a stage script with vendor-override support (tries `config-repo/vendor-scripts/` before `scripts/stages/`) |
 
-### Vendor Script Override
-
-For each stage stem (e.g. `02-build`), `StageScriptRunner` searches in order:
-
-1. `config-repo/vendor-scripts/02-build.sh`
-1. `config-repo/vendor-scripts/02-build.groovy`
-1. `config-repo/vendor-scripts/02-build.py`
-1. `scripts/stages/02-build.sh` ← default implementation
-1. `scripts/stages/02-build.groovy`
-1. `scripts/stages/02-build.py`
-1. No-op (stage skipped)
-
 ## Pipeline Stages
 
 Stage execution is controlled by two mechanisms:
@@ -173,22 +161,6 @@ Stage execution is controlled by two mechanisms:
 | 20 | Reproducible Compare | `20-reproducible-compare.sh` | `RUN_REPRODUCIBLE_COMPARE` | `RUN_REPRODUCIBLE_COMPARE=true`, `SCM_REF` set | false |
 
 Each stage calls `initializeStage()` which: cleans the workspace, checks out this repository, clones the config repository (sparse), initialises/reuses `BUILD_UID`, validates prerequisites, and copies required artifacts from the current build.
-
-## Configuration Repository
-
-The pipeline reads build configuration from a separately maintained config repository supplied via `CONFIG_REPO_URL`. The config repository must contain:
-
-```text
-<config-repo>/
-├── adoptium_pipeline_config.json      # Pipeline-level defaults (repo URLs, branches)
-├── jenkins_job_config.json            # Job DSL settings (log rotation, default params)
-└── configurations/
-    ├── jdk21_pipeline_config.json     # Per-version platform matrix
-    ├── jdk17_pipeline_config.json
-    └── ...
-```
-
-At runtime, `ConfigHelper` calls `scripts/lib/load-pipeline-config-json.py` which merges the platform-level JSON with job parameters to produce `pipeline-config.json` — the single source of truth for all subsequent stages.
 
 ## Jenkins Setup
 
@@ -249,16 +221,6 @@ Each module is imported by `run-pipeline.py` and has a single responsibility.
 | [`stage_executor.py`](ci/local/lib/stage_executor.py) | Executes a resolved stage script as a subprocess; captures exit code; records stage pass/fail |
 | [`workspace_manager.py`](ci/local/lib/workspace_manager.py) | Manages `stage_workspace/` (pre/post cleanup) and `build_artifacts/` (archive and restore); enforces workspace validation rules |
 
-### Vendor Script Override
-
-For each stage stem (e.g. `02-build`), `StageResolver` searches in order:
-
-1. `config-repo/vendor-scripts/02-build.sh`
-1. `config-repo/vendor-scripts/02-build.py`
-1. `scripts/stages/02-build.sh` ← default implementation
-1. `scripts/stages/02-build.py`
-1. No-op (stage skipped)
-
 ### Workspace Layout
 
 ```text
@@ -305,22 +267,80 @@ python3 ci/local/run-pipeline.py \
 
 See [`ci/local/README.md`](ci/local/README.md) for the full CLI reference, workspace validation rules, and stage parameter documentation.
 
+## Shared Concepts
+
+### Configuration Repository
+
+Both the Jenkins and local pipelines read build configuration from a separately maintained config repository supplied at runtime (`CONFIG_REPO_URL` / `--config-repo-url`). The config repository must contain:
+
+```text
+<config-repo>/
+├── adoptium_pipeline_config.json      # CI-agnostic defaults (repo URLs, branches, variant)
+├── jenkins_job_config.json            # Jenkins-only: job DSL settings, stage agent labels
+├── configurations/
+│   ├── jdk21_pipeline_config.json     # Per-version platform matrix
+│   ├── jdk17_pipeline_config.json
+│   └── ...
+└── vendor-scripts/                    # Optional vendor-specific stage script overrides
+    ├── 02-build.sh
+    └── ...
+```
+
+`scripts/lib/load-pipeline-config-json.py` merges the per-version platform JSON with runtime parameters to produce `pipeline-config.json` — the single source of truth passed to every subsequent stage via `$CONFIG_FILE`. `jenkins_job_config.json` is Jenkins-specific and is not read by the local runner.
+
+See [`docs/CODE_CONFIG_SEPARATION.md`](docs/CODE_CONFIG_SEPARATION.md) for a full breakdown of each config file and how it flows through the pipeline.
+
+### Vendor Script Override
+
+Any stage script in `scripts/stages/` can be replaced per-vendor by placing a script of the same stem in the config repository's `vendor-scripts/` directory. Both orchestrators resolve scripts in the same priority order, with a minor difference: Jenkins also supports `.groovy` vendor scripts; the local runner does not.
+
+| Priority | Jenkins (`StageScriptRunner.groovy`) | Local (`stage_resolver.py`) |
+|---|---|---|
+| 1 | `config-repo/vendor-scripts/<stem>.sh` | `config-repo/vendor-scripts/<stem>.sh` |
+| 2 | `config-repo/vendor-scripts/<stem>.groovy` | `config-repo/vendor-scripts/<stem>.py` |
+| 3 | `config-repo/vendor-scripts/<stem>.py` | `scripts/stages/<stem>.sh` ← default |
+| 4 | `scripts/stages/<stem>.sh` ← default | `scripts/stages/<stem>.py` |
+| 5 | `scripts/stages/<stem>.groovy` | No-op (stage skipped) |
+| 6 | `scripts/stages/<stem>.py` | |
+| 7 | No-op (stage skipped) | |
+
+### Shared Stage Libraries (`scripts/lib/`)
+
+These files are sourced or invoked by every stage script regardless of whether it runs on Jenkins or locally. They are the only place shared logic lives — stage scripts must not duplicate what is here.
+
+| File | Responsibility |
+|---|---|
+| [`logging-utils.sh`](scripts/lib/logging-utils.sh) | Timestamped `log_info` / `log_warn` / `log_error` / `log_section` functions written to stderr |
+| [`config-utils.sh`](scripts/lib/config-utils.sh) | `validate_standard_environment()` (checks `WORKSPACE`, `CONFIG_FILE`, defaults `TARGET_DIR`); `get_config_value()` / `get_config_bool()` JSON helpers via `jq` |
+| [`artifact-utils.sh`](scripts/lib/artifact-utils.sh) | `prepare_output_dir()`, `copy_artifacts()`, `verify_artifact()`, `create_checksums()`, `create_stage_metadata()`, `determine_filename()` |
+| [`load-pipeline-config-json.py`](scripts/lib/load-pipeline-config-json.py) | Merges `adoptium_pipeline_config.json` + per-version platform JSON + runtime params → writes `pipeline-config.json` |
+| [`load-adoptium-pipeline-config-json.py`](scripts/lib/load-adoptium-pipeline-config-json.py) | Standalone reader for `adoptium_pipeline_config.json`; used by tools and the seed job |
+| [`collect-stage-params.py`](scripts/lib/collect-stage-params.py) | Collates all `*.params.json` sidecars (default + vendor) into a single document consumed by Job DSL and the local runner |
+| [`build-metadata-writer.py`](scripts/lib/build-metadata-writer.py) | Writes `build-metadata.json` after a successful build stage |
+| [`sbom-workspace-extractor.py`](scripts/lib/sbom-workspace-extractor.py) | Extracts the `Build Workspace Directory` path from an SBOM JSON file; used for reproducible build path padding |
+| [`python-runner.sh`](scripts/lib/python-runner.sh) | Resolves `python3`/`python` and execs a given `.py` script; used as the single shell-context Python entry point |
+| [`workspace-cleanup.sh`](scripts/lib/workspace-cleanup.sh) | Standalone script; cleans the ephemeral stage workspace pre/post stage based on `CLEANUP_TYPE` and `cleanWorkspaceAfterStage` config |
+
+See [`docs/SHELL_SCRIPTS_SUMMARY.md`](docs/SHELL_SCRIPTS_SUMMARY.md) for the full function-level reference.
+
 ## Documentation
 
 | Document | Topic |
 |---|---|
-| [`docs/CI_AGNOSTIC_ARCHITECTURE.md`](docs/CI_AGNOSTIC_ARCHITECTURE.md) | 3-layer design, before/after comparison |
-| [`docs/CODE_CONFIG_SEPARATION.md`](docs/CODE_CONFIG_SEPARATION.md) | Pipeline code vs config repository separation |
-| [`docs/CONFIGURATION_GUIDE.md`](docs/CONFIGURATION_GUIDE.md) | JSON configuration reference |
-| [`docs/RESTARTABILITY_GUIDE.md`](docs/RESTARTABILITY_GUIDE.md) | Stage restart patterns |
-| [`docs/JENKINS_RESTART_BEHAVIOR.md`](docs/JENKINS_RESTART_BEHAVIOR.md) | BUILD_UID and restart mechanics |
-| [`docs/BUILD_UID_INTEGRATION.md`](docs/BUILD_UID_INTEGRATION.md) | BUILD_UID tracking detail |
-| [`docs/STAGE_IO_SPECIFICATION.md`](docs/STAGE_IO_SPECIFICATION.md) | Stage input/output contracts |
-| [`docs/JOB_DSL_AUTOMATION.md`](docs/JOB_DSL_AUTOMATION.md) | Job DSL setup guide |
-| [`docs/PIPELINE_RUNNER_GUIDE.md`](docs/PIPELINE_RUNNER_GUIDE.md) | Local runner reference |
-| [`docs/REPRODUCIBLE_COMPARE.md`](docs/REPRODUCIBLE_COMPARE.md) | Reproducible build comparison |
-| [`docs/JENKINS_ENVIRONMENT_VARIABLES.md`](docs/JENKINS_ENVIRONMENT_VARIABLES.md) | Environment variable reference |
-| [`tools/README.md`](tools/README.md) | Legacy config conversion tools |
+| [`docs/CI_AGNOSTIC_ARCHITECTURE.md`](docs/CI_AGNOSTIC_ARCHITECTURE.md) | 3-layer design, before/after comparison, stage interface contract |
+| [`docs/CODE_CONFIG_SEPARATION.md`](docs/CODE_CONFIG_SEPARATION.md) | Config repository structure, each config file explained, flow through the pipeline |
+| [`docs/CONFIG_SCHEMA.md`](docs/CONFIG_SCHEMA.md) | JSON schema reference for all config files |
+| [`docs/SHELL_SCRIPTS_SUMMARY.md`](docs/SHELL_SCRIPTS_SUMMARY.md) | Full function-level reference for `scripts/lib/` and all stage scripts |
+| [`docs/STAGE_DEFINITION_REFERENCE.md`](docs/STAGE_DEFINITION_REFERENCE.md) | `stageCondition` / `stageDisabled` schema in `*.params.json` sidecar files |
+| [`docs/WORKSPACE_ARTIFACTS_ARCHITECTURE.md`](docs/WORKSPACE_ARTIFACTS_ARCHITECTURE.md) | Workspace layout, artifact archive/restore flow, Jenkins vs local side-by-side |
+| [`docs/BUILD_UID_INTEGRATION.md`](docs/BUILD_UID_INTEGRATION.md) | `BUILD_UID` / `GROUP_UID` lifecycle and restart mechanics |
+| [`docs/JOB_DSL_AUTOMATION.md`](docs/JOB_DSL_AUTOMATION.md) | Seed job setup, launch job SHA staleness checks, platform job creation |
+| [`docs/BUILD_JOB_NAMING_CONVENTION.md`](docs/BUILD_JOB_NAMING_CONVENTION.md) | Jenkins job naming schema and folder layout |
+| [`docs/PIPELINE_RUNNER_GUIDE.md`](docs/PIPELINE_RUNNER_GUIDE.md) | Local runner CLI reference, workspace validation rules, stage parameters |
+| [`docs/REPRO_COMPARE_INTEGRATION.md`](docs/REPRO_COMPARE_INTEGRATION.md) | Reproducible build comparison stage integration |
+| [`docs/UNIVERSAL_STAGE_PATTERN.md`](docs/UNIVERSAL_STAGE_PATTERN.md) | Template and conventions for writing a new stage script |
+| [`docs/DEVELOPMENT_GUIDE.md`](docs/DEVELOPMENT_GUIDE.md) | Contributor guide: architecture rules, code style, adding a stage |
+| [`tools/README.md`](tools/README.md) | Legacy Groovy config migration tools |
 
 ## License
 
