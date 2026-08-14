@@ -10,6 +10,7 @@ This repository contains the pipeline code for building, signing, testing, and p
 
 Key properties:
 
+- **Two CI implementations included** — a full declarative Jenkins pipeline (`ci/jenkins/`) and a local Python runner (`ci/local/`) that executes the same stage scripts without a CI server
 - **Stage-level restartability** — restart from any failed stage; no costly full rebuilds
 - **CI-agnostic stage scripts** — `scripts/` contains plain shell scripts that run identically on Jenkins, locally, or any other CI platform
 - **Declarative Jenkins pipeline** with shared Groovy library helpers in `ci/jenkins/lib/`
