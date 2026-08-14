@@ -211,17 +211,83 @@ The seed job creates all launch and platform build jobs automatically.
 - Workspace Cleanup (`cleanWs`)
 - Timestamper
 
-## Local Execution
+## Local Pipeline Architecture
+
+### Single-Process Model
+
+```text
+run-pipeline.py
+  │
+  ├─ Phase 1 — Initialize
+  │    clone config-repo → <workspace>/config-repo/
+  │    run load-pipeline-config-json.py → pipeline-config.json
+  │    archive pipeline-config.json → build_artifacts/
+  │
+  └─ Phase 2 — Remaining stages (in sequence)
+       collate *.params.json from scripts/stages/ + config-repo/vendor-scripts/
+       for each enabled stage:
+         wipe stage_workspace/
+         restore inputs: build_artifacts/ → stage_workspace/
+         run stage script (vendor-scripts/ checked first, then scripts/stages/)
+         archive outputs: stage_workspace/target/ → build_artifacts/
+```
+
+The local runner executes all stages sequentially in a single process — there is no fan-out to parallel platform jobs. It mirrors the Jenkins build pipeline exactly: each stage receives a clean workspace, has its inputs explicitly restored from a durable artifact store (`build_artifacts/`), and archives its outputs back before the next stage begins. Use `--start-from-stage` to resume from any stage after a failure, the same way Jenkins supports "Restart from Stage".
+
+### Python Library (`ci/local/lib/`)
+
+Each module is imported by `run-pipeline.py` and has a single responsibility.
+
+| Module | Responsibility |
+|---|---|
+| [`cli_parser.py`](ci/local/lib/cli_parser.py) | Phase-1 fixed CLI options (`--jdk-version`, `--target-os`, `--architecture`, etc.); deferred capture of unknown stage params for Phase-2 validation |
+| [`config_repo.py`](ci/local/lib/config_repo.py) | Clones the config repository (depth-1) into `<workspace>/config-repo/` during Initialize |
+| [`stage_params.py`](ci/local/lib/stage_params.py) | Discovers and merges `*.params.json` from `scripts/stages/` and `config-repo/vendor-scripts/`; validates CLI tokens against the complete param set |
+| [`stage_registry.py`](ci/local/lib/stage_registry.py) | Reads `scripts/stages/pipeline-stages.json`; determines stage order and which stages are enabled given the current param values |
+| [`stage_resolver.py`](ci/local/lib/stage_resolver.py) | Resolves which script to execute for a given stage stem — vendor override first, then default |
+| [`stage_env.py`](ci/local/lib/stage_env.py) | Builds the environment dict injected into each stage script (`WORKSPACE`, `CONFIG_FILE`, `INPUT_ARTIFACTS_DIR`, `TARGET_DIR`, stage params) |
+| [`stage_executor.py`](ci/local/lib/stage_executor.py) | Executes a resolved stage script as a subprocess; captures exit code; records stage pass/fail |
+| [`workspace_manager.py`](ci/local/lib/workspace_manager.py) | Manages `stage_workspace/` (pre/post cleanup) and `build_artifacts/` (archive and restore); enforces workspace validation rules |
+
+### Vendor Script Override
+
+For each stage stem (e.g. `02-build`), `StageResolver` searches in order:
+
+1. `config-repo/vendor-scripts/02-build.sh`
+1. `config-repo/vendor-scripts/02-build.py`
+1. `scripts/stages/02-build.sh` ← default implementation
+1. `scripts/stages/02-build.py`
+1. No-op (stage skipped)
+
+### Workspace Layout
+
+```text
+~/openjdk-build/                    # --workspace root (persists for the pipeline run)
+├── config-repo/                    # Cloned once at Initialize; not re-cloned per stage
+│   ├── adoptium_pipeline_config.json
+│   ├── configurations/
+│   └── vendor-scripts/
+├── stage_workspace/                # ≈ Jenkins WORKSPACE — wiped before every stage
+│   ├── pipeline-config.json        # Restored from build_artifacts/ before each stage
+│   ├── *.tar.gz, *.zip …           # Other stage inputs restored from build_artifacts/
+│   └── target/                     # TARGET_DIR — stage writes outputs here
+└── build_artifacts/                # ≈ Jenkins artifact store — durable, never auto-cleaned
+    ├── pipeline-config.json        # Archived by Initialize
+    ├── OpenJDK*.tar.gz             # Archived by Build
+    └── …                           # Archived by downstream stages
+```
+
+### Quick Start
 
 ```bash
-# Full build locally
+# Full build
 python3 ci/local/run-pipeline.py \
   --jdk-version jdk21 \
   --target-os linux \
   --architecture x64 \
   --config-repo-url https://github.com/adoptium/ci-temurin-config.git
 
-# Resume from a specific stage
+# Resume from a specific stage after a failure
 python3 ci/local/run-pipeline.py \
   --jdk-version jdk21 \
   --target-os linux \
@@ -229,7 +295,7 @@ python3 ci/local/run-pipeline.py \
   --config-repo-url https://github.com/adoptium/ci-temurin-config.git \
   --start-from-stage 13-smoke-tests
 
-# Use a custom config repo
+# Vendor-specific config repository
 python3 ci/local/run-pipeline.py \
   --jdk-version jdk21 \
   --target-os mac \
@@ -237,7 +303,7 @@ python3 ci/local/run-pipeline.py \
   --config-repo-url https://github.com/myorg/my-jdk-configs.git
 ```
 
-See [`ci/local/README.md`](ci/local/README.md) for full options.
+See [`ci/local/README.md`](ci/local/README.md) for the full CLI reference, workspace validation rules, and stage parameter documentation.
 
 ## Documentation
 
