@@ -199,6 +199,15 @@ pipeline {
             }
         }
 
+        stage('Resolve Worker Label') {
+            agent any
+            steps {
+                script {
+                    env.WORKER_LABEL = getWorkerLabel()
+                    echo "✓ Worker label resolved: ${env.WORKER_LABEL}"
+            }
+        }
+
         stage('Fetch Configuration') {
             agent any
             steps {
@@ -244,7 +253,7 @@ pipeline {
             // Always runs — ordered groups and separator names must be available
             // for the 'Create/Update Platform Jobs' stage on every run.
             agent {
-                label workerLabel
+                label env.WORKER_LABEL
             }
             steps {
                 script {
@@ -255,7 +264,7 @@ pipeline {
 
         stage('Determine Platforms') {
             agent {
-                label workerLabel
+                label env.WORKER_LABEL
             }
             steps {
                 script {
@@ -276,7 +285,7 @@ pipeline {
 
         stage('Create/Update Platform Jobs') {
             agent {
-                label workerLabel
+                label env.WORKER_LABEL
             }
             steps {
                 script {
