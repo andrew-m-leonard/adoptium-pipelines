@@ -128,7 +128,7 @@ stored in `pipeline-config.json`. They flow exclusively through the process envi
 ### Two-phase execution in main()
 
 1. **Phase 1** — argparse fixed options only; extra tokens captured as raw list;
-   workspace validated/cleaned; Initialize stage runs (clones config repo,
+   workspace validated/cleaned; Initialize stage runs (clones config repository,
    generates `pipeline-config.json`)
 2. **Phase 2** — full param collation from `scripts/stages/*.params.json` merged with
    `config-repo/vendor-scripts/*.params.json`; extra tokens validated against complete
