@@ -263,7 +263,7 @@ run-pipeline.py
 
 The local runner executes all stages sequentially in a single process — there is no fan-out to parallel platform jobs. It mirrors the Jenkins build pipeline exactly: each stage receives a clean workspace, has its inputs explicitly restored from a durable artifact store (`build_artifacts/`), and archives its outputs back before the next stage begins. Use `--start-from-stage` to resume from any stage after a failure, the same way Jenkins supports "Restart from Stage".
 
-> **Supported stages**: the local runner currently executes a subset of the full pipeline, as defined by `_LOCAL_STAGES` in [`ci/local/run-pipeline.py`](ci/local/run-pipeline.py): Initialize, Build, Validate SBOM, Smoke Tests, AQA Tests, and Reproducible Compare. Signing, installer, and publish stages run on Jenkins only.
+> **Supported stages**: the local runner currently executes a subset of the full pipeline, as defined by `_LOCAL_STAGES` in [`ci/local/run-pipeline.py`](ci/local/run-pipeline.py): Initialize, Build, Validate SBOM, Smoke Tests, AQA Tests, and Reproducible Compare.
 
 ### Python Library (`ci/local/lib/`)
 
