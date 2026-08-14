@@ -199,15 +199,6 @@ pipeline {
             }
         }
 
-        stage('Resolve Worker Label') {
-            agent any
-            steps {
-                script {
-                    env.WORKER_LABEL = getWorkerLabel()
-                    echo "✓ Worker label resolved: ${env.WORKER_LABEL}"
-            }
-        }
-
         stage('Fetch Configuration') {
             agent any
             steps {
@@ -245,6 +236,9 @@ pipeline {
                             echo "✓ Pipeline base folder: ${env.PIPELINE_BASE_FOLDER}"
                         }
                     }
+                    // Resolve worker label now that CONFIG_STAGE_AGENT_LABELS is populated.
+                    env.WORKER_LABEL = getWorkerLabel()
+                    echo "✓ Worker label resolved: ${env.WORKER_LABEL}"
                 }
             }
         }
