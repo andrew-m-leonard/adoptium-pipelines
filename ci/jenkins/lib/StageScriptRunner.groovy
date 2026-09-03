@@ -114,6 +114,19 @@ String containerEnvFlags() {
         .findAll { String name -> name }
     vars = vars + stageParamNames
 
+    // Forward credential env vars injected by CredentialHelper.withStageCredentials()
+    // via withCredentials().  STAGE_CREDENTIAL_ENV_VARS is set to the injected var
+    // *names* before withCredentials() is entered, and cleared in finally afterward,
+    // so it is always in sync with the active bindings.
+    // containerEnvFlags() is called from within _dispatch(), which runs inside the
+    // withCredentials() scope, so env.getProperty() resolves the live injected values.
+    // Jenkins masks those values in logs wherever they appear.
+    List credEnvVarNames = (env.getProperty('STAGE_CREDENTIAL_ENV_VARS') ?: '')
+        .split(',')
+        .collect { String name -> name.trim() }
+        .findAll { String name -> name }
+    vars = vars + credEnvVarNames
+
     List flags = vars
         .unique()
         .findAll { String v -> env.getProperty(v) != null && env.getProperty(v) != '' }
@@ -146,6 +159,28 @@ String containerEnvFlags() {
  *                    .sh and .py scripts receive config via environment variables.
  * @return int exit code — 0 = success, non-zero = failure.
  */
+// CredentialHelper instance — injected by Jenkinsfile.declarative after load().
+// Null when running without credential support (e.g. Restart from Stage where
+// Initialize was skipped); _withStageCredentials() falls back to body() directly.
+def credentialHelper = null
+
+void setCredentialHelper(helper) {
+    credentialHelper = helper
+}
+
+/**
+ * Resolve and execute a stage script, returning an exit code.
+ *
+ * Wraps the dispatch in a credential scope via CredentialHelper.withStageCredentials()
+ * so vendor stage overrides receive any credentials declared in
+ * jenkins_credential_config.json without any change to call sites in
+ * Jenkinsfile.declarative.
+ *
+ * @param scriptStem  Script stem e.g. '13-smoke-tests'
+ * @param config      Pipeline config map — forwarded to .groovy scripts as the call() argument.
+ *                    .sh and .py scripts receive config via environment variables.
+ * @return int exit code — 0 = success, non-zero = failure.
+ */
 int run(String scriptStem, Map config = null) {
     final int EXIT_SUCCESS = 0
     List candidates = [
@@ -166,6 +201,35 @@ int run(String scriptStem, Map config = null) {
 
     echo "▶ Running ${found.type.toUpperCase()} stage script: ${found.path}"
 
+    int exitCode = EXIT_SUCCESS
+    _withStageCredentials(scriptStem) {
+        exitCode = _dispatch(found, scriptStem, config)
+    }
+    return exitCode
+}
+
+/**
+ * Delegate to CredentialHelper.withStageCredentials() if available, otherwise
+ * call body() directly.  Provides graceful degradation when credentialHelper
+ * has not been injected (e.g. Restart from Stage skipping Initialize).
+ */
+private void _withStageCredentials(String stageId, Closure body) {
+    if (credentialHelper) {
+        credentialHelper.withStageCredentials(stageId, body)
+    } else {
+        body()
+    }
+}
+
+/**
+ * Dispatch a resolved stage script and return its exit code.
+ *
+ * Called from within the credential scope established by _withStageCredentials()
+ * so that containerEnvFlags() — invoked for container dispatch — sees the live
+ * withCredentials()-injected values via env.getProperty().
+ */
+private int _dispatch(Map found, String scriptStem, Map config) {
+    final int EXIT_SUCCESS = 0
     String containerId = env.BUILD_CONTAINER_ID?.trim()
     String containerWs = env.BUILD_CONTAINER_WORKSPACE?.trim()
     String runtime     = env.BUILD_CONTAINER_RUNTIME?.trim() ?: 'docker'

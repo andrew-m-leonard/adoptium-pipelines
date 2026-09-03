@@ -157,6 +157,25 @@ Map generateJenkinsConfig(String configRepoPath = './config-repo') {
     // can enforce it at every node() allocation without re-reading config.
     env.CONFIG_ACTIVE_NODE_TIMEOUT = (jenkinsConfig.activeNodeTimeoutMinutes ?: 10).toString()
 
+    // Load optional vendor credential config.  If jenkins_credential_config.json is
+    // absent from the config repo the script writes an empty-but-valid output file
+    // and sets both env vars to '{}' — no stage receives credentials.
+    sh 'scripts/lib/python-runner.sh ci/jenkins/lib/load-jenkins-credential-config.py' +
+       " --config-repo-path ${configRepoPath}" +
+       ' --output           ./jenkins-credential-config.json'
+
+    Map credentialConfig = readJSON(file: 'jenkins-credential-config.json')
+
+    // Serialise credential maps into env vars so CredentialHelper can read them
+    // without re-parsing a file on every stage execution.
+    // writeJSON is a sandbox-safe Pipeline Utility Steps step — used here instead
+    // of the sandbox-restricted groovy.json.JsonOutput static method.
+    writeJSON file: 'cred-definitions.tmp.json', json: (credentialConfig.credentials      ?: [:])
+    writeJSON file: 'cred-stage-map.tmp.json',   json: (credentialConfig.stageCredentials ?: [:])
+    env.CONFIG_CREDENTIAL_DEFINITIONS = readFile('cred-definitions.tmp.json').trim()
+    env.CONFIG_STAGE_CREDENTIALS      = readFile('cred-stage-map.tmp.json').trim()
+    sh 'rm -f cred-definitions.tmp.json cred-stage-map.tmp.json'
+
     return jenkinsConfig
 }
 

@@ -46,6 +46,7 @@ import groovy.transform.Field
 @Field def stageRunner
 @Field def configHelper
 @Field def nodeAgentHelper
+@Field def credentialHelper
 
 // ── Stage ID constants ───────────────────────────────────────────────────────
 // Each value matches the "id" field in scripts/stages/pipeline-stages.json
@@ -174,6 +175,8 @@ void ensureLibsLoaded(String stageId) {
         stageRunner     = load('ci/jenkins/lib/StageScriptRunner.groovy')
         configHelper    = load('ci/jenkins/lib/ConfigHelper.groovy')
         nodeAgentHelper = load('ci/jenkins/lib/NodeAgentHelper.groovy')
+        credentialHelper = load('ci/jenkins/lib/CredentialHelper.groovy')
+        stageRunner.setCredentialHelper(credentialHelper)
     }
 }
 
@@ -245,7 +248,7 @@ pipeline {
                         Map pipelineConfig = configHelper.generatePipelineConfig('./config-repo')
                         Map jenkinsConfig  = configHelper.generateJenkinsConfig('./config-repo')
 
-                        archiveArtifacts artifacts: 'pipeline-config.json,jenkins-config.json',
+                        archiveArtifacts artifacts: 'pipeline-config.json,jenkins-config.json,jenkins-credential-config.json',
                                        fingerprint: true,
                                        allowEmptyArchive: false
 
