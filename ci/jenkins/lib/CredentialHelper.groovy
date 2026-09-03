@@ -48,6 +48,57 @@ limitations under the License.
 
 import groovy.json.JsonSlurper
 
+// ---------------------------------------------------------------------------
+// @NonCPS helpers — JSON parsing must never happen in a CPS-suspended frame.
+//
+// JsonSlurper returns groovy.json.internal.LazyMap, which is NOT Java-serializable.
+// The Jenkins CPS engine serializes the full program state to disk between pipeline
+// steps (for resume/restart support).  If a LazyMap is alive as a local variable
+// at any suspension point — including the body() call inside withStageCredentials —
+// the serialization fails with NotSerializableException and the build crashes.
+//
+// The fix: extract every JsonSlurper call into a @NonCPS method.  @NonCPS methods
+// are not managed by the CPS engine, so their stack frames are never serialized.
+// They must be non-blocking, non-CPS, and must return only serializable types
+// (plain List<String>, plain Map<String,String>) before the CPS caller resumes.
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse CONFIG_STAGE_CREDENTIALS and return the credential names for stageId.
+ * Returns an empty list when no credentials are mapped for the stage.
+ * @NonCPS — must not call any CPS pipeline steps.
+ */
+@NonCPS
+List<String> _credentialNamesForStage(String stageId, String stageCredsJson) {
+    Map parsed = new JsonSlurper().parseText(stageCredsJson ?: '{}')
+    List raw = parsed[stageId] ?: []
+    // Return a plain ArrayList<String> — LazyMap/LazyList are not serializable.
+    return raw.collect { it.toString() }
+}
+
+/**
+ * Parse CONFIG_CREDENTIAL_DEFINITIONS and return a plain Map<String, Map<String,String>>
+ * containing only the entries needed for the given credential names.
+ * @NonCPS — must not call any CPS pipeline steps.
+ */
+@NonCPS
+Map<String, Map<String, String>> _credentialDefs(List<String> names, String credDefsJson) {
+    Map parsed = new JsonSlurper().parseText(credDefsJson ?: '{}')
+    Map<String, Map<String, String>> result = [:]
+    names.each { String name ->
+        Map raw = parsed[name]
+        if (raw != null) {
+            // Flatten LazyMap into a plain LinkedHashMap with String values only.
+            result[name] = raw.collectEntries { k, v -> [(k.toString()): v?.toString() ?: ''] }
+        }
+    }
+    return result
+}
+
+// ---------------------------------------------------------------------------
+// CPS public API
+// ---------------------------------------------------------------------------
+
 /**
  * Execute body wrapped in withCredentials() bindings for the given stageId.
  *
@@ -64,29 +115,30 @@ import groovy.json.JsonSlurper
  * @param body     Closure to execute — typically StageScriptRunner._dispatch()
  */
 void withStageCredentials(String stageId, Closure body) {
-    Map stageCreds = new JsonSlurper().parseText(env.CONFIG_STAGE_CREDENTIALS ?: '{}')
-    List<String> names = stageCreds[stageId] ?: []
+    // All JSON parsing delegated to @NonCPS helpers — no LazyMap ever enters
+    // this CPS method's stack frame, so program-state serialization cannot fail.
+    List<String> names = _credentialNamesForStage(stageId, env.CONFIG_STAGE_CREDENTIALS)
 
     if (!names) {
         body()
         return
     }
 
-    Map credDefs = new JsonSlurper().parseText(env.CONFIG_CREDENTIAL_DEFINITIONS ?: '{}')
+    Map<String, Map<String, String>> credDefs = _credentialDefs(names, env.CONFIG_CREDENTIAL_DEFINITIONS)
 
     List bindings    = []
     List envVarNames = []
 
     names.each { String name ->
-        Map cred = credDefs[name]
+        Map<String, String> cred = credDefs[name]
         if (!cred) {
             error("CredentialHelper: credential '${name}' referenced by stage '${stageId}' " +
                   "is not defined in jenkins_credential_config.json")
         }
         switch (cred.type) {
             case 'string':
-                bindings     << string(credentialsId: cred.credentialId, variable: name)
-                envVarNames  << name
+                bindings    << string(credentialsId: cred.credentialId, variable: name)
+                envVarNames << name
                 break
             case 'usernamePassword':
                 String u = cred.usernameEnvVar ?: "${name}_USER"
