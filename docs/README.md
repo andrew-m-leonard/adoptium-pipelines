@@ -19,6 +19,8 @@ This directory contains reference documentation for the Adoptium CI pipeline inf
 | Add or modify a stage script | [CI_AGNOSTIC_ARCHITECTURE.md](./CI_AGNOSTIC_ARCHITECTURE.md) (Per-Stage Summary) + [UNIVERSAL_STAGE_PATTERN.md](./UNIVERSAL_STAGE_PATTERN.md) |
 | Understand BUILD_UID tracking | [BUILD_UID_INTEGRATION.md](./BUILD_UID_INTEGRATION.md) |
 | Work with reproducible builds | [REPRO_COMPARE_INTEGRATION.md](./REPRO_COMPARE_INTEGRATION.md) |
+| Inject credentials into a stage (Jenkins) | [STAGE_CREDENTIALS.md](./STAGE_CREDENTIALS.md) |
+| Authenticate git operations against GitHub | [GITHUB_AUTH_GIT_OPERATIONS.md](./GITHUB_AUTH_GIT_OPERATIONS.md) |
 | Convert legacy Groovy configs | [`tools/README.md`](../tools/README.md) |
 
 ---
@@ -53,6 +55,8 @@ This directory contains reference documentation for the Adoptium CI pipeline inf
 ## Pipeline Features
 
 - **[REPRO_COMPARE_INTEGRATION.md](./REPRO_COMPARE_INTEGRATION.md)** — Integration details: `REPRODUCIBLE_COMPARE_BUILD` parameter, `SCM_REF` requirement, `TARGET_DIR` outputs
+- **[STAGE_CREDENTIALS.md](./STAGE_CREDENTIALS.md)** — Per-stage Jenkins credential injection via `jenkins_credential_config.json`; supported types; `ALL_STAGES` wildcard; container forwarding
+- **[GITHUB_AUTH_GIT_OPERATIONS.md](./GITHUB_AUTH_GIT_OPERATIONS.md)** — Transparent GitHub token authentication for all stage `git` operations; `GIT_ASKPASS` mechanism; Jenkins credential config vs local `GITHUB_TOKEN` env var
 
 ## Local Execution
 

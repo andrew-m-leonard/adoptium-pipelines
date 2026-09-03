@@ -22,7 +22,44 @@ in Jenkins.
 
 import json
 import os
+import stat
 from pathlib import Path
+
+
+def _setup_git_auth(stage_workspace: Path, env: dict) -> None:
+    """
+    Configure transparent GitHub HTTPS authentication via GIT_ASKPASS.
+
+    When GITHUB_TOKEN is present in the environment (set by the developer
+    before running run-pipeline.py), writes a tiny git-askpass.sh script to
+    the stage workspace and sets GIT_ASKPASS in the env dict to its path.
+
+    Why GIT_ASKPASS:
+      The token value must never be embedded in a git config key or value
+      string — that would expose it as plain text in a different variable.
+      GIT_ASKPASS is a *path* to a script; the token stays in its own
+      GITHUB_TOKEN variable and is only read by git at auth time.
+
+    git-askpass.sh content:  #!/bin/sh\\necho "${GITHUB_TOKEN}"\\n
+      No secret literal in the file.  The script inherits GITHUB_TOKEN from
+      the subprocess env dict that already contains it via os.environ.copy().
+
+    The script is written to the stage workspace which is cleaned up by
+    WorkspaceManager after every stage, so it never persists between stages.
+
+    Args:
+        stage_workspace: Ephemeral per-stage workspace directory.
+        env:             Mutable env dict (modified in-place).
+    """
+    token = env.get("GITHUB_TOKEN", "")
+    if not token:
+        return
+
+    askpass = stage_workspace / "git-askpass.sh"
+    askpass.write_text("#!/bin/sh\necho \"${GITHUB_TOKEN}\"\n", encoding="utf-8")
+    askpass.chmod(askpass.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    env["GIT_ASKPASS"] = str(askpass)
+    print("🔑 GITHUB_TOKEN present — git HTTPS operations will be authenticated via GIT_ASKPASS")
 
 
 def build_stage_env(
@@ -50,6 +87,11 @@ def build_stage_env(
 
     Stage param values are injected last so vendor stage scripts can read
     them as environment variables without needing any other mechanism.
+
+    If GITHUB_TOKEN is present in the ambient environment, a git-askpass.sh
+    helper is written to the stage workspace and GIT_ASKPASS is set so that
+    all git HTTPS operations in stage scripts are transparently authenticated
+    without any changes to those scripts.
 
     Args:
         script_dir:          Root of the ci-adoptium-pipelines checkout.
@@ -103,4 +145,10 @@ def build_stage_env(
 
     if extra:
         env.update(extra)
+
+    # Configure GIT_ASKPASS for transparent GitHub HTTPS authentication.
+    # Called after all other env vars (including any extra overrides) are set
+    # so that stage_workspace is fully resolved before the script is written.
+    _setup_git_auth(stage_workspace, env)
+
     return env

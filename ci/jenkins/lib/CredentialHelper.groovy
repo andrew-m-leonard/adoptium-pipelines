@@ -44,6 +44,12 @@ limitations under the License.
  *   usernamePassword → usernameEnvVar / passwordEnvVar (defaults: <NAME>_USER / <NAME>_PASS)
  *   sshUserPrivateKey→ keyFileEnvVar  (default: <NAME>_KEYFILE)
  *   file             → fileEnvVar     (default: <NAME>_FILE)
+ *
+ * ALL_STAGES wildcard:
+ *   A credential listed under the special key "ALL_STAGES" in stageCredentials
+ *   is injected into every stage, regardless of stageId.  This is the intended
+ *   mechanism for GITHUB_TOKEN — a PAT needed by every stage that performs a
+ *   git clone over HTTPS (see docs/GITHUB_AUTH_GIT_OPERATIONS.md).
  */
 
 import groovy.json.JsonSlurper
@@ -71,9 +77,14 @@ import groovy.json.JsonSlurper
 @NonCPS
 List<String> _credentialNamesForStage(String stageId, String stageCredsJson) {
     Map parsed = new JsonSlurper().parseText(stageCredsJson ?: '{}')
-    List raw = parsed[stageId] ?: []
+    // ALL_STAGES entries are injected into every stage regardless of stageId.
+    List allStages = parsed['ALL_STAGES'] ?: []
+    List stageOnly = parsed[stageId]      ?: []
+    // Merge, preserving order (ALL_STAGES first), deduplicating by name.
+    LinkedHashSet<String> merged = new LinkedHashSet<>()
+    (allStages + stageOnly).each { merged.add(it.toString()) }
     // Return a plain ArrayList<String> — LazyMap/LazyList are not serializable.
-    return raw.collect { it.toString() }
+    return new ArrayList<>(merged)
 }
 
 /**
@@ -165,7 +176,8 @@ void withStageCredentials(String stageId, Closure body) {
         }
     }
 
-    echo "🔑 Injecting ${names.size()} credential(s) for stage '${stageId}': ${names.join(', ')}"
+    echo "🔑 Injecting ${names.size()} credential(s) for stage '${stageId}': ${names.join(', ')}" +
+         ((_credentialNamesForStage('ALL_STAGES', env.CONFIG_STAGE_CREDENTIALS) ? ' (includes ALL_STAGES)' : ''))
 
     // Set STAGE_CREDENTIAL_ENV_VARS *before* withCredentials() so containerEnvFlags()
     // — called from within the body closure — can enumerate the var names and pick

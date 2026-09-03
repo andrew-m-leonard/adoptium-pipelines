@@ -132,8 +132,21 @@ String containerEnvFlags() {
         .findAll { String v -> env.getProperty(v) != null && env.getProperty(v) != '' }
         .collect { String v -> "-e '${v}=${env.getProperty(v)}'" }
 
-    // Clear Jenkins agent-side askpass binaries that don't exist in the container.
-    flags << "-e 'GIT_ASKPASS='"
+    // GitHub token authentication — forward git-askpass.sh path if set by _withGitAuth().
+    // GITHUB_TOKEN itself is already forwarded above via the STAGE_CREDENTIAL_ENV_VARS block
+    // (withCredentials injects it into env and Jenkins masks it wherever it appears in logs).
+    // GIT_ASKPASS must be forwarded explicitly because it is set via withEnv() rather than
+    // withCredentials(), so it is not tracked in STAGE_CREDENTIAL_ENV_VARS.
+    String gitAskPass = env.getProperty('GIT_ASKPASS')
+    if (gitAskPass) {
+        // Override any host-side askpass entry already in the flags list.
+        flags.removeAll { String f -> f.startsWith("-e 'GIT_ASKPASS=") }
+        flags << "-e 'GIT_ASKPASS=${gitAskPass}'"
+    } else {
+        // No GitHub auth — clear any Jenkins agent-side askpass binary that does not
+        // exist inside the container.
+        flags << "-e 'GIT_ASKPASS='"
+    }
     flags << "-e 'SSH_ASKPASS='"
     flags << "-e 'GIT_TERMINAL_PROMPT=0'"
 
@@ -222,11 +235,58 @@ private void _withStageCredentials(String stageId, Closure body) {
 }
 
 /**
+ * Write git-askpass.sh to the workspace and wrap body() in a withEnv() scope
+ * that sets GIT_ASKPASS to its path, when GITHUB_TOKEN is available.
+ *
+ * Why GIT_ASKPASS instead of embedding the token in a git config value:
+ *   GIT_ASKPASS is a *path* to a script — the token value never appears in any
+ *   withEnv() argument string.  The token stays in the GITHUB_TOKEN env var,
+ *   which withCredentials() already masks in Jenkins logs.  Embedding the token
+ *   in a GIT_CONFIG_VALUE_* or url.insteadOf string would place it in a variable
+ *   that Jenkins does not mask.
+ *
+ * git-askpass.sh content:  #!/bin/sh\necho "${GITHUB_TOKEN}"\n
+ * No secret literal — git calls it at auth time and it reads GITHUB_TOKEN from
+ * its inherited environment at that moment.
+ *
+ * git-askpass.sh is written to WORKSPACE and wiped by cleanWs() after every stage.
+ *
+ * Applies to all script types:
+ *   .sh/.py  — shell spawned by sh() inherits GIT_ASKPASS from withEnv scope.
+ *   .groovy  — every sh("git ...") call inside the loaded Groovy script also
+ *              inherits GIT_ASKPASS from this surrounding withEnv scope.
+ *
+ * If GITHUB_TOKEN is absent (vendor has not configured a GitHub PAT credential)
+ * body() is called directly with zero overhead.
+ */
+private void _withGitAuth(Closure body) {
+    String token = env.getProperty('GITHUB_TOKEN')
+    if (!token) {
+        body()
+        return
+    }
+
+    String askPassPath = "${env.WORKSPACE}/git-askpass.sh"
+    writeFile file: 'git-askpass.sh', text: '#!/bin/sh\necho "${GITHUB_TOKEN}"\n'
+    sh "chmod +x '${askPassPath}'"
+    echo '🔑 GitHub token present — git HTTPS operations will be authenticated via GIT_ASKPASS'
+
+    withEnv(["GIT_ASKPASS=${askPassPath}"]) {
+        body()
+    }
+}
+
+/**
  * Dispatch a resolved stage script and return its exit code.
  *
  * Called from within the credential scope established by _withStageCredentials()
  * so that containerEnvFlags() — invoked for container dispatch — sees the live
  * withCredentials()-injected values via env.getProperty().
+ *
+ * Wrapped by _withGitAuth() so GIT_ASKPASS is active for all three script types:
+ *   .sh/.py  — shell inherits GIT_ASKPASS from the withEnv scope.
+ *   .groovy  — every sh("git ...") inside the loaded script inherits GIT_ASKPASS
+ *              from the enclosing withEnv scope transparently.
  */
 private int _dispatch(Map found, String scriptStem, Map config) {
     final int EXIT_SUCCESS = 0
@@ -245,37 +305,45 @@ private int _dispatch(Map found, String scriptStem, Map config) {
         sh "mkdir -p '${env.TARGET_DIR}'"
     }
 
-    switch (found.type) {
-        case 'sh':
-            if (containerId) {
-                String eFlags = containerEnvFlags()
-                return sh(script: "${runtime} exec ${eFlags} -w '${containerWs}' '${containerId}' bash '${found.path}'", returnStatus: true)
-            }
-            return sh(script: "bash ${found.path}", returnStatus: true)
+    int exitCode = EXIT_SUCCESS
+    _withGitAuth {
+        switch (found.type) {
+            case 'sh':
+                if (containerId) {
+                    String eFlags = containerEnvFlags()
+                    exitCode = sh(script: "${runtime} exec ${eFlags} -w '${containerWs}' '${containerId}' bash '${found.path}'", returnStatus: true)
+                } else {
+                    exitCode = sh(script: "bash ${found.path}", returnStatus: true)
+                }
+                break
 
-        case 'groovy':
-            // Groovy scripts run on the host JVM (Jenkins CPS engine) and cannot
-            // be dispatched into the container automatically.  Any sh() calls
-            // inside such a script will run on the host, not in the container.
-            if (containerId) {
-                echo "⚠️  WARNING: Groovy stage script '${found.path}' is running on the host JVM " +
-                     "while the build agent is a container (BUILD_CONTAINER_ID=${containerId}). " +
-                     'Options: ' +
-                     '(1) Convert to a .sh or .py script — these are dispatched into the container automatically. ' +
-                     "(2) Issue '${runtime} exec' calls directly using BUILD_CONTAINER_ID and BUILD_CONTAINER_WORKSPACE."
-            }
-            def script = load(found.path)
-            return script(config) ?: EXIT_SUCCESS
+            case 'groovy':
+                // Groovy scripts run on the host JVM (Jenkins CPS engine) and cannot
+                // be dispatched into the container automatically.  Any sh() calls
+                // inside such a script will run on the host, not in the container.
+                if (containerId) {
+                    echo "⚠️  WARNING: Groovy stage script '${found.path}' is running on the host JVM " +
+                         "while the build agent is a container (BUILD_CONTAINER_ID=${containerId}). " +
+                         'Options: ' +
+                         '(1) Convert to a .sh or .py script — these are dispatched into the container automatically. ' +
+                         "(2) Issue '${runtime} exec' calls directly using BUILD_CONTAINER_ID and BUILD_CONTAINER_WORKSPACE."
+                }
+                def script = load(found.path)
+                exitCode = script(config) ?: EXIT_SUCCESS
+                break
 
-        case 'py':
-            // python-runner.sh resolves python3/python and execs the script.
-            if (containerId) {
-                String eFlags = containerEnvFlags()
-                return sh(script: "${runtime} exec ${eFlags} -w '${containerWs}' '${containerId}' scripts/lib/python-runner.sh '${found.path}'", returnStatus: true)
-            }
-            return sh(script: "scripts/lib/python-runner.sh '${found.path}'", returnStatus: true)
+            case 'py':
+                // python-runner.sh resolves python3/python and execs the script.
+                if (containerId) {
+                    String eFlags = containerEnvFlags()
+                    exitCode = sh(script: "${runtime} exec ${eFlags} -w '${containerWs}' '${containerId}' scripts/lib/python-runner.sh '${found.path}'", returnStatus: true)
+                } else {
+                    exitCode = sh(script: "scripts/lib/python-runner.sh '${found.path}'", returnStatus: true)
+                }
+                break
+        }
     }
-    return EXIT_SUCCESS
+    return exitCode
 }
 
 return this
