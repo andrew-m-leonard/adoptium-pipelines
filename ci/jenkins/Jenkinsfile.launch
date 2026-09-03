@@ -109,6 +109,19 @@ List collateAndMergeGroups() {
 }
 
 /**
+ * Re-clone the config repository into config-repo/ in the current workspace.
+ * Called at the start of any stage that runs on a worker node and needs
+ * config-repo/ present (the Fetch Configuration stage runs on a different
+ * node, so the directory is absent after each workspace-clean checkout).
+ */
+void checkoutConfigRepo() {
+    dir('config-repo') {
+        git url: params.CONFIG_REPO_URL, branch: params.CONFIG_REPO_BRANCH
+    }
+}
+
+
+/**
  * Build the forwardedParams list for a platform build trigger in the exact
  * order the platform job defines its parameters, with separators interleaved.
  *
@@ -251,6 +264,7 @@ pipeline {
             }
             steps {
                 script {
+                    checkoutConfigRepo()
                     collateAndMergeGroups()
                 }
             }
