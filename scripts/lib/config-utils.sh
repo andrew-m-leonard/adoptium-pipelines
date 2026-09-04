@@ -105,11 +105,21 @@ get_config_bool() {
 	local default_value=${3:-false}
 	local value
 
+	if ! command -v jq &>/dev/null; then
+		log_error "jq is required but not found on PATH"
+		return 1
+	fi
+
 	# If config looks like a file path, read directly from file
 	if [[ -f "${config}" ]]; then
-		value=$(jq -r "${json_path}" "${config}" 2>/dev/null)
+		value=$(jq -r "${json_path}" "${config}" 2>&1)
 	else
-		value=$(echo "${config}" | jq -r "${json_path}" 2>/dev/null)
+		value=$(echo "${config}" | jq -r "${json_path}" 2>&1)
+	fi
+
+	if [[ "${value}" == jq:* ]]; then
+		log_error "jq error reading ${json_path}: ${value}"
+		return 1
 	fi
 
 	if [[ "${value}" == "true" ]]; then
