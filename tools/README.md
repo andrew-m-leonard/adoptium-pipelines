@@ -219,13 +219,13 @@ Generated files:
 
 ```bash
 # Inspect top-level config
-cat ~/workspace/ci-temurin-config/jenkins_job_config.json | jq .
+python3 -m json.tool ~/workspace/ci-temurin-config/jenkins_job_config.json
 
 # Inspect a version config
-cat ~/workspace/ci-temurin-config/configurations/jdk21_pipeline_config.json | jq .
+python3 -m json.tool ~/workspace/ci-temurin-config/configurations/jdk21_pipeline_config.json
 
 # Verify active versions list
-jq '.activeJdkVersions' ~/workspace/ci-temurin-config/jenkins_job_config.json
+python3 scripts/lib/json-utils.py get .activeJdkVersions ~/workspace/ci-temurin-config/jenkins_job_config.json
 ```
 
 Pay particular attention to:

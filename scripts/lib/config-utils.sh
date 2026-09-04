@@ -48,17 +48,28 @@ require_dir() {
 	log_debug "Found required directory: ${dir_path}"
 }
 
+# Resolve the path to json-utils.py relative to this script.
+_JSON_UTILS="${SCRIPT_DIR}/json-utils.py"
+
 # Load JSON configuration file
 load_config() {
 	local config_file=$1
 	require_file "${config_file}"
-
-	if ! command -v jq &>/dev/null; then
-		log_error "jq is required but not installed"
-		exit 1
-	fi
-
 	cat "${config_file}"
+}
+
+# Extract a value from JSON using a simple dot-notation path (e.g. ".foo.bar").
+# Uses scripts/lib/json-utils.py — no jq required.
+# Accepts either a file path or a raw JSON string as the first argument.
+_json_get() {
+	local config=$1
+	local json_path=$2
+
+	if [[ -f "${config}" ]]; then
+		python3 "${_JSON_UTILS}" get "${json_path}" "${config}"
+	else
+		echo "${config}" | python3 "${_JSON_UTILS}" get "${json_path}" -
+	fi
 }
 
 # Get value from JSON configuration
@@ -68,22 +79,13 @@ get_config_value() {
 	local default_value=${3:-}
 	local value
 
-	if ! command -v jq &>/dev/null; then
-		log_error "jq is required but not found on PATH"
-		return 1
-	fi
-
-	# If config looks like a file path, read directly from file
-	if [[ -f "${config}" ]]; then
-		value=$(jq -r "${json_path}" "${config}" 2>&1)
-	else
-		value=$(echo "${config}" | jq -r "${json_path}" 2>&1)
-	fi
-
-	# Catch jq parse/runtime errors (output starts with "jq:")
-	if [[ "${value}" == jq:* ]]; then
-		log_error "jq error reading ${json_path}: ${value}"
-		return 1
+	if ! value=$(_json_get "${config}" "${json_path}" 2>&1); then
+		if [[ "${value}" == "null" ]]; then
+			: # handled below
+		else
+			log_error "Error reading ${json_path} from config: ${value}"
+			return 1
+		fi
 	fi
 
 	if [[ "${value}" == "null" ]] || [[ -z "${value}" ]]; then
@@ -105,21 +107,11 @@ get_config_bool() {
 	local default_value=${3:-false}
 	local value
 
-	if ! command -v jq &>/dev/null; then
-		log_error "jq is required but not found on PATH"
-		return 1
-	fi
-
-	# If config looks like a file path, read directly from file
-	if [[ -f "${config}" ]]; then
-		value=$(jq -r "${json_path}" "${config}" 2>&1)
-	else
-		value=$(echo "${config}" | jq -r "${json_path}" 2>&1)
-	fi
-
-	if [[ "${value}" == jq:* ]]; then
-		log_error "jq error reading ${json_path}: ${value}"
-		return 1
+	if ! value=$(_json_get "${config}" "${json_path}" 2>&1); then
+		if [[ "${value}" != "null" ]]; then
+			log_error "Error reading ${json_path} from config: ${value}"
+			return 1
+		fi
 	fi
 
 	if [[ "${value}" == "true" ]]; then

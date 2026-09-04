@@ -347,8 +347,8 @@ require_env()                     # fails if env var not set
 require_file()                    # fails if file doesn't exist
 require_dir()                     # fails if directory doesn't exist
 load_config()                     # reads pipeline-config.json as string
-get_config_value()                # extracts value with jq
-get_config_bool()                 # extracts boolean with jq
+get_config_value()                # extracts value via json-utils.py (Python built-in json)
+get_config_bool()                 # extracts boolean via json-utils.py (Python built-in json)
 prepare_output_dir()              # mkdir -p TARGET_DIR
 ```
 
@@ -381,7 +381,7 @@ Vendors place override scripts in `vendor-scripts/` in their config repository. 
 
 ### 4. Maintainability
 
-Clear separation of concerns. Shell scripts are simpler than Groovy. Standard Unix tools (`jq`, `bash`). Each stage script is focused on a single task.
+Clear separation of concerns. Shell scripts are simpler than Groovy. Standard Unix tools (`bash`, `python3`). Each stage script is focused on a single task.
 
 ### 5. Consistency
 

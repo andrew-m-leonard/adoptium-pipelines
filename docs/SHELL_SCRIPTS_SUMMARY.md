@@ -29,9 +29,9 @@ Environment validation and JSON config helpers.
 | `require_env VAR` | Exit 1 if `VAR` is unset or empty |
 | `require_file PATH` | Exit 1 if file does not exist |
 | `require_dir PATH` | Exit 1 if directory does not exist |
-| `load_config FILE` | `cat` the JSON file (requires `jq`) |
-| `get_config_value FILE JQ_PATH [DEFAULT]` | Extract string value via `jq`; exit 1 if absent and no default |
-| `get_config_bool FILE JQ_PATH [DEFAULT]` | Extract boolean value; returns `true`/`false` string |
+| `load_config FILE` | `cat` the JSON file |
+| `get_config_value FILE JSON_PATH [DEFAULT]` | Extract string value via `json-utils.py` (Python built-in `json`); exit 1 if absent and no default |
+| `get_config_bool FILE JSON_PATH [DEFAULT]` | Extract boolean value via `json-utils.py`; returns `true`/`false` string |
 | `validate_standard_environment` | Checks `WORKSPACE` and `CONFIG_FILE` are set and file exists; sets `TARGET_DIR` default to `${WORKSPACE}/target` if not already provided |
 
 ### [`scripts/lib/artifact-utils.sh`](../scripts/lib/artifact-utils.sh)

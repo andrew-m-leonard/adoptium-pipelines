@@ -169,7 +169,8 @@ These files are sourced or invoked by every stage script regardless of whether i
 | File | Responsibility |
 |---|---|
 | [`logging-utils.sh`](scripts/lib/logging-utils.sh) | Timestamped `log_info` / `log_warn` / `log_error` / `log_section` functions written to stderr |
-| [`config-utils.sh`](scripts/lib/config-utils.sh) | `validate_standard_environment()` (checks `WORKSPACE`, `CONFIG_FILE`, defaults `TARGET_DIR`); `get_config_value()` / `get_config_bool()` JSON helpers via `jq` |
+| [`config-utils.sh`](scripts/lib/config-utils.sh) | `validate_standard_environment()` (checks `WORKSPACE`, `CONFIG_FILE`, defaults `TARGET_DIR`); `get_config_value()` / `get_config_bool()` JSON helpers via `json-utils.py` |
+| [`json-utils.py`](scripts/lib/json-utils.py) | Standalone Python JSON extraction helper used by `config-utils.sh`; no `jq` dependency |
 | [`artifact-utils.sh`](scripts/lib/artifact-utils.sh) | `prepare_output_dir()`, `copy_artifacts()`, `verify_artifact()`, `create_checksums()`, `create_stage_metadata()`, `determine_filename()` |
 | [`load-pipeline-config-json.py`](scripts/lib/load-pipeline-config-json.py) | Merges `adoptium_pipeline_config.json` + per-version platform JSON + runtime params → writes `pipeline-config.json` |
 | [`load-adoptium-pipeline-config-json.py`](scripts/lib/load-adoptium-pipeline-config-json.py) | Standalone reader for `adoptium_pipeline_config.json`; used by tools and the seed job |
