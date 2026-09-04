@@ -79,15 +79,25 @@ import groovy.transform.Field
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
- * Read collated-stage-params.json (written by collect-stage-params.py during the
- * Collate Stage Parameters stage in Jenkinsfile.launch, then carried into each
- * platform build job's workspace by initializeStage) and store a compact
- * stageId → stageCondition[] map as env.COLLATED_STAGE_CONDITIONS (JSON string).
+ * Generate and read collated-stage-params.json using collect-stage-params.py
+ * and store a compact stageId → stageCondition[] map as env.COLLATED_STAGE_CONDITIONS
+ * and stageId → timeoutMinutes map as env.COLLATED_STAGE_TIMEOUTS.
  *
  * Called once inside the Initialize stage steps so the inline script block stays
  * small.  stageConditionMet() reads the stored JSON on every when{} evaluation.
  */
 void loadStageConditions() {
+    if (!fileExists('collated-stage-params.json')) {
+        def ps = load('ci/jenkins/lib/PipelineStages.groovy')
+        String vendorOpt = fileExists('config-repo/vendor-scripts') ? '--vendor-scripts-dir config-repo/vendor-scripts' : ''
+        sh """\
+            scripts/lib/python-runner.sh scripts/lib/collect-stage-params.py \\
+                --default-stages-dir scripts/stages \\
+                ${vendorOpt} \\
+                --orchestrated-stages ${ps.orchestratedStages()} \\
+                --output collated-stage-params.json
+        """.stripIndent()
+    }
     if (!fileExists('collated-stage-params.json')) {
         echo 'ℹ️  collated-stage-params.json not found — stageConditions will not be evaluated'
         return
@@ -246,7 +256,7 @@ pipeline {
                         Map pipelineConfig = configHelper.generatePipelineConfig('./config-repo')
                         Map jenkinsConfig  = configHelper.generateJenkinsConfig('./config-repo')
 
-                        archiveArtifacts artifacts: 'pipeline-config.json,jenkins-config.json,jenkins-credential-config.json',
+                        archiveArtifacts artifacts: 'pipeline-config.json,jenkins-config.json,jenkins-credential-config.json,collated-stage-params.json',
                                        fingerprint: true,
                                        allowEmptyArchive: false
 

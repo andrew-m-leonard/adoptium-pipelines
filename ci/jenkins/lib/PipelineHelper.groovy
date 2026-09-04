@@ -113,7 +113,8 @@ Map initializeStage(String stageName, List<String> prerequisites = [], String ar
                          [path: 'vendor-scripts/*'],
                          [path: 'vendor_stage_params.json'],
                          [path: 'adoptium_pipeline_config.json'],
-                         [path: 'jenkins_job_config.json']
+                         [path: 'jenkins_job_config.json'],
+                         [path: 'jenkins_credential_config.json']
                      ]]
                 ]
             ])
