@@ -169,42 +169,35 @@ class PipelineRunner:
             # Stage: 02-build
             # #####################################################################
             if BUILD in self.stages_to_run:
-                if not _run(BUILD, "pipeline-config.json",
-                            {"TARGET_DIR": str(self.workspace_mgr.stage_workspace / "build_output")}):
+                if not _run(BUILD, "pipeline-config.json"):
                     raise _PipelineAbort()
 
             # #####################################################################
             # Stage: 12-validate-sbom
             # #####################################################################
             if VALIDATE_SBOM in self.stages_to_run:
-                if not _run(VALIDATE_SBOM, "pipeline-config.json,*sbom*.json",
-                            {"TARGET_DIR": str(self.workspace_mgr.stage_workspace / "sbom_validation_output")}):
+                if not _run(VALIDATE_SBOM, "pipeline-config.json,*sbom*.json"):
                     raise _PipelineAbort()
 
             # #####################################################################
             # Stage: 13-smoke-tests
             # #####################################################################
             if SMOKE_TESTS in self.stages_to_run and self.executor.condition_met(SMOKE_TESTS):
-                if not _run(SMOKE_TESTS, "pipeline-config.json,*.tar.gz,*.zip",
-                            {"TARGET_DIR": str(self.workspace_mgr.stage_workspace / "smoke_test_output")}):
+                if not _run(SMOKE_TESTS, "pipeline-config.json,*.tar.gz,*.zip"):
                     raise _PipelineAbort()
 
             # #####################################################################
             # Stage: 14-aqa-tests
             # #####################################################################
             if AQA_TESTS in self.stages_to_run and self.executor.condition_met(AQA_TESTS):
-                if not _run(AQA_TESTS, "pipeline-config.json,*.tar.gz,*.zip",
-                            {"TARGET_DIR": str(self.workspace_mgr.stage_workspace / "aqa_test_output")}):
+                if not _run(AQA_TESTS, "pipeline-config.json,*.tar.gz,*.zip"):
                     raise _PipelineAbort()
 
             # #####################################################################
             # Stage: 20-reproducible-compare
             # #####################################################################
             if REPRODUCIBLE_COMPARE in self.stages_to_run and self.executor.condition_met(REPRODUCIBLE_COMPARE):
-                release_type = (self.args.release_type or "NIGHTLY").upper()
-                _run(REPRODUCIBLE_COMPARE, "pipeline-config.json,*.tar.gz,*.zip",
-                     {"TARGET_DIR": str(self.workspace_mgr.stage_workspace / "reproducible_compare_output"),
-                      "RELEASE": "true" if release_type == "RELEASE" else "false"})
+                _run(REPRODUCIBLE_COMPARE, "pipeline-config.json,*.tar.gz,*.zip")
 
         except _PipelineAbort:
             pass

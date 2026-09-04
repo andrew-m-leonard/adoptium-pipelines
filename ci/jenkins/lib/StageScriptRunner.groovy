@@ -165,6 +165,21 @@ String containerEnvFlags() {
 }
 
 /**
+ * Resolve the TARGET_DIR for a given stage stem.
+ *
+ * Always derived from the current WORKSPACE so it is valid on whichever agent
+ * the stage runs on — never a path from a prior stage on a different agent.
+ * The Jenkinsfile can call this to obtain the value for post-run archive blocks
+ * without duplicating the derivation logic.
+ *
+ * @param scriptStem  Stage stem e.g. '02-build'
+ * @return Absolute path: <WORKSPACE>/<scriptStem>-output
+ */
+String resolveTargetDir(String scriptStem) {
+    return "${env.WORKSPACE}/${scriptStem}-output"
+}
+
+/**
  * Resolve and execute a stage script, returning an exit code.
  *
  * @param scriptStem  Script stem e.g. '13-smoke-tests'
@@ -214,11 +229,32 @@ int run(String scriptStem, Map config = null) {
 
     echo "▶ Running ${found.type.toUpperCase()} stage script: ${found.path}"
 
-    int exitCode = EXIT_SUCCESS
-    _withStageCredentials(scriptStem) {
-        exitCode = _dispatch(found, scriptStem, config)
+    // Scope the stage input contract variables to this run() call via withEnv()
+    // so they are derived fresh from the current WORKSPACE on every invocation
+    // and never leak a stale value from a prior stage into the global env.
+    //
+    // TARGET_DIR    — stage output directory, always under the current WORKSPACE.
+    // CONFIG_FILE   — pipeline config written by initializeStage() to WORKSPACE root.
+    // INPUT_ARTIFACTS_DIR — artifacts copied into WORKSPACE root by initializeStage().
+    //
+    // withEnv() is a scoped override: the values are visible to everything called
+    // within the closure (including _dispatch → sh → the stage script) but revert
+    // to their previous values when the closure returns.  Any env.TARGET_DIR = …
+    // assignment in the Jenkinsfile around the call site therefore has no effect
+    // while run() is executing, and run() cannot corrupt the global env on exit.
+    String targetDir = resolveTargetDir(scriptStem)
+    String workspace = env.WORKSPACE
+    withEnv([
+        "TARGET_DIR=${targetDir}",
+        "CONFIG_FILE=${workspace}/pipeline-config.json",
+        "INPUT_ARTIFACTS_DIR=${workspace}",
+    ]) {
+        int exitCode = EXIT_SUCCESS
+        _withStageCredentials(scriptStem) {
+            exitCode = _dispatch(found, scriptStem, config)
+        }
+        return exitCode
     }
-    return exitCode
 }
 
 /**

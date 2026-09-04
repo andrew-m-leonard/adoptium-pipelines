@@ -163,7 +163,7 @@ class StageExecutor:
 
         return self._resolver
 
-    def _build_env(self, extra: dict | None = None) -> dict:
+    def _build_env(self, stage_id: str, extra: dict | None = None) -> dict:
         """Build the standard environment dict passed to every stage script."""
         return build_stage_env(
             script_dir=self._script_dir,
@@ -173,6 +173,7 @@ class StageExecutor:
             release_type=self._args.release_type or "NIGHTLY",
             clean_workspace=self._args.clean_workspace,
             stage_param_values=self.stage_param_values,
+            stage_id=stage_id,
             extra=extra,
         )
 
@@ -203,7 +204,7 @@ class StageExecutor:
         self._workspace_mgr.cleanup_stage_workspace("pre")
         self._workspace_mgr.restore_stage_inputs(stage_label, artifact_filter)
 
-        env = self._build_env(extra_env)
+        env = self._build_env(stage_id, extra_env)
         exit_code = self._get_resolver().run(stage_id, env)
 
         self._workspace_mgr.archive_stage_outputs(stage_label, target_dir=env.get("TARGET_DIR"))

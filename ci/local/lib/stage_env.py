@@ -62,6 +62,24 @@ def _setup_git_auth(stage_workspace: Path, env: dict) -> None:
     print("🔑 GITHUB_TOKEN present — git HTTPS operations will be authenticated via GIT_ASKPASS")
 
 
+def resolve_target_dir(stage_workspace: Path, stage_id: str) -> Path:
+    """
+    Derive the TARGET_DIR for a stage — mirrors StageScriptRunner.resolveTargetDir()
+    in the Jenkins pipeline.
+
+    Always derived from the current stage_workspace so it is never a stale path
+    from a prior stage.
+
+    Args:
+        stage_workspace: Ephemeral per-stage workspace directory.
+        stage_id:        Stage stem e.g. '02-build'.
+
+    Returns:
+        Absolute Path: <stage_workspace>/<stage_id>-output
+    """
+    return stage_workspace / f"{stage_id}-output"
+
+
 def build_stage_env(
     *,
     script_dir: Path,
@@ -71,16 +89,35 @@ def build_stage_env(
     release_type: str,
     clean_workspace: bool,
     stage_param_values: dict[str, str],
+    stage_id: str,
     extra: dict | None = None,
 ) -> dict:
     """
     Build the standard environment dict passed to every stage script.
 
-    Mirrors PipelineHelper.initializeStage() in Jenkins.
+    Mirrors PipelineHelper.initializeStage() + StageScriptRunner.run() in Jenkins.
 
-    All five standard variables are set:
-      WORKSPACE, CONFIG_FILE, INPUT_ARTIFACTS_DIR, TARGET_DIR, BUILD_NUMBER
-    plus PIPELINE_ROOT for vendor scripts that source shared lib utilities.
+    Standard stage contract variables set for every stage:
+
+      WORKSPACE            — Ephemeral per-stage working directory.  Stage scripts
+                             clone repos and produce intermediate files here.
+      CONFIG_FILE          — Absolute path to pipeline-config.json inside WORKSPACE.
+      INPUT_ARTIFACTS_DIR  — Directory containing artifacts copied in before the
+                             stage runs (equals WORKSPACE for the local runner).
+      TARGET_DIR           — Stage output directory.  Derived from stage_id as
+                             <WORKSPACE>/<stage_id>-output so each stage writes to
+                             its own subdirectory and never inherits a stale path
+                             from a prior stage.
+      BUILD_NUMBER         — Build identifier string (e.g. 'local-20240101-120000').
+      RELEASE_TYPE         — Build type: NIGHTLY, WEEKLY, or RELEASE.
+      PIPELINE_ROOT        — Absolute path to the ci-adoptium-pipelines checkout root.
+                             Allows vendor stage scripts to source shared lib utilities
+                             (e.g. scripts/lib/config-utils.sh) by a stable path that
+                             is independent of the ephemeral WORKSPACE.
+                             Jenkins equivalent: the pipeline repo is checked out into
+                             every agent workspace so scripts/ is always at a fixed
+                             relative path — PIPELINE_ROOT makes that same root
+                             explicitly accessible in the local runner.
 
     CONFIG_* variables are populated from pipeline-config.json so that
     stage scripts (e.g. 02-build.sh) can read them without needing jq.
@@ -101,6 +138,7 @@ def build_stage_env(
         release_type:        Release type string (e.g. 'NIGHTLY').
         clean_workspace:     Whether --clean-workspace was requested.
         stage_param_values:  Dict of PARAM_NAME → value from collated stage params.
+        stage_id:            Stage stem e.g. '02-build' — used to derive TARGET_DIR.
         extra:               Additional env vars to merge in last (highest priority).
 
     Returns:
@@ -111,7 +149,7 @@ def build_stage_env(
     env["PIPELINE_ROOT"] = str(script_dir)
     env["CONFIG_FILE"] = str(stage_workspace / "pipeline-config.json")
     env["INPUT_ARTIFACTS_DIR"] = str(stage_workspace)
-    env["TARGET_DIR"] = str(stage_workspace / "target")
+    env["TARGET_DIR"] = str(resolve_target_dir(stage_workspace, stage_id))
     env["BUILD_NUMBER"] = build_number
     # Fixed job-level params that stage scripts read directly
     env["RELEASE_TYPE"] = release_type.upper()

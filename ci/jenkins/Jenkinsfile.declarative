@@ -277,14 +277,12 @@ pipeline {
                         pipelineHelper.executeStageWithTracking(BUILD) {
                             Map config = pipelineHelper.initializeStage(BUILD, [INITIALIZE])
 
-                            env.TARGET_DIR = "${WORKSPACE}/build_output"
-
                             int buildExitCode = stageRunner.run(BUILD, config)
                             if (buildExitCode != 0) {
                                 error("Build failed with exit code: ${buildExitCode}")
                             }
 
-                            dir(env.TARGET_DIR) {
+                            dir(stageRunner.resolveTargetDir(BUILD)) {
                                 archiveArtifacts artifacts: '**/*',
                                                fingerprint: true,
                                                allowEmptyArchive: false
@@ -543,8 +541,6 @@ pipeline {
                     pipelineHelper.executeStageWithTracking(VALIDATE_SBOM) {
                         Map config = pipelineHelper.initializeStage(VALIDATE_SBOM, [BUILD], 'pipeline-config.json,*sbom*.json')
 
-                        env.TARGET_DIR = "${WORKSPACE}/sbom_validation_output"
-
                         int sbomValExitCode = stageRunner.run(VALIDATE_SBOM, config)
                         if (sbomValExitCode != 0) { error("Validate SBOM failed with exit code: ${sbomValExitCode}") }
 
@@ -571,8 +567,6 @@ pipeline {
                     nodeAgentHelper.waitForActiveNode(getStageLabel(SMOKE_TESTS), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(SMOKE_TESTS) {
                         Map config = pipelineHelper.initializeStage(SMOKE_TESTS, [BUILD], 'pipeline-config.json,*.tar.gz,*.zip')
-
-                        env.TARGET_DIR = "${WORKSPACE}/smoke_test_output"
 
                         int smokeTestExitCode = stageRunner.run(SMOKE_TESTS, config)
                         if (smokeTestExitCode != 0) {
@@ -603,14 +597,9 @@ pipeline {
                     pipelineHelper.executeStageWithTracking(REPRODUCIBLE_COMPARE) {
                         Map config = pipelineHelper.initializeStage(REPRODUCIBLE_COMPARE, [BUILD], 'pipeline-config.json,*.tar.gz,*.zip')
 
-                        env.TARGET_DIR    = "${WORKSPACE}/reproducible_compare_output"
-                        env.PIPELINE_ROOT = "${WORKSPACE}"
-                        env.SCM_REF       = params.SCM_REF
-                        env.RELEASE       = (params.RELEASE_TYPE == 'RELEASE') ? 'true' : 'false'
-
                         int comparisonExitCode = stageRunner.run(REPRODUCIBLE_COMPARE, config)
 
-                        dir(env.TARGET_DIR) {
+                        dir(stageRunner.resolveTargetDir(REPRODUCIBLE_COMPARE)) {
                             archiveArtifacts artifacts: '**/*',
                                            fingerprint: true,
                                            allowEmptyArchive: true
@@ -697,8 +686,6 @@ pipeline {
                     nodeAgentHelper.waitForActiveNode(getStageLabel(PUBLISH_ARTIFACTS), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(PUBLISH_ARTIFACTS) {
                         Map config = pipelineHelper.initializeStage(PUBLISH_ARTIFACTS, [BUILD], 'pipeline-config.json,**/*.tar.gz,**/*.zip,**/*.msi,**/*.pkg,**/metadata/**/*')
-
-                        env.TARGET_DIR = "${WORKSPACE}/publish_output"
 
                         int publishExitCode = stageRunner.run(PUBLISH_ARTIFACTS, config)
                         if (publishExitCode != 0) { error("Publish Artifacts failed with exit code: ${publishExitCode}") }
