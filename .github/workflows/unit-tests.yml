@@ -1,0 +1,32 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: Run Python & Shell Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run Python Unit Tests
+        run: |
+          python3 -m unittest discover tests
+
+      - name: Run Shell Unit Tests
+        run: |
+          bash tests/test_determine_filename.sh
