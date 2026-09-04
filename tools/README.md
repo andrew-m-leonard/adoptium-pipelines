@@ -71,7 +71,6 @@ python3 tools/migrate-groovy-pipeline-configs.py \
   "repository": {
     "url": "https://github.com/adoptium/ci-adoptium-pipelines.git",
     "branch": "main",
-    "credentialsId": "",
     "buildRepoUrl": "https://github.com/adoptium/temurin-build.git",
     "buildBranch": "master",
     "aqaRepoUrl": "https://github.com/adoptium/aqa-tests.git",
@@ -234,7 +233,8 @@ Pay particular attention to:
 - Nested maps and lists (complex Groovy structures may need manual adjustment)
 - Variant-specific values (e.g. `buildArgs: [temurin: '...', hotspot: '...']` → `"buildArgs": {"temurin": "...", "hotspot": "..."}`)
 - `enabled` flags — verify disabled versions are correctly set to `false`
-- `repository` block in `jenkins_job_config.json` — update `url`, `branch`, `credentialsId` for your org
+- `repository` block in `adoptium_pipeline_config.json` — update `url` and `branch` for your org
+- `pipelineRepoCredentialsId` / `configRepoCredentialsId` in `jenkins_credential_config.json` — set to your Jenkins credential ID for private repos (omit or leave empty for public repos)
 
 ### Step 4 — Commit to the configuration repository
 

@@ -25,7 +25,7 @@ This file is the single source of truth for:
   - defaultVariant
   - defaultScmReference
   - configFilePrefix / configFileSuffix
-  - repository (url, branch, credentialsId)
+  - repository (url, branch)
 
 Usage:
     # From a local config repo checkout
@@ -137,7 +137,6 @@ def output_env(config: dict):
     )
     print(f"export ADOPTIUM_REPO_URL=\"{repo.get('url', '')}\"")
     print(f"export ADOPTIUM_REPO_BRANCH=\"{repo.get('branch', 'main')}\"")
-    print(f"export ADOPTIUM_REPO_CREDENTIALS_ID=\"{repo.get('credentialsId', '')}\"")
     print(f"export ADOPTIUM_BUILD_REPO_URL=\"{repo.get('buildRepoUrl', '')}\"")
     print(f"export ADOPTIUM_BUILD_BRANCH=\"{repo.get('buildBranch', '')}\"")
     print(f"export ADOPTIUM_AQA_REPO_URL=\"{repo.get('aqaRepoUrl', '')}\"")

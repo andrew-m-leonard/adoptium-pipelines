@@ -139,7 +139,6 @@ def generate_adoptium_pipeline_config(
         "repository": {
             "url": "https://github.com/adoptium/ci-adoptium-pipelines.git",
             "branch": "main",
-            "credentialsId": "",
             "buildRepoUrl": "https://github.com/adoptium/temurin-build.git",
             "buildBranch": "master",
             "aqaRepoUrl": "https://github.com/adoptium/aqa-tests.git",

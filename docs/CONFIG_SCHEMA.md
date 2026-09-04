@@ -11,6 +11,7 @@ The configuration is split across three file types with clearly separated concer
 |---|---|---|
 | `adoptium_pipeline_config.json` | repository root | CI-agnostic: active versions, build defaults, repository references |
 | `jenkins_job_config.json` | repository root | Jenkins-specific: Jenkinsfile path, timeout, job parameters, log rotation |
+| `jenkins_credential_config.json` | repository root | Jenkins-specific: credential IDs for SCM checkouts and per-stage secret injection |
 | `configurations/jdkNN_pipeline_config.json` | `configurations/` | Per-version: platform build matrix |
 
 ---
@@ -34,7 +35,6 @@ repository references that apply regardless of which CI system runs the pipeline
   "repository": {
     "url": "https://github.com/adoptium/ci-adoptium-pipelines.git",
     "branch": "main",
-    "credentialsId": "",
     "buildRepoUrl": "https://github.com/adoptium/temurin-build.git",
     "buildBranch": "master",
     "aqaRepoUrl": "https://github.com/adoptium/aqa-tests.git",
@@ -58,7 +58,6 @@ repository references that apply regardless of which CI system runs the pipeline
 | `repository` | object | ✅ | Repository references for pipeline code and build tooling |
 | `repository.url` | string | ✅ | Git URL of the CI pipeline repository |
 | `repository.branch` | string | ✅ | Branch of the CI pipeline repository to check out |
-| `repository.credentialsId` | string | ✅ | Jenkins credentials ID for pipeline repository checkout. Empty string for public repos |
 | `repository.buildRepoUrl` | string | ✅ | Git URL of the temurin-build repository |
 | `repository.buildBranch` | string | ✅ | Branch of the temurin-build repository |
 | `repository.aqaRepoUrl` | string | ✅ | Git URL of the aqa-tests repository |
@@ -131,6 +130,57 @@ Jenkins-specific configuration. Contains two groups: **job-creation settings** (
 | `jobConfiguration.logRotation.numToKeep` | integer | ✅ | Maximum number of build records to retain |
 | `jobConfiguration.logRotation.artifactDaysToKeep` | integer | ✅ | Number of days to retain build artifacts |
 | `jobConfiguration.logRotation.artifactNumToKeep` | integer | ✅ | Maximum number of builds whose artifacts are retained |
+
+---
+
+## `jenkins_credential_config.json`
+
+Jenkins-specific credential configuration. Contains Jenkins credential IDs for SCM checkouts (pipelines
+repo and config repo) as well as per-stage secret injection used by `CredentialHelper`.
+
+This file is the single home for all Jenkins credential IDs — credential IDs must never appear in the
+CI-agnostic `adoptium_pipeline_config.json`.
+
+```json
+{
+  "pipelineRepoCredentialsId": "github-pipelines-credential",
+  "configRepoCredentialsId":   "github-config-repo-credential",
+  "credentials": {
+    "GITHUB_TOKEN": {
+      "type": "string",
+      "credentialId": "github-token",
+      "description": "GitHub PAT for authenticated git HTTPS operations. Injected into every stage via ALL_STAGES."
+    },
+    "DOCKER_REGISTRY_CREDENTIAL": {
+      "type": "usernamePassword",
+      "credentialId": "my-registry-credential",
+      "usernameEnvVar": "REGISTRY_USER",
+      "passwordEnvVar": "REGISTRY_PASS",
+      "description": "Registry login for build images"
+    }
+  },
+  "stageCredentials": {
+    "ALL_STAGES": ["GITHUB_TOKEN"],
+    "02-build":   ["DOCKER_REGISTRY_CREDENTIAL"]
+  }
+}
+```
+
+### Fields
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `pipelineRepoCredentialsId` | string | ☑️ optional | Jenkins credentials ID used to check out the `ci-adoptium-pipelines` repository. Empty string or absent for public repos |
+| `configRepoCredentialsId` | string | ☑️ optional | Jenkins credentials ID used to check out the vendor config repository itself. Empty string or absent for public repos |
+| `credentials` | object | ☑️ optional | Map of credential name → definition. Names are arbitrary identifiers used in `stageCredentials` |
+| `credentials[name].type` | string | ✅ | One of `string`, `usernamePassword`, `sshUserPrivateKey`, `file` |
+| `credentials[name].credentialId` | string | ✅ | Jenkins credential store ID |
+| `credentials[name].description` | string | ☑️ optional | Human-readable note — not used by the pipeline |
+| `credentials[name].usernameEnvVar` | string | ☑️ `usernamePassword` only | Env var receiving the username (default: `<NAME>_USER`) |
+| `credentials[name].passwordEnvVar` | string | ☑️ `usernamePassword` only | Env var receiving the password (default: `<NAME>_PASS`) |
+| `credentials[name].keyFileEnvVar` | string | ☑️ `sshUserPrivateKey` only | Env var receiving the key file path (default: `<NAME>_KEYFILE`) |
+| `credentials[name].fileEnvVar` | string | ☑️ `file` only | Env var receiving the file path (default: `<NAME>_FILE`) |
+| `stageCredentials` | object | ☑️ optional | Map of stage ID → list of credential names to inject. The special key `ALL_STAGES` injects into every stage |
 
 ---
 

@@ -107,6 +107,15 @@ println "  Active JDK versions: ${pipelineConfig.activeJdkVersions.findAll { it.
 def jenkinsConfig = slurper.parseText(readFileFromWorkspace('jenkins_job_config.json'))
 println '✓ Loaded jenkins_job_config.json'
 
+// jenkins_credential_config.json is optional — absent for public-repo setups.
+def credentialConfig = [:]
+try {
+    credentialConfig = slurper.parseText(readFileFromWorkspace('jenkins_credential_config.json'))
+    println '✓ Loaded jenkins_credential_config.json'
+} catch (Exception e) {
+    println 'ℹ️  jenkins_credential_config.json not found — no SCM credentials configured'
+}
+
 // Read optional base folder from jenkins_job_config.json.
 // Strip any trailing slashes so path construction is consistent.
 def pipelineBaseFolder = (jenkinsConfig?.pipelineBaseFolder ?: '').toString().trim().replaceAll(/\/+$/, '')
@@ -184,7 +193,7 @@ folder(inFolder('Build_openjdk')) {
 
 def pipelineRepoUrl           = pipelineConfig.repository?.url ?: 'https://github.com/adoptium/ci-adoptium-pipelines.git'
 def pipelineRepoBranch        = pipelineConfig.repository?.branch ?: 'main'
-def pipelineRepoCredentialsId = pipelineConfig.repository?.credentialsId ?: ''
+def pipelineRepoCredentialsId = credentialConfig.pipelineRepoCredentialsId ?: ''
 def defaultParams             = jenkinsConfig.jobConfiguration?.defaultParameters ?: [:]
 
 println 'Creating launch orchestrator jobs for active JDK versions:'

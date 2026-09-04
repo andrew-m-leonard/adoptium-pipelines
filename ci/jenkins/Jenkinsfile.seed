@@ -86,6 +86,16 @@ pipeline {
                     env.PIPELINES_REPO_URL    = cfg.repository.url
                     env.PIPELINES_REPO_BRANCH = cfg.repository.branch
                     echo "✓ Pipelines repo : ${env.PIPELINES_REPO_URL} @ ${env.PIPELINES_REPO_BRANCH}"
+
+                    // Read the Jenkins credential ID for the pipelines repo from
+                    // jenkins_credential_config.json (optional — public repos leave it absent).
+                    // Keeping credential IDs out of the CI-agnostic adoptium_pipeline_config.json.
+                    if (fileExists('jenkins_credential_config.json')) {
+                        def credCfg = readJSON file: 'jenkins_credential_config.json'
+                        env.PIPELINES_REPO_CREDENTIALS_ID = credCfg.pipelineRepoCredentialsId ?: ''
+                    } else {
+                        env.PIPELINES_REPO_CREDENTIALS_ID = ''
+                    }
                 }
             }
         }
@@ -97,8 +107,14 @@ pipeline {
                 // The vendor config repo is already in the workspace root
                 // (checked out by the Pipeline SCM step above).
                 dir('pipelines') {
-                    git url:    env.PIPELINES_REPO_URL,
-                        branch: env.PIPELINES_REPO_BRANCH
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: "*/${env.PIPELINES_REPO_BRANCH}"]],
+                        userRemoteConfigs: [[
+                            url: env.PIPELINES_REPO_URL,
+                            credentialsId: env.PIPELINES_REPO_CREDENTIALS_ID ?: ''
+                        ]]
+                    ])
                 }
                 // Capture the SHA so it can be stamped into every generated job.
                 // GIT_COMMIT is set by the git step above but scoped to the dir()

@@ -97,6 +97,15 @@ println '✓ Loaded adoptium_pipeline_config.json'
 def jenkinsConfig = slurper.parseText(readFileFromWorkspace('config-repo/jenkins_job_config.json'))
 println '✓ Loaded jenkins_job_config.json'
 
+// jenkins_credential_config.json is optional — absent for public-repo setups.
+def credentialConfig = [:]
+try {
+    credentialConfig = slurper.parseText(readFileFromWorkspace('config-repo/jenkins_credential_config.json'))
+    println '✓ Loaded jenkins_credential_config.json'
+} catch (Exception e) {
+    println 'ℹ️  jenkins_credential_config.json not found — no SCM credentials configured'
+}
+
 // Read optional base folder — must match what the seed job used.
 def pipelineBaseFolder = (jenkinsConfig?.pipelineBaseFolder ?: '').toString().trim().replaceAll(/\/+$/, '')
 def inFolder = { String name -> pipelineBaseFolder ? "${pipelineBaseFolder}/${name}" : name }
@@ -308,8 +317,8 @@ pipelineJob(jobName.replaceAll(/^\//, '')) {
                 git {
                     remote {
                         url(pipelineConfig.repository.url)
-                        if (pipelineConfig.repository.credentialsId) {
-                            credentials(pipelineConfig.repository.credentialsId)
+                        if (credentialConfig.pipelineRepoCredentialsId) {
+                            credentials(credentialConfig.pipelineRepoCredentialsId)
                         }
                     }
                     branch("*/${pipelineConfig.repository.branch}")

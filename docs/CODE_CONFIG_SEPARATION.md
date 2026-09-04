@@ -66,7 +66,6 @@ This is the top-level config file that glues everything together. It tells the s
   "repository": {
     "url": "https://github.com/adoptium/ci-adoptium-pipelines.git",
     "branch": "main",
-    "credentialsId": "",
     "buildRepoUrl": "https://github.com/adoptium/temurin-build.git",
     "buildBranch": "master",
     "aqaRepoUrl": "https://github.com/adoptium/aqa-tests.git",

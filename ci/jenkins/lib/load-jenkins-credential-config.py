@@ -138,7 +138,7 @@ def generateCredentialConfig(config_repo_path, output_path):
             "— no stage credentials will be configured",
             file=sys.stderr,
         )
-        out = {"credentials": {}, "stageCredentials": {}}
+        out = {"pipelineRepoCredentialsId": "", "configRepoCredentialsId": "", "credentials": {}, "stageCredentials": {}}
         with open(Path(output_path), "w", encoding="utf-8") as f:
             json.dump(out, f, indent=2)
         print(f"✓ Created {output_path} (empty — no credential config found)")
@@ -147,6 +147,8 @@ def generateCredentialConfig(config_repo_path, output_path):
     with open(source_path, "r", encoding="utf-8") as f:
         config = json.load(f)
 
+    pipeline_repo_credentials_id = config.get("pipelineRepoCredentialsId", "")
+    config_repo_credentials_id   = config.get("configRepoCredentialsId", "")
     credentials      = config.get("credentials", {})
     stage_credentials = config.get("stageCredentials", {})
 
@@ -164,8 +166,10 @@ def generateCredentialConfig(config_repo_path, output_path):
         resolved_credentials[name] = resolved
 
     out = {
-        "credentials":      resolved_credentials,
-        "stageCredentials": stage_credentials,
+        "pipelineRepoCredentialsId": pipeline_repo_credentials_id,
+        "configRepoCredentialsId":   config_repo_credentials_id,
+        "credentials":               resolved_credentials,
+        "stageCredentials":          stage_credentials,
     }
 
     with open(Path(output_path), "w", encoding="utf-8") as f:
