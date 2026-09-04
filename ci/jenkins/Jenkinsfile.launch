@@ -210,6 +210,9 @@ pipeline {
                     echo "Pipeline SHA: ${env.GIT_COMMIT} | Platforms: ${params.PLATFORMS}"
                 }
             }
+            post {
+                always { cleanWs() }
+            }
         }
 
         stage('Fetch Configuration') {
@@ -254,6 +257,9 @@ pipeline {
                     echo "✓ Worker label resolved: ${env.WORKER_LABEL}"
                 }
             }
+            post {
+                always { cleanWs() }
+            }
         }
 
         stage('Collate Stage Parameters') {
@@ -267,6 +273,9 @@ pipeline {
                     checkoutConfigRepo()
                     collateAndMergeGroups()
                 }
+            }
+            post {
+                always { cleanWs() }
             }
         }
 
@@ -288,6 +297,9 @@ pipeline {
                     env.SELECTED_PLATFORMS = selected.join(',')
                     echo "✓ Platforms: ${env.SELECTED_PLATFORMS}"
                 }
+            }
+            post {
+                always { cleanWs() }
             }
         }
 
@@ -323,6 +335,9 @@ pipeline {
                     }
                     echo '✓ Platform jobs created/updated'
                 }
+            }
+            post {
+                always { cleanWs() }
             }
         }
 
