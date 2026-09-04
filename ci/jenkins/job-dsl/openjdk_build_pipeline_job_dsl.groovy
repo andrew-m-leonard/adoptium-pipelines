@@ -161,16 +161,19 @@ println "✓ Received ${rawGroups.size()} raw group(s), merged to ${collatedPara
 
 // Job DSL scripts run on the Jenkins controller in a trusted (non-sandboxed)
 // context, so Jenkins.instance is available without script approval.
-def jobName     = "/${inFolder("Build_openjdk/Build_openjdk${jdkVersion}_${variant}_${architecture}_${targetOs}")}"
-def existingJob = Jenkins.instance.getItemByFullName(jobName.replaceAll(/^\//, ''))
-def storedSha   = (existingJob?.description ?: '') =~ /pipeline-sha:([0-9a-f]+)/
+def jobName      = "/${inFolder("Build_openjdk/Build_openjdk${jdkVersion}_${variant}_${architecture}_${targetOs}")}"
+def lookupName   = jobName.replaceAll(/^\//, '')
+def existingJob  = Jenkins.instance.getItemByFullName(lookupName)
+println "  → Looking up job: '${lookupName}' → ${existingJob == null ? 'NOT FOUND' : 'found, description=' + existingJob.description}"
+def shaMatch     = (existingJob?.description ?: '') =~ /pipeline-sha:([0-9a-f]+)/
+def storedShaVal = shaMatch.find() ? shaMatch.group(1) : null
 
 if (existingJob == null) {
     println '  → Job does not exist yet — will create'
-} else if (!storedSha || storedSha[DUPLICATE_ZERO][1] != pipelineCommitSha) {
-    println "  → Stored pipeline-sha (${storedSha ? storedSha[DUPLICATE_ZERO][1] : 'none'}) differs from current (${pipelineCommitSha}) — will regenerate"
+} else if (storedShaVal != pipelineCommitSha) {
+    println "  → Stored pipeline-sha (${storedShaVal ?: 'none'}) differs from current (${pipelineCommitSha}) — will regenerate"
 } else {
-    println "  → Job is up-to-date (pipeline-sha: ${storedSha[DUPLICATE_ZERO][1]}) — skipping regeneration"
+    println "  → Job is up-to-date (pipeline-sha: ${storedShaVal}) — skipping regeneration"
     return
 }
 
