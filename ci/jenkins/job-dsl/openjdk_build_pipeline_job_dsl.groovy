@@ -162,7 +162,7 @@ println "✓ Received ${rawGroups.size()} raw group(s), merged to ${collatedPara
 // Job DSL scripts run on the Jenkins controller in a trusted (non-sandboxed)
 // context, so Jenkins.instance is available without script approval.
 def jobName     = "/${inFolder("Build_openjdk/Build_openjdk${jdkVersion}_${variant}_${architecture}_${targetOs}")}"
-def existingJob = Jenkins.instance.getItemByFullName(jobName)
+def existingJob = Jenkins.instance.getItemByFullName(jobName.replaceAll(/^\//, ''))
 def storedSha   = (existingJob?.description ?: '') =~ /pipeline-sha:([0-9a-f]+)/
 
 if (existingJob == null) {
