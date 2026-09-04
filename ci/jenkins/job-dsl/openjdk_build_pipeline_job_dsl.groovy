@@ -164,7 +164,6 @@ println "✓ Received ${rawGroups.size()} raw group(s), merged to ${collatedPara
 def jobName      = "/${inFolder("Build_openjdk/Build_openjdk${jdkVersion}_${variant}_${architecture}_${targetOs}")}"
 def lookupName   = jobName.replaceAll(/^\//, '')
 def existingJob  = Jenkins.instance.getItemByFullName(lookupName)
-println "  → Looking up job: '${lookupName}' → ${existingJob == null ? 'NOT FOUND' : 'found, description=' + existingJob.description}"
 def shaMatch     = (existingJob?.description ?: '') =~ /pipeline-sha:([0-9a-f]+)/
 def storedShaVal = shaMatch.find() ? shaMatch.group(1) : null
 
