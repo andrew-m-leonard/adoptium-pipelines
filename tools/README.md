@@ -86,7 +86,6 @@ python3 tools/migrate-groovy-pipeline-configs.py \
 {
   "jenkinsfilePath": "ci/jenkins/Jenkinsfile.declarative",
   "pipelineTimeoutHours": 8,
-  "activeNodeTimeoutMinutes": 10,
   "jobConfiguration": {
     "defaultParameters": {
       "VARIANT": "temurin",
@@ -108,13 +107,12 @@ python3 tools/migrate-groovy-pipeline-configs.py \
 }
 ```
 
-When `--pipeline-base-folder` is supplied the field is inserted between `activeNodeTimeoutMinutes` and `jobConfiguration`:
+When `--pipeline-base-folder` is supplied the field is inserted between `pipelineTimeoutHours` and `jobConfiguration`:
 
 ```json
 {
   "jenkinsfilePath": "ci/jenkins/Jenkinsfile.declarative",
   "pipelineTimeoutHours": 8,
-  "activeNodeTimeoutMinutes": 10,
   "pipelineBaseFolder": "MyOrg/OpenJDK",
   "jobConfiguration": { "...": "..." },
   "stageAgentLabels": { "...": "..." }

@@ -153,10 +153,6 @@ Map generateJenkinsConfig(String configRepoPath = './config-repo') {
     }
     env.CONFIG_STAGE_AGENT_LABELS = "{${labelPairs.join(',')}}"
 
-    // Publish the active-node timeout so NodeAgentHelper and the Jenkinsfile
-    // can enforce it at every node() allocation without re-reading config.
-    env.CONFIG_ACTIVE_NODE_TIMEOUT = (jenkinsConfig.activeNodeTimeoutMinutes ?: 10).toString()
-
     // Load optional vendor credential config.  If jenkins_credential_config.json is
     // absent from the config repo the script writes an empty-but-valid output file
     // and sets both env vars to '{}' — no stage receives credentials.

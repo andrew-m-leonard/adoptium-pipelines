@@ -68,7 +68,7 @@ repository references that apply regardless of which CI system runs the pipeline
 
 ## `jenkins_job_config.json`
 
-Jenkins-specific configuration. Contains two groups: **job-creation settings** (`jenkinsfilePath`, `pipelineTimeoutHours`, `activeNodeTimeoutMinutes`, `jobConfiguration`) used by the seed job only; and **agent-selection settings** (`stageAgentLabels`) read at build runtime by `ConfigHelper.generateJenkinsConfig()` to resolve which node each stage runs on.
+Jenkins-specific configuration. Contains two groups: **job-creation settings** (`jenkinsfilePath`, `pipelineTimeoutHours`, `jobConfiguration`) used by the seed job only; and **agent-selection settings** (`stageAgentLabels`) read at build runtime by `ConfigHelper.generateJenkinsConfig()` to resolve which node each stage runs on.
 
 > For a full annotated example and a description of how each section is consumed, see [CODE_CONFIG_SEPARATION.md §2](./CODE_CONFIG_SEPARATION.md#2-jenkins_job_configjson--jenkins-specific-job-and-agent-settings).
 
@@ -76,7 +76,6 @@ Jenkins-specific configuration. Contains two groups: **job-creation settings** (
 {
   "jenkinsfilePath": "ci/jenkins/Jenkinsfile.declarative",
   "pipelineTimeoutHours": 8,
-  "activeNodeTimeoutMinutes": 10,
   "stageAgentLabels": {
     "__any__":               "ci.role.worker",
     "01-initialize":         "ci.role.worker",
@@ -123,7 +122,6 @@ Jenkins-specific configuration. Contains two groups: **job-creation settings** (
 |---|---|---|---|
 | `jenkinsfilePath` | string | ✅ | Relative path within the pipeline repository to the Jenkinsfile |
 | `pipelineTimeoutHours` | integer | ☑️ default `8` | Maximum wall-clock hours a platform build pipeline run is allowed before Jenkins aborts it. Applied as a job-level `buildTimeoutWrapper` (Build Timeout plugin) by the Job DSL when the platform build job is created or regenerated. |
-| `activeNodeTimeoutMinutes` | integer | ☑️ default `10` | Minutes to wait for **at least one online agent** matching a stage label before failing. Jenkins queuing (all agents busy) is unaffected — this only fires when **zero** agents matching the label are online. Supports cloud provisioners that take time to spin up a new agent. Exposed as the `CONFIG_ACTIVE_NODE_TIMEOUT` env var at runtime. |
 | `pipelineBaseFolder` | string | ☑️ optional | Jenkins folder path under which all generated jobs and views are placed (e.g. `"MyOrg/OpenJDK"`). Intermediate folders are created automatically. Omit or set to `""` to generate everything at the Jenkins root. Consumed by the seed job and the launch job. |
 | `stageAgentLabels` | object | ✅ | Map of **stage ID** → label template. Keys must match stage IDs from `scripts/stages/pipeline-stages.json` (e.g. `"02-build"`, `"13-smoke-tests"`). `{os}` and `{arch}` placeholders are resolved at build runtime to `sw.os.*` / `hw.arch.*` values. The special key `__any__` sets the fallback label for any stage not explicitly listed; also used for launch-pipeline worker stages that require `python3`; defaults to `ci.role.worker` if absent. |
 | `jobConfiguration` | object | ✅ | Jenkins job settings (seed job only) |

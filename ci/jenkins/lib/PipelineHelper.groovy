@@ -39,19 +39,45 @@ limitations under the License.
 buildUidHelper = null // Lazy-loaded by initializeStage(); explicit null initialises the Binding entry
 
 /**
- * Execute a stage body with automatic result tracking via BuildUidHelper.
+ * Return configured stage timeout in minutes from env.COLLATED_STAGE_TIMEOUTS, or 0 if none.
+ */
+int getStageTimeout(String stageName) {
+    String timeoutJson = env.COLLATED_STAGE_TIMEOUTS
+    if (!timeoutJson) { return 0 }
+    try {
+        Map timeoutMap = new groovy.json.JsonSlurper().parseText(timeoutJson)
+        return (timeoutMap[stageName] ?: 0) as int
+    } catch (Exception e) {
+        return 0
+    }
+}
+
+/**
+ * Execute a stage body with automatic result tracking via BuildUidHelper and optional timeout.
  */
 void executeStageWithTracking(String stageName, Closure body) {
-    try {
-        body()
-        buildUidHelper.recordStageResult(stageName, 'SUCCESS')
-    } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
-        buildUidHelper.recordStageResult(stageName, 'ABORTED')
-        throw e
-    } catch (Exception e) {
-        String result = currentBuild.result ?: 'FAILURE'
-        buildUidHelper.recordStageResult(stageName, result)
-        throw e
+    int timeoutMins = getStageTimeout(stageName)
+    Closure trackedBody = {
+        try {
+            body()
+            buildUidHelper.recordStageResult(stageName, 'SUCCESS')
+        } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
+            buildUidHelper.recordStageResult(stageName, 'ABORTED')
+            throw e
+        } catch (Exception e) {
+            String result = currentBuild.result ?: 'FAILURE'
+            buildUidHelper.recordStageResult(stageName, result)
+            throw e
+        }
+    }
+
+    if (timeoutMins > 0) {
+        echo "Enforcing stage timeout for '${stageName}': ${timeoutMins} minute(s)"
+        timeout(time: timeoutMins, unit: 'MINUTES') {
+            trackedBody()
+        }
+    } else {
+        trackedBody()
     }
 }
 

@@ -1,6 +1,7 @@
 {
   "stageId": "02-build",
   "stageDisabled": false,
+  "stageTimeoutMinutes": 0,
   "stageCondition": [],
   "description": "Parameters consumed by the build stage script. Vendor overrides may suppress, replace, or extend these via a vendor-scripts/02-build.params.json in the config repo.",
   "parameterGroups": [

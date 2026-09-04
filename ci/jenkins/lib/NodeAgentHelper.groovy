@@ -84,81 +84,6 @@ limitations under the License.
  *   BUILD_CONTAINER_WORKSPACE — workspace path inside the container
  */
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Active-node guard
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Abort the build when no Jenkins agent matching the label expression is online.
- *
- * Jenkins queues builds when all matching agents are *busy* — that is the
- * expected behaviour and we leave it alone.  But when *zero* agents are
- * online for the label (e.g. a cloud template is misconfigured, or all
- * physical nodes are offline), a build would hang indefinitely.  This guard
- * detects that case and aborts with a clear message after timeoutMinutes,
- * giving cloud provisioners (e.g. Kubernetes, EC2) time to spin up a fresh agent.
- *
- * Uses the sandboxed pipeline step nodesByLabel(label) (Pipeline Utility Steps
- * plugin) — no Script Security approval required, works in both scripted and
- * declarative pipelines.
- *
- * Logic:
- *   1. Call nodesByLabel(labelExpr) — returns names of ALL nodes carrying the
- *      label, regardless of whether they are online or busy.
- *   2. If the list is non-empty, at least one agent exists; return immediately
- *      and let Jenkins queue the build normally (busy is fine).
- *   3. If the list is empty (zero agents match the label at all), wait
- *      POLL_INTERVAL_SECONDS and retry.
- *   4. If timeoutMinutes elapses without any agent appearing, throw
- *      FlowInterruptedException(ABORTED) — infrastructure issue, not a code bug.
- *
- * Must be called from a controller-side step context (e.g. inside script {})
- * and NOT from inside an already-allocated node() block.
- *
- * @param labelExpr      Label expression string (same value passed to node()).
- * @param timeoutMinutes How long to wait for at least one matching agent to appear.
- *                       Defaults to CONFIG_ACTIVE_NODE_TIMEOUT env var or 10.
- */
-void waitForActiveNode(String labelExpr, Integer timeoutMinutes = null) {
-    final int POLL_INTERVAL_SECONDS = 30
-    Integer timeoutMins = timeoutMinutes
-                   ?: (env.CONFIG_ACTIVE_NODE_TIMEOUT ? env.CONFIG_ACTIVE_NODE_TIMEOUT.toInteger() : 10)
-
-    echo "Checking for active agents matching label: '${labelExpr}' (timeout: ${timeoutMins} min)"
-
-    long deadline = System.currentTimeMillis() + timeoutMins * 60 * 1000L
-
-    while (true) {
-        // nodesByLabel is a sandboxed Pipeline Utility Steps step — no Script Security
-        // approval needed.  It returns node names whose label set satisfies labelExpr,
-        // online or not.  An empty list means zero agents carry this label at all.
-        List matchingNodes = nodesByLabel(label: labelExpr, offline: true)
-        int activeCount = matchingNodes.size()
-
-        if (activeCount > 0) {
-            echo "✓ Found ${activeCount} agent(s) matching '${labelExpr}' — proceeding."
-            return
-        }
-
-        long remaining = (deadline - System.currentTimeMillis()) / 1000
-        if (remaining <= 0) {
-            // Set ABORTED before calling error() — Jenkins preserves a result that is
-            // already worse-than-SUCCESS, so the build shows as Aborted rather than Failed.
-            // FlowInterruptedException constructors are not sandbox-safe, so this is the
-            // correct approach for sandboxed declarative/scripted pipelines.
-            String msg = "No agent found for label '${labelExpr}' after ${timeoutMins} minute(s). " +
-                      'Ensure at least one agent with this label is online (busy agents are fine — ' +
-                      'this timeout only fires when zero agents match the label). ' +
-                      'If using cloud provisioning, verify the cloud template is configured correctly.'
-            currentBuild.result = 'ABORTED'
-            error(msg)
-        }
-
-        echo "  No active agent yet for '${labelExpr}'. Waiting ${POLL_INTERVAL_SECONDS}s " +
-             "(${remaining.toInteger()}s remaining)..."
-        sleep(POLL_INTERVAL_SECONDS)
-    }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Runtime detection
@@ -322,23 +247,19 @@ void runInPodmanContainer(String image, String extraArgs, Closure body) {
  * Allocate a node and optionally run inside a container.
  *
  * With CONFIG_DOCKER_IMAGE set:
- *   1. Checks that at least one agent matching CONFIG_NODE_LABEL is online
- *      (waitForActiveNode — fails after CONFIG_ACTIVE_NODE_TIMEOUT minutes if
- *      zero agents are online; busy agents are fine and do not trigger this).
- *   2. Allocates a node by CONFIG_NODE_LABEL.
- *   3. Detects the container runtime (Docker or Podman).
- *   4. Performs registry login if CONFIG_DOCKER_REGISTRY + CONFIG_DOCKER_CREDENTIAL are set.
- *   5. Starts the container via runInDockerContainer or runInPodmanContainer.
+ *   1. Allocates a node by CONFIG_NODE_LABEL.
+ *   2. Detects the container runtime (Docker or Podman).
+ *   3. Performs registry login if CONFIG_DOCKER_REGISTRY + CONFIG_DOCKER_CREDENTIAL are set.
+ *   4. Starts the container via runInDockerContainer or runInPodmanContainer.
  *      Both use the scripted approach — see the module-level comment.
  *
  * Without CONFIG_DOCKER_IMAGE:
- *   Checks active agents, then allocates a node by CONFIG_NODE_LABEL and runs body directly.
+ *   Allocates a node by CONFIG_NODE_LABEL and runs body directly.
  */
 void withBuildAgent(Closure body) {
     String nodeLabel = env.CONFIG_NODE_LABEL?.trim() ?: 'worker'
     String image     = env.CONFIG_DOCKER_IMAGE?.trim()
 
-    waitForActiveNode(nodeLabel)
     node(nodeLabel) {
         if (!image) {
             body()

@@ -443,7 +443,6 @@ def generate_jenkins_job_config(pipeline_base_folder: str = "") -> Dict[str, Any
     config: Dict[str, Any] = {
         "jenkinsfilePath": "ci/jenkins/Jenkinsfile.declarative",
         "pipelineTimeoutHours": 8,
-        "activeNodeTimeoutMinutes": 10,
     }
 
     # Only emit pipelineBaseFolder when explicitly provided — omitting it is

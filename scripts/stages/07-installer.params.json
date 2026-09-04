@@ -1,6 +1,7 @@
 {
   "stageId": "07-installer",
   "stageDisabled": false,
+  "stageTimeoutMinutes": 0,
   "stageCondition": [
     { "param": "ENABLE_INSTALLERS", "value": true }
   ],

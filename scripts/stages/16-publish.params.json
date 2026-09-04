@@ -1,6 +1,7 @@
 {
   "stageId": "16-publish",
   "stageDisabled": false,
+  "stageTimeoutMinutes": 0,
   "stageCondition": [
     { "param": "PUBLISH_ARTIFACTS", "value": true }
   ],

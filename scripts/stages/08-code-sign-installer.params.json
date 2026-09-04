@@ -1,6 +1,7 @@
 {
   "stageId": "08-code-sign-installer",
   "stageDisabled": false,
+  "stageTimeoutMinutes": 0,
   "stageCondition": [
     { "param": "ENABLE_INSTALLERS", "value": true },
     { "param": "SIGN_ARTIFACTS",    "value": true }

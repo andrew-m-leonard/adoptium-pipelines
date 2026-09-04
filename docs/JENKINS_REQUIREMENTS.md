@@ -39,10 +39,8 @@ This label is used by:
   `controller`; running builds on the controller is not recommended).
 
 > **Important:** `ci.role.worker` is a hard requirement with no configuration
-> override for the Initialize stage.  If no agent carrying this label is online
-> when the Initialize stage is scheduled, the pipeline will wait up to
-> `activeNodeTimeoutMinutes` (default 10 minutes, configurable in
-> `jenkins_job_config.json`) before failing.
+> override for the Initialize stage.  Jenkins queues the stage until a matching
+> worker agent is available.
 
 ### Stage-specific labels
 
@@ -59,14 +57,10 @@ reference.
 
 ## Timeout Behaviour
 
-The pipeline uses `activeNodeTimeoutMinutes` (from `jenkins_job_config.json`,
-default `10`) to wait for at least one matching agent to come online before
-failing.  This is distinct from the Jenkins executor queue — it fires only when
-**zero** agents carrying the required label are online (e.g. during cloud
-provisioner startup).
-
-The `ci.role.worker` agents used by the Initialize stage follow the same
-timeout and are subject to the same check.
+The pipeline uses `pipelineTimeoutHours` (from `jenkins_job_config.json`,
+default `8`) as the overall build execution timeout. Individual stages can
+optionally define `stageTimeoutMinutes` in their `*.params.json` sidecar files
+to enforce per-stage execution timeouts via `pipelineHelper.executeStageWithTracking()`.
 
 ---
 
@@ -85,4 +79,4 @@ timeout and are subject to the same check.
 
 - [LABEL_SCHEMA.md](./LABEL_SCHEMA.md) — full node label schema (`ci.role.*`, `sw.os.*`, `hw.arch.*`)
 - [JOB_DSL_AUTOMATION.md](./JOB_DSL_AUTOMATION.md) — seed job setup and prerequisites
-- [CONFIG_SCHEMA.md](./CONFIG_SCHEMA.md) — `jenkins_job_config.json` schema including `activeNodeTimeoutMinutes` and `stageAgentLabels`
+- [CONFIG_SCHEMA.md](./CONFIG_SCHEMA.md) — `jenkins_job_config.json` schema including `stageAgentLabels`

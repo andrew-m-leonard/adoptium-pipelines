@@ -181,15 +181,10 @@ def generateJenkinsConfig(config_repo_path, pipeline_config_path, output_path):
     if build_node_label and additional_node_labels:
         build_node_label = build_node_label + "&&" + additional_node_labels
 
-    # Pass activeNodeTimeoutMinutes through to jenkins-config.json so the
-    # Jenkinsfile can enforce a "no active nodes" timeout at node() allocation.
-    active_node_timeout = jenkins_config.get("activeNodeTimeoutMinutes", 10)
-
     jenkins_out = {
         "stageAgentLabels": stage_agent_labels,
         "resolvedStageAgentLabels": resolved,
         "buildNodeLabel": build_node_label,
-        "activeNodeTimeoutMinutes": active_node_timeout,
     }
 
     with open(Path(output_path), "w", encoding="utf-8") as f:

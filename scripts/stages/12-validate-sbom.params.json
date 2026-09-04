@@ -1,6 +1,7 @@
 {
   "stageId": "12-validate-sbom",
   "stageDisabled": false,
+  "stageTimeoutMinutes": 0,
   "stageCondition": [
     { "param": "CREATE_SBOM", "value": true }
   ],

@@ -105,6 +105,18 @@ void loadStageConditions() {
     }
     env.COLLATED_STAGE_CONDITIONS = JsonOutput.toJson(condMap)
     echo "✓ Loaded stage conditions for ${condMap.size()} stage(s)"
+
+    Map timeoutMap = [:]
+    (collated.groups ?: []).each { Map grp ->
+        int timeoutMins = grp.stageTimeoutMinutes ? grp.stageTimeoutMinutes.toInteger() : 0
+        if (timeoutMins > 0) {
+            timeoutMap[grp.stageId] = timeoutMins
+        }
+    }
+    env.COLLATED_STAGE_TIMEOUTS = JsonOutput.toJson(timeoutMap)
+    if (timeoutMap) {
+        echo "✓ Loaded stage timeouts for ${timeoutMap.size()} stage(s): ${timeoutMap}"
+    }
 }
 
 /**
@@ -206,16 +218,6 @@ String getStageLabel(String stageId) {
     return 'ci.role.worker'
 }
 
-/**
- * Return the active-node timeout in minutes from CONFIG_ACTIVE_NODE_TIMEOUT,
- * falling back to 10 minutes if the config has not yet been loaded.
- */
-int activeNodeTimeout() {
-    final int DEFAULT_TIMEOUT = 10
-    if (env.CONFIG_ACTIVE_NODE_TIMEOUT) { return env.CONFIG_ACTIVE_NODE_TIMEOUT.toInteger() }
-    return DEFAULT_TIMEOUT
-}
-
 // ============================================================================
 
 pipeline {
@@ -238,10 +240,6 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(INITIALIZE)
-                    // NOTE: CONFIG_ACTIVE_NODE_TIMEOUT is not yet set at this point — it is only
-                    // populated by ConfigHelper.generateJenkinsConfig() which runs *inside* this stage.
-                    // activeNodeTimeout() will therefore fall back to 10 minutes.
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(INITIALIZE), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(INITIALIZE) {
                         pipelineHelper.initializeStage(INITIALIZE, [])
 
@@ -315,7 +313,6 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(INTERNAL_CODE_SIGN)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(INTERNAL_CODE_SIGN), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(INTERNAL_CODE_SIGN) {
                         Map config = pipelineHelper.initializeStage(INTERNAL_CODE_SIGN, [BUILD], 'pipeline-config.json,workspace/target/jmods/**/*')
 
@@ -348,7 +345,6 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(ASSEMBLE_IMAGES)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(ASSEMBLE_IMAGES), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(ASSEMBLE_IMAGES) {
                         Map config = pipelineHelper.initializeStage(ASSEMBLE_IMAGES, [INTERNAL_CODE_SIGN], 'pipeline-config.json,signed-jmods/**/*')
 
@@ -375,7 +371,6 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(POST_BUILD_CODE_SIGN)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(POST_BUILD_CODE_SIGN), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(POST_BUILD_CODE_SIGN) {
                         Map config = pipelineHelper.initializeStage(POST_BUILD_CODE_SIGN, [BUILD], 'pipeline-config.json,workspace/target/**/*.tar.gz,workspace/target/**/*.zip,workspace/target/metadata/**/*')
 
@@ -402,7 +397,6 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(BUILD_INSTALLERS)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(BUILD_INSTALLERS), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(BUILD_INSTALLERS) {
                         Map config = pipelineHelper.initializeStage(BUILD_INSTALLERS, [BUILD], 'pipeline-config.json,**/*.tar.gz,**/*.zip,**/metadata/**/*')
 
@@ -429,7 +423,6 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(CODE_SIGN_INSTALLER)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(CODE_SIGN_INSTALLER), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(CODE_SIGN_INSTALLER) {
                         Map config = pipelineHelper.initializeStage(CODE_SIGN_INSTALLER, [BUILD_INSTALLERS], 'pipeline-config.json,installers/**/*')
 
@@ -456,7 +449,6 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(SBOM_SIGN)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(SBOM_SIGN), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(SBOM_SIGN) {
                         Map config = pipelineHelper.initializeStage(SBOM_SIGN, [BUILD], 'pipeline-config.json,**/*.json')
 
@@ -483,7 +475,6 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(DIGITAL_ARTIFACT_SIGN)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(DIGITAL_ARTIFACT_SIGN), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(DIGITAL_ARTIFACT_SIGN) {
                         Map config = pipelineHelper.initializeStage(DIGITAL_ARTIFACT_SIGN, [POST_BUILD_CODE_SIGN, SBOM_SIGN], 'pipeline-config.json,signed/**/*,signed-installers/**/*,signed-sbom/**/*')
 
@@ -510,7 +501,6 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(VERIFY_SIGNING)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(VERIFY_SIGNING), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(VERIFY_SIGNING) {
                         Map config = pipelineHelper.initializeStage(VERIFY_SIGNING, [DIGITAL_ARTIFACT_SIGN, SBOM_SIGN, CODE_SIGN_INSTALLER, POST_BUILD_CODE_SIGN], 'pipeline-config.json,signed/**/*,*.sig,*.asc')
 
@@ -537,7 +527,6 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(VALIDATE_SBOM)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(VALIDATE_SBOM), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(VALIDATE_SBOM) {
                         Map config = pipelineHelper.initializeStage(VALIDATE_SBOM, [BUILD], 'pipeline-config.json,*sbom*.json')
 
@@ -564,7 +553,6 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(SMOKE_TESTS)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(SMOKE_TESTS), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(SMOKE_TESTS) {
                         Map config = pipelineHelper.initializeStage(SMOKE_TESTS, [BUILD], 'pipeline-config.json,*.tar.gz,*.zip')
 
@@ -593,7 +581,6 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(REPRODUCIBLE_COMPARE)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(REPRODUCIBLE_COMPARE), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(REPRODUCIBLE_COMPARE) {
                         Map config = pipelineHelper.initializeStage(REPRODUCIBLE_COMPARE, [BUILD], 'pipeline-config.json,*.tar.gz,*.zip')
 
@@ -629,7 +616,6 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(AQA_TESTS)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(AQA_TESTS), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(AQA_TESTS) {
                         Map config = pipelineHelper.initializeStage(AQA_TESTS, [SMOKE_TESTS], 'pipeline-config.json,workspace/target/**/*.tar.gz,workspace/target/metadata/**/*')
 
@@ -656,7 +642,6 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(TCK_TESTS)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(TCK_TESTS), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(TCK_TESTS) {
                         Map config = pipelineHelper.initializeStage(TCK_TESTS, [SMOKE_TESTS], 'pipeline-config.json,workspace/target/**/*.tar.gz,workspace/target/metadata/**/*')
 
@@ -683,7 +668,6 @@ pipeline {
             steps {
                 script {
                     ensureLibsLoaded(PUBLISH_ARTIFACTS)
-                    nodeAgentHelper.waitForActiveNode(getStageLabel(PUBLISH_ARTIFACTS), activeNodeTimeout())
                     pipelineHelper.executeStageWithTracking(PUBLISH_ARTIFACTS) {
                         Map config = pipelineHelper.initializeStage(PUBLISH_ARTIFACTS, [BUILD], 'pipeline-config.json,**/*.tar.gz,**/*.zip,**/*.msi,**/*.pkg,**/metadata/**/*')
 
@@ -717,9 +701,6 @@ pipeline {
                     // that cannot be caught by a try/catch.
                     if (env.CONFIG_STAGE_AGENT_LABELS) {
                         try {
-                            // NOTE: If the pipeline failed before generateJenkinsConfig() completed,
-                            // CONFIG_ACTIVE_NODE_TIMEOUT may be unset; falls back to 10 minutes.
-                            nodeAgentHelper.waitForActiveNode(getStageLabel(INITIALIZE), activeNodeTimeout())
                             node(getStageLabel(INITIALIZE)) {
                                 echo 'Final workspace cleanup...'
                                 cleanWs notFailBuild: true, deleteDirs: true

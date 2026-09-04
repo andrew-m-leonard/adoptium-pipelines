@@ -53,6 +53,11 @@ Stage-level metadata fields (top-level in each .params.json):
     regex.  Both the Jenkins Groovy evaluator and the local Python runner
     honour this prefix.
 
+  stageTimeoutMinutes (integer, optional, default 0 / not set)
+    Optional wall-clock timeout in minutes for the stage. If set to > 0,
+    pipelineHelper.executeStageWithTracking() enforces a timeout around the
+    stage body. 0 or absent means no stage timeout is applied.
+
 Output JSON (written to --output):
   {
     "groups": [
@@ -63,6 +68,7 @@ Output JSON (written to --output):
         "stageIds":       ["03-internal-code-sign", "07-installer", "14-aqa-tests", ...],
         "stageDisabled":  false,
         "stageCondition": [],
+        "stageTimeoutMinutes": 0,
         "parameters": [
           { "name": "RUN_TESTS", "type": "boolean", "default": true, "description": "..." },
           ...
@@ -201,6 +207,14 @@ def _validate_params_file(data: dict, source: str) -> None:
                     f"invalid regex pattern {pattern!r}: {exc}"
                 )
 
+    # Validate stageTimeoutMinutes if present
+    if "stageTimeoutMinutes" in data and data["stageTimeoutMinutes"] is not None:
+        timeout = data["stageTimeoutMinutes"]
+        if not isinstance(timeout, int) or isinstance(timeout, bool) or timeout < 0:
+            raise ValueError(
+                f"[{source}] 'stageTimeoutMinutes' must be a non-negative integer: {timeout!r}"
+            )
+
 
 # ---------------------------------------------------------------------------
 # Loading helpers
@@ -270,6 +284,22 @@ def _resolve_stage_condition(
     return []
 
 
+def _resolve_stage_timeout(
+    default_data: dict | None, vendor_data: dict | None
+) -> int:
+    """
+    Resolve the effective stageTimeoutMinutes value after vendor overlay.
+
+    Vendor data takes precedence if it explicitly sets stageTimeoutMinutes.
+    Falls back to default_data, then 0.
+    """
+    if vendor_data is not None and "stageTimeoutMinutes" in vendor_data:
+        return int(vendor_data["stageTimeoutMinutes"] or 0)
+    if default_data is not None and "stageTimeoutMinutes" in default_data:
+        return int(default_data["stageTimeoutMinutes"] or 0)
+    return 0
+
+
 def _merge_stage(
     default_data: dict | None, vendor_data: dict | None, stage_stem: str
 ) -> list:
@@ -277,7 +307,7 @@ def _merge_stage(
     Merge default and vendor parameterGroups for one stage stem.
 
     Returns a list of group dicts, each containing:
-      name, description, stageId, stageDisabled, stageCondition, parameters
+      name, description, stageId, stageDisabled, stageCondition, stageTimeoutMinutes, parameters
     """
     source_default = f"{stage_stem}.params.json (default)"
     source_vendor = f"{stage_stem}.params.json (vendor)"
@@ -289,6 +319,7 @@ def _merge_stage(
 
     stage_disabled = _resolve_stage_disabled(default_data, vendor_data)
     stage_condition = _resolve_stage_condition(default_data, vendor_data)
+    stage_timeout = _resolve_stage_timeout(default_data, vendor_data)
 
     # Build the default group map: group_name → group dict
     # and a reverse index: param_name → group_name
@@ -304,6 +335,7 @@ def _merge_stage(
                 "stageId": stage_stem,
                 "stageDisabled": stage_disabled,
                 "stageCondition": stage_condition,
+                "stageTimeoutMinutes": stage_timeout,
                 "parameters": list(grp.get("parameters") or []),
             }
             for p in grp.get("parameters") or []:
@@ -441,6 +473,7 @@ def _reorder_by_priority(groups: list[dict]) -> list[dict]:
                     "stageIds": list(all_ids),
                     "stageDisabled": grp.get("stageDisabled", False),
                     "stageCondition": list(grp.get("stageCondition") or []),
+                    "stageTimeoutMinutes": grp.get("stageTimeoutMinutes", 0),
                     "parameters": list(grp.get("parameters") or []),
                 }
             else:
@@ -653,6 +686,7 @@ def collect(
                         "stageId": grp["stageId"],
                         "stageDisabled": grp["stageDisabled"],
                         "stageCondition": grp["stageCondition"],
+                        "stageTimeoutMinutes": grp.get("stageTimeoutMinutes", 0),
                         "parameters": clean_params,
                     }
                 )
@@ -716,6 +750,7 @@ def collect(
                     "stageId": stage_id,
                     "stageDisabled": False,
                     "stageCondition": [],
+                    "stageTimeoutMinutes": stage_entry.get("stageTimeoutMinutes", 0),
                     "parameters": [],
                 }
                 output_groups.append(target_group)

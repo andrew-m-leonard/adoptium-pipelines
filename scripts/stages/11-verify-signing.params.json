@@ -1,6 +1,7 @@
 {
   "stageId": "11-verify-signing",
   "stageDisabled": false,
+  "stageTimeoutMinutes": 0,
   "stageCondition": [
     { "param": "SIGN_ARTIFACTS", "value": true }
   ],

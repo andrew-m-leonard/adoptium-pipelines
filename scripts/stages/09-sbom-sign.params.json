@@ -1,6 +1,7 @@
 {
   "stageId": "09-sbom-sign",
   "stageDisabled": false,
+  "stageTimeoutMinutes": 0,
   "stageCondition": [
     { "param": "SIGN_ARTIFACTS", "value": true },
     { "param": "CREATE_SBOM",    "value": true }

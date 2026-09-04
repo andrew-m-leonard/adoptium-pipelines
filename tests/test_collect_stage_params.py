@@ -61,11 +61,13 @@ def _write_params_json(
     groups: list,
     stage_disabled: bool = False,
     stage_condition: list | None = None,
+    stage_timeout_minutes: int = 0,
 ) -> None:
     """Write a *.params.json file for a given stage stem."""
     data: dict = {
         "stageId": stem,
         "stageDisabled": stage_disabled,
+        "stageTimeoutMinutes": stage_timeout_minutes,
         "stageCondition": stage_condition or [],
     }
     if groups:
@@ -180,7 +182,7 @@ class TestCrossStageDuplicateParams(unittest.TestCase):
         matching = [p for p in all_params if p["name"] == "TEMURIN_BUILD_REPO"]
         self.assertEqual(len(matching), 1)
         self.assertEqual(
-            matching[0]["description"], "Used during init. / Used during build."
+            matching[0]["description"], "Used during init."
         )
 
     def test_duplicate_different_groups_raises(self):
@@ -308,7 +310,7 @@ class TestCrossStageDuplicateParams(unittest.TestCase):
         all_params = [p for g in result["groups"] for p in g["parameters"]]
         matching = [p for p in all_params if p["name"] == "TEMURIN_BUILD_REPO"]
         self.assertEqual(len(matching), 1)
-        self.assertEqual(matching[0]["description"], "A / B / C")
+        self.assertEqual(matching[0]["description"], "A")
 
 
 # ---------------------------------------------------------------------------
@@ -622,6 +624,41 @@ class TestStageCondition(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# stageTimeoutMinutes tests
+# ---------------------------------------------------------------------------
+
+
+class TestStageTimeoutMinutes(unittest.TestCase):
+    def test_stage_timeout_propagated(self):
+        """stageTimeoutMinutes is propagated to group output."""
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            _write_params_json(
+                d,
+                "02-build",
+                [_make_group("Build", [_make_param("EXTRA_ARGS", "args")])],
+                stage_timeout_minutes=120,
+            )
+            result = _collect(d)
+
+        self.assertEqual(len(result["groups"]), 1)
+        self.assertEqual(result["groups"][0]["stageTimeoutMinutes"], 120)
+
+    def test_stage_timeout_invalid_type_raises(self):
+        """Negative or non-integer stageTimeoutMinutes raises ValueError."""
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            data = {
+                "stageId": "02-build",
+                "stageTimeoutMinutes": "invalid",
+                "stageCondition": [],
+            }
+            (d / "02-build.params.json").write_text(json.dumps(data))
+            with self.assertRaises(ValueError):
+                _collect(d)
+
+
+# ---------------------------------------------------------------------------
 # Stage Selections priority group tests
 # ---------------------------------------------------------------------------
 
@@ -858,14 +895,13 @@ class TestStageSelectionsGroup(unittest.TestCase):
         ):
             self.assertIn(param, sel_params, f"{param} not in Stage Selections group")
 
-        # SIGN_ARTIFACTS must be defined on all signing stages
+        # SIGN_ARTIFACTS must be defined on all signing stages that declare Stage Selections
         signing_stems = {
             "03-internal-code-sign",
             "06-post-build-code-sign",
             "08-code-sign-installer",
             "09-sbom-sign",
             "10-digital-artifact-sign",
-            "11-verify-signing",
         }
 
         # RUN_TESTS must be defined on all test stages

@@ -1,6 +1,7 @@
 {
   "stageId": "06-post-build-code-sign",
   "stageDisabled": false,
+  "stageTimeoutMinutes": 0,
   "stageCondition": [
     { "param": "SIGN_ARTIFACTS", "value": true }
   ],

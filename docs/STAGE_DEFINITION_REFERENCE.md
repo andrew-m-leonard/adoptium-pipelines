@@ -55,6 +55,7 @@ Every `scripts/stages/NN-stem.params.json` file follows this schema:
 {
   "stageId": "NN-stem",
   "stageDisabled": false,
+  "stageTimeoutMinutes": 0,
   "stageCondition": [
     { "param": "PARAM_NAME", "value": true }
   ],
@@ -109,7 +110,14 @@ A list of runtime conditions that must all be satisfied (AND) for the stage to e
 - If `stageDisabled: true`, the stage is always skipped regardless of conditions.
 - If `stageDisabled: false` but conditions are not met, the stage is skipped at runtime.
 
-**Gate-only files:** a `params.json` may contain only `stageId`, `stageDisabled`, and `stageCondition` with no `parameterGroups` (e.g. `08-code-sign-installer.params.json`). This is valid — it registers the gate condition without introducing any new parameters.
+**Gate-only files:** a `params.json` may contain only `stageId`, `stageDisabled`, `stageTimeoutMinutes`, and `stageCondition` with no `parameterGroups` (e.g. `08-code-sign-installer.params.json`). This is valid — it registers the gate condition without introducing any new parameters.
+
+#### `stageTimeoutMinutes` (integer, optional, default `0`)
+
+Optional wall-clock timeout in minutes for this stage.
+
+- `0` (or omitted) — no stage timeout is enforced; the stage is bounded only by the overall `pipelineTimeoutHours`.
+- `> 0` — `pipelineHelper.executeStageWithTracking()` wraps the stage execution in a Jenkins `timeout(time: N, unit: 'MINUTES')` block. If the stage exceeds this duration, it is aborted cleanly.
 
 #### `parameterGroups` (array, optional)
 
@@ -222,6 +230,7 @@ main "$@"
 {
   "stageId": "NN-new-stage",
   "stageDisabled": false,
+  "stageTimeoutMinutes": 0,
   "stageCondition": [],
   "description": "Parameters for the new stage.",
   "parameterGroups": [
@@ -259,7 +268,6 @@ stage('New Stage') {
     steps {
         script {
             ensureLibsLoaded()
-            nodeAgentHelper.waitForActiveNode(getStageLabel('New Stage'), getActiveNodeTimeout())
             pipelineHelper.executeStageWithTracking('New Stage') {
                 def config = pipelineHelper.initializeStage(
                     'New Stage',

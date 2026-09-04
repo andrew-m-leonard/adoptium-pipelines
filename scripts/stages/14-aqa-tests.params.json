@@ -1,6 +1,7 @@
 {
   "stageId": "14-aqa-tests",
   "stageDisabled": false,
+  "stageTimeoutMinutes": 0,
   "stageCondition": [
     { "param": "RUN_TESTS", "value": true }
   ],

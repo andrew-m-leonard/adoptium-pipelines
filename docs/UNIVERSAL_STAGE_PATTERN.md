@@ -85,6 +85,7 @@ Every stage that introduces new parameters or has runtime gate conditions needs 
 {
   "stageId": "NN-stem",
   "stageDisabled": false,
+  "stageTimeoutMinutes": 0,
   "stageCondition": [],
   "description": "Parameters consumed by the NN-stem stage.",
   "parameterGroups": [
@@ -183,7 +184,6 @@ stage(NN_MY_STAGE) {
     steps {
         script {
             ensureLibsLoaded(NN_MY_STAGE)
-            nodeAgentHelper.waitForActiveNode(getStageLabel(NN_MY_STAGE), getActiveNodeTimeout())
             pipelineHelper.executeStageWithTracking(NN_MY_STAGE) {
                 def config = pipelineHelper.initializeStage(
                     NN_MY_STAGE,

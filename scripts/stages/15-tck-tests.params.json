@@ -1,6 +1,7 @@
 {
   "stageId": "15-tck-tests",
   "stageDisabled": false,
+  "stageTimeoutMinutes": 0,
   "stageCondition": [
     { "param": "ENABLE_TCK", "value": true }
   ],
