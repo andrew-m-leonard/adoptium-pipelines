@@ -26,7 +26,14 @@ the pipeline behaves exactly as before — no stage receives any credentials.
 
 Supported credential types and their env var fields:
 
-  string           → variable name = the credential key itself
+  string           → envVar (default: the credential key itself)
+                     Optional override: set "envVar": "MY_VAR" to inject the secret
+                     under a different name.  Multiple string credentials in ALL_STAGES
+                     and a specific stage may share the same envVar — the stage-specific
+                     one takes precedence and the ALL_STAGES entry is silently suppressed
+                     for that stage.  Two stage-specific credentials (neither being
+                     ALL_STAGES) resolving to the same envVar in the same stage is an
+                     error caught at load time.
   usernamePassword → usernameEnvVar (default: <KEY>_USER)
                      passwordEnvVar (default: <KEY>_PASS)
   sshUserPrivateKey→ keyFileEnvVar  (default: <KEY>_KEYFILE)
@@ -61,7 +68,8 @@ _TYPE_ENV_VAR_FIELDS = {
 def _default_env_var_names(name, cred_type):
     """Return the default env var names for a credential that omits explicit fields."""
     if cred_type == "string":
-        return {name: name}
+        # envVar defaults to the credential key name; can be overridden explicitly.
+        return {"envVar": name}
     if cred_type == "usernamePassword":
         return {
             "usernameEnvVar": f"{name}_USER",
@@ -99,8 +107,29 @@ def _validate_credentials(credentials):
         sys.exit(1)
 
 
-def _validate_stage_credentials(stage_credentials, credentials):
-    """Validate stageCredentials references.  All names must exist in credentials."""
+def _resolve_env_var(name, cred, resolved_credentials):
+    """Return the effective env var name for a credential entry.
+
+    For string credentials uses the explicit 'envVar' field if present,
+    otherwise falls back to the credential key name.
+    For other types returns None (they carry multiple env vars handled elsewhere).
+    """
+    if cred.get("type") == "string":
+        return resolved_credentials.get(name, {}).get("envVar") or name
+    return None
+
+
+def _validate_stage_credentials(stage_credentials, credentials, resolved_credentials):
+    """Validate stageCredentials references and envVar collision rules.
+
+    Rules:
+      1. All credential names must exist in credentials.
+      2. Two stage-specific (non-ALL_STAGES) entries for the same stage that resolve
+         to the same envVar is an error — the binding would be ambiguous.
+      3. An ALL_STAGES entry and a stage-specific entry sharing an envVar is NOT an
+         error — the stage-specific one wins (ALL_STAGES entry is suppressed at
+         runtime by CredentialHelper).
+    """
     errors = []
     for stage_id, names in stage_credentials.items():
         if not isinstance(names, list):
@@ -113,6 +142,30 @@ def _validate_stage_credentials(stage_credentials, credentials):
                 errors.append(
                     f"  stageCredentials['{stage_id}']: '{name}' is not defined in credentials"
                 )
+
+    # Rule 2: duplicate envVar within stage-specific entries for the same stage.
+    # Collect stage-specific names per stage (excluding ALL_STAGES itself).
+    all_stages_names = set(stage_credentials.get("ALL_STAGES", []))
+    for stage_id, names in stage_credentials.items():
+        if stage_id == "ALL_STAGES":
+            continue
+        # Only consider names that are NOT in ALL_STAGES (those are handled by rule 3).
+        stage_only_names = [n for n in names if n not in all_stages_names and n in credentials]
+        seen_env_vars = {}
+        for name in stage_only_names:
+            cred = credentials[name]
+            ev = _resolve_env_var(name, cred, resolved_credentials)
+            if ev is None:
+                continue
+            if ev in seen_env_vars:
+                errors.append(
+                    f"  stageCredentials['{stage_id}']: credentials '{seen_env_vars[ev]}' and "
+                    f"'{name}' both resolve to envVar '{ev}'. "
+                    f"Two stage-specific credentials may not share the same env var name."
+                )
+            else:
+                seen_env_vars[ev] = name
+
     if errors:
         print("ERROR: jenkins_credential_config.json validation failed:", file=sys.stderr)
         for e in errors:
@@ -153,9 +206,9 @@ def generateCredentialConfig(config_repo_path, output_path):
     stage_credentials = config.get("stageCredentials", {})
 
     _validate_credentials(credentials)
-    _validate_stage_credentials(stage_credentials, credentials)
 
-    # Apply defaults for omitted env var name fields
+    # Apply defaults for omitted env var name fields (must happen before
+    # _validate_stage_credentials so _resolve_env_var sees resolved envVar values).
     resolved_credentials = {}
     for name, cred in credentials.items():
         resolved = dict(cred)
@@ -164,6 +217,8 @@ def generateCredentialConfig(config_repo_path, output_path):
             if field not in resolved:
                 resolved[field] = default_val
         resolved_credentials[name] = resolved
+
+    _validate_stage_credentials(stage_credentials, credentials, resolved_credentials)
 
     out = {
         "pipelineRepoCredentialsId": pipeline_repo_credentials_id,

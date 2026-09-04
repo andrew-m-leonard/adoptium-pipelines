@@ -40,7 +40,10 @@ limitations under the License.
  *       block after the scope exits.
  *
  * Supported credential types (mirrors Jenkins withCredentials binding types):
- *   string           → env var = the credential name itself
+ *   string           → env var name = cred.envVar field (default: credential key name)
+ *                      The optional 'envVar' field allows the same well-known env var
+ *                      name (e.g. GITHUB_TOKEN) to be injected from different underlying
+ *                      Jenkins credentials for different stages.
  *   usernamePassword → usernameEnvVar / passwordEnvVar (defaults: <NAME>_USER / <NAME>_PASS)
  *   sshUserPrivateKey→ keyFileEnvVar  (default: <NAME>_KEYFILE)
  *   file             → fileEnvVar     (default: <NAME>_FILE)
@@ -50,6 +53,14 @@ limitations under the License.
  *   is injected into every stage, regardless of stageId.  This is the intended
  *   mechanism for GITHUB_TOKEN — a PAT needed by every stage that performs a
  *   git clone over HTTPS (see docs/GITHUB_AUTH_GIT_OPERATIONS.md).
+ *
+ * envVar precedence for string credentials:
+ *   When a stage-specific credential and an ALL_STAGES credential both resolve to
+ *   the same envVar name, the stage-specific one takes precedence.  The ALL_STAGES
+ *   entry is silently suppressed for that stage so withCredentials() never sees two
+ *   bindings for the same variable name (which would cause a Jenkins runtime error).
+ *   Two stage-specific (non-ALL_STAGES) credentials sharing an envVar in the same
+ *   stage are rejected at config-load time by load-jenkins-credential-config.py.
  */
 
 import groovy.json.JsonSlurper
@@ -81,10 +92,99 @@ List<String> _credentialNamesForStage(String stageId, String stageCredsJson) {
     List allStages = parsed['ALL_STAGES'] ?: []
     List stageOnly = parsed[stageId]      ?: []
     // Merge, preserving order (ALL_STAGES first), deduplicating by name.
+    // ALL_STAGES entries whose envVar is overridden by a stage-specific entry are
+    // removed in _buildBindings(), not here — we still need both in the list so
+    // _buildBindings() can compare them.
     LinkedHashSet<String> merged = new LinkedHashSet<>()
     (allStages + stageOnly).each { merged.add(it.toString()) }
     // Return a plain ArrayList<String> — LazyMap/LazyList are not serializable.
     return new ArrayList<>(merged)
+}
+
+/**
+ * Resolve the effective env var name for a string credential.
+ * Uses the explicit 'envVar' field if present, otherwise falls back to the
+ * credential key name.
+ * @NonCPS — must not call any CPS pipeline steps.
+ */
+@NonCPS
+String _resolveEnvVar(String name, Map<String, String> cred) {
+    String ev = cred.get('envVar')
+    return (ev != null && !ev.isEmpty()) ? ev : name
+}
+
+/**
+ * Build the withCredentials() bindings list and the flat list of injected env var
+ * names, applying ALL_STAGES suppression for string credentials whose envVar is
+ * claimed by a stage-specific entry.
+ *
+ * Returns a plain Map with two keys:
+ *   bindings    → List of withCredentials binding objects
+ *   envVarNames → List<String> of all env var names that will be injected
+ *
+ * @NonCPS — must not call any CPS pipeline steps.
+ */
+@NonCPS
+Map _buildBindings(String stageId, List<String> names,
+                   Map<String, Map<String, String>> credDefs,
+                   String stageCredsJson) {
+    // Determine which credential names are stage-specific (not from ALL_STAGES).
+    Map parsed         = new JsonSlurper().parseText(stageCredsJson ?: '{}')
+    Set allStagesNames = new HashSet<>(parsed['ALL_STAGES']?.collect { it.toString() } ?: [])
+    Set stageOnlyNames = new HashSet<>(parsed[stageId]?.collect    { it.toString() } ?: [])
+
+    // Collect the envVar names claimed by stage-specific string credentials.
+    // These take precedence over any ALL_STAGES entry with the same envVar.
+    Set<String> stageClaimedEnvVars = new HashSet<>()
+    stageOnlyNames.each { String name ->
+        Map<String, String> cred = credDefs[name]
+        if (cred && cred.type == 'string') {
+            stageClaimedEnvVars.add(_resolveEnvVar(name, cred))
+        }
+    }
+
+    List bindings    = []
+    List envVarNames = []
+
+    names.each { String name ->
+        Map<String, String> cred = credDefs[name]
+        if (!cred) { return }  // error reported by caller
+
+        boolean isAllStages = allStagesNames.contains(name) && !stageOnlyNames.contains(name)
+
+        switch (cred.type) {
+            case 'string':
+                String ev = _resolveEnvVar(name, cred)
+                // Suppress ALL_STAGES entry when a stage-specific entry claims the same envVar.
+                if (isAllStages && stageClaimedEnvVars.contains(ev)) {
+                    return  // skip — stage-specific wins
+                }
+                bindings    << [type: 'string', credentialId: cred.credentialId, variable: ev]
+                envVarNames << ev
+                break
+            case 'usernamePassword':
+                String u = cred.usernameEnvVar ?: "${name}_USER"
+                String p = cred.passwordEnvVar ?: "${name}_PASS"
+                bindings    << [type: 'usernamePassword', credentialId: cred.credentialId,
+                                usernameVariable: u, passwordVariable: p]
+                envVarNames << u << p
+                break
+            case 'sshUserPrivateKey':
+                String k = cred.keyFileEnvVar ?: "${name}_KEYFILE"
+                bindings    << [type: 'sshUserPrivateKey', credentialId: cred.credentialId,
+                                keyFileVariable: k]
+                envVarNames << k
+                break
+            case 'file':
+                String f = cred.fileEnvVar ?: "${name}_FILE"
+                bindings    << [type: 'file', credentialId: cred.credentialId, variable: f]
+                envVarNames << f
+                break
+        }
+    }
+
+    // Return plain serializable types — no LazyMap.
+    return [bindings: new ArrayList(bindings), envVarNames: new ArrayList(envVarNames)]
 }
 
 /**
@@ -137,46 +237,41 @@ void withStageCredentials(String stageId, Closure body) {
 
     Map<String, Map<String, String>> credDefs = _credentialDefs(names, env.CONFIG_CREDENTIAL_DEFINITIONS)
 
-    List bindings    = []
-    List envVarNames = []
-
+    // Validate that every referenced credential is defined.
     names.each { String name ->
-        Map<String, String> cred = credDefs[name]
-        if (!cred) {
+        if (!credDefs[name]) {
             error("CredentialHelper: credential '${name}' referenced by stage '${stageId}' " +
                   "is not defined in jenkins_credential_config.json")
         }
-        switch (cred.type) {
+    }
+
+    // Build bindings with ALL_STAGES suppression for envVar conflicts.
+    // _buildBindings() is @NonCPS so no LazyMap escapes into this CPS frame.
+    Map built = _buildBindings(stageId, names, credDefs, env.CONFIG_STAGE_CREDENTIALS)
+    List bindings    = built.bindings    as List
+    List envVarNames = built.envVarNames as List
+
+    // Convert the plain maps produced by the @NonCPS helper into Jenkins
+    // withCredentials() binding objects (these are CPS-safe value types).
+    List wcBindings = bindings.collect { Map b ->
+        switch (b.type) {
             case 'string':
-                bindings    << string(credentialsId: cred.credentialId, variable: name)
-                envVarNames << name
-                break
+                return string(credentialsId: b.credentialId, variable: b.variable)
             case 'usernamePassword':
-                String u = cred.usernameEnvVar ?: "${name}_USER"
-                String p = cred.passwordEnvVar ?: "${name}_PASS"
-                bindings    << usernamePassword(credentialsId: cred.credentialId,
-                                                usernameVariable: u,
-                                                passwordVariable: p)
-                envVarNames << u << p
-                break
+                return usernamePassword(credentialsId: b.credentialId,
+                                        usernameVariable: b.usernameVariable,
+                                        passwordVariable: b.passwordVariable)
             case 'sshUserPrivateKey':
-                String k = cred.keyFileEnvVar ?: "${name}_KEYFILE"
-                bindings    << sshUserPrivateKey(credentialsId: cred.credentialId,
-                                                 keyFileVariable: k)
-                envVarNames << k
-                break
+                return sshUserPrivateKey(credentialsId: b.credentialId,
+                                         keyFileVariable: b.keyFileVariable)
             case 'file':
-                String f = cred.fileEnvVar ?: "${name}_FILE"
-                bindings    << file(credentialsId: cred.credentialId, variable: f)
-                envVarNames << f
-                break
+                return file(credentialsId: b.credentialId, variable: b.variable)
             default:
-                error("CredentialHelper: unknown credential type '${cred.type}' " +
-                      "for credential '${name}' in stage '${stageId}'")
+                error("CredentialHelper: unknown credential type '${b.type}' in stage '${stageId}'")
         }
     }
 
-    echo "🔑 Injecting ${names.size()} credential(s) for stage '${stageId}': ${names.join(', ')}" +
+    echo "🔑 Injecting ${wcBindings.size()} credential binding(s) for stage '${stageId}': ${names.join(', ')}" +
          ((_credentialNamesForStage('ALL_STAGES', env.CONFIG_STAGE_CREDENTIALS) ? ' (includes ALL_STAGES)' : ''))
 
     // Set STAGE_CREDENTIAL_ENV_VARS *before* withCredentials() so containerEnvFlags()
@@ -184,7 +279,7 @@ void withStageCredentials(String stageId, Closure body) {
     // up the live injected values via env.getProperty().
     env.STAGE_CREDENTIAL_ENV_VARS = envVarNames.join(',')
     try {
-        withCredentials(bindings) {
+        withCredentials(wcBindings) {
             body()
         }
     } finally {

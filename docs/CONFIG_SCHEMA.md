@@ -176,11 +176,44 @@ CI-agnostic `adoptium_pipeline_config.json`.
 | `credentials[name].type` | string | ✅ | One of `string`, `usernamePassword`, `sshUserPrivateKey`, `file` |
 | `credentials[name].credentialId` | string | ✅ | Jenkins credential store ID |
 | `credentials[name].description` | string | ☑️ optional | Human-readable note — not used by the pipeline |
+| `credentials[name].envVar` | string | ☑️ `string` only | Env var name the secret is injected into. Defaults to the credential key name. Use this to inject the same well-known name (e.g. `GITHUB_TOKEN`) from different Jenkins credentials in different stages — see precedence rules below |
 | `credentials[name].usernameEnvVar` | string | ☑️ `usernamePassword` only | Env var receiving the username (default: `<NAME>_USER`) |
 | `credentials[name].passwordEnvVar` | string | ☑️ `usernamePassword` only | Env var receiving the password (default: `<NAME>_PASS`) |
 | `credentials[name].keyFileEnvVar` | string | ☑️ `sshUserPrivateKey` only | Env var receiving the key file path (default: `<NAME>_KEYFILE`) |
 | `credentials[name].fileEnvVar` | string | ☑️ `file` only | Env var receiving the file path (default: `<NAME>_FILE`) |
 | `stageCredentials` | object | ☑️ optional | Map of stage ID → list of credential names to inject. The special key `ALL_STAGES` injects into every stage |
+
+#### `envVar` precedence rules for `string` credentials
+
+When multiple credentials resolve to the same `envVar` name for a single stage:
+
+- **Stage-specific beats ALL_STAGES** — if a credential listed directly under a stage ID (e.g. `"16-publish"`) resolves to the same `envVar` as one listed under `ALL_STAGES`, the stage-specific credential wins. The `ALL_STAGES` entry is silently suppressed for that stage only; other stages still receive it normally.
+- **Two stage-specific entries with the same `envVar` is an error** — `load-jenkins-credential-config.py` will reject this at config-load time with a clear error message. This prevents ambiguous bindings.
+
+Example — use a higher-privilege PAT only in the publish stage:
+
+```json
+{
+  "credentials": {
+    "GENERAL_PAT": {
+      "type": "string",
+      "credentialId": "general-github-pat",
+      "envVar": "GITHUB_TOKEN"
+    },
+    "PUBLISH_PAT": {
+      "type": "string",
+      "credentialId": "publish-github-pat",
+      "envVar": "GITHUB_TOKEN"
+    }
+  },
+  "stageCredentials": {
+    "ALL_STAGES":   ["GENERAL_PAT"],
+    "16-publish":   ["PUBLISH_PAT"]
+  }
+}
+```
+
+In this config: every stage receives `GITHUB_TOKEN` from `general-github-pat`, except `16-publish` which receives `GITHUB_TOKEN` from `publish-github-pat` (`GENERAL_PAT` is suppressed for that stage).
 
 ---
 
