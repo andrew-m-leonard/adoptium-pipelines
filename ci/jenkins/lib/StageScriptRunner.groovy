@@ -127,10 +127,15 @@ String containerEnvFlags() {
         .findAll { String name -> name }
     vars = vars + credEnvVarNames
 
+    // Use shell variable expansion (${VAR}) rather than Groovy GString interpolation
+    // so that secret values are never baked into the Groovy string passed to sh().
+    // Jenkins only masks secrets that remain as environment variable references up
+    // until the shell receives them; once a secret is embedded in a Groovy string
+    // it is already "in the clear" in the CPS engine and the warning is raised.
     List flags = vars
         .unique()
         .findAll { String v -> env.getProperty(v) != null && env.getProperty(v) != '' }
-        .collect { String v -> "-e '${v}=${env.getProperty(v)}'" }
+        .collect { String v -> "-e \"${v}=\${${v}}\"" }
 
     // GitHub token authentication — forward git-askpass.sh path if set by _withGitAuth().
     // GITHUB_TOKEN itself is already forwarded above via the STAGE_CREDENTIAL_ENV_VARS block
@@ -140,8 +145,8 @@ String containerEnvFlags() {
     String gitAskPass = env.getProperty('GIT_ASKPASS')
     if (gitAskPass) {
         // Override any host-side askpass entry already in the flags list.
-        flags.removeAll { String f -> f.startsWith("-e 'GIT_ASKPASS=") }
-        flags << "-e 'GIT_ASKPASS=${gitAskPass}'"
+        flags.removeAll { String f -> f.startsWith('-e "GIT_ASKPASS=') }
+        flags << '-e "GIT_ASKPASS=${GIT_ASKPASS}"'
     } else {
         // No GitHub auth — clear any Jenkins agent-side askpass binary that does not
         // exist inside the container.
@@ -158,8 +163,7 @@ String containerEnvFlags() {
     // Set HOME to the Jenkins agent's home directory.  The host home is
     // bind-mounted into the container at the same path (by NodeAgentHelper),
     // so it is writable.  Without a valid HOME, git's temp-file allocation fails.
-    String jenkinsHome = env.getProperty('HOME') ?: '/home/jenkins'
-    flags << "-e 'HOME=${jenkinsHome}'"
+    flags << '-e "HOME=${HOME}"'
 
     return flags.join(' ')
 }
