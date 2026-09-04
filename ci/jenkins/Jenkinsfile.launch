@@ -309,6 +309,7 @@ pipeline {
             }
             steps {
                 script {
+                    checkoutConfigRepo()
                     echo "Checking platform jobs against pipeline SHA: ${env.GIT_COMMIT}"
 
                     env.SELECTED_PLATFORMS.split(',').each { String platform ->
