@@ -116,7 +116,14 @@ List collateAndMergeGroups() {
  */
 void checkoutConfigRepo() {
     dir('config-repo') {
-        git url: params.CONFIG_REPO_URL, branch: params.CONFIG_REPO_BRANCH
+        checkout([
+            $class: 'GitSCM',
+            branches: [[name: "*/${params.CONFIG_REPO_BRANCH}"]],
+            userRemoteConfigs: [[
+                url: params.CONFIG_REPO_URL,
+                credentialsId: params.CONFIG_REPO_CREDENTIALS_ID ?: ''
+            ]]
+        ])
     }
 }
 
@@ -180,8 +187,9 @@ List buildForwardedParams(List orderedGroups, Map platformCfg) {
     // ── Config Repository separator ───────────────────────────────────────────
     fwd << [$class: 'jenkins.plugins.parameter_separator.ParameterSeparatorValue',
             name: '__sep_config_repo', sectionHeader: 'Config Repository']
-    fwd << string(name: 'CONFIG_REPO_URL',    value: params.CONFIG_REPO_URL    ?: '')
-    fwd << string(name: 'CONFIG_REPO_BRANCH', value: params.CONFIG_REPO_BRANCH ?: '')
+    fwd << string(name: 'CONFIG_REPO_URL',             value: params.CONFIG_REPO_URL             ?: '')
+    fwd << string(name: 'CONFIG_REPO_BRANCH',          value: params.CONFIG_REPO_BRANCH          ?: '')
+    fwd << string(name: 'CONFIG_REPO_CREDENTIALS_ID',  value: params.CONFIG_REPO_CREDENTIALS_ID  ?: '')
     return fwd
 }
 
@@ -221,7 +229,14 @@ pipeline {
                 script {
                     String configFile = "configurations/jdk${env.JDK_VERSION}_pipeline_config.json"
                     dir('config-repo') {
-                        git url: params.CONFIG_REPO_URL, branch: params.CONFIG_REPO_BRANCH
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: "*/${params.CONFIG_REPO_BRANCH}"]],
+                            userRemoteConfigs: [[
+                                url: params.CONFIG_REPO_URL,
+                                credentialsId: params.CONFIG_REPO_CREDENTIALS_ID ?: ''
+                            ]]
+                        ])
                         if (!fileExists(configFile)) {
                             error("Configuration file not found: ${configFile}")
                         }
@@ -325,13 +340,14 @@ pipeline {
                             ignoreExisting:        false,
                             lookupStrategy:        'JENKINS_ROOT',
                             additionalParameters: [
-                                JDK_VERSION:          env.JDK_VERSION,
-                                PLATFORM:             platform,
-                                COLLATED_PARAMS_JSON: env.COLLATED_PARAMS_JSON,
-                                PIPELINE_COMMIT_SHA:  env.GIT_COMMIT,
-                                CONFIG_REPO_URL:      params.CONFIG_REPO_URL,
-                                CONFIG_REPO_BRANCH:   params.CONFIG_REPO_BRANCH
-                            ]
+                                    JDK_VERSION:                env.JDK_VERSION,
+                                    PLATFORM:                   platform,
+                                    COLLATED_PARAMS_JSON:        env.COLLATED_PARAMS_JSON,
+                                    PIPELINE_COMMIT_SHA:         env.GIT_COMMIT,
+                                    CONFIG_REPO_URL:             params.CONFIG_REPO_URL,
+                                    CONFIG_REPO_BRANCH:          params.CONFIG_REPO_BRANCH,
+                                    CONFIG_REPO_CREDENTIALS_ID: params.CONFIG_REPO_CREDENTIALS_ID ?: ''
+                                ]
                         )
                     }
                     echo '✓ Platform jobs created/updated'

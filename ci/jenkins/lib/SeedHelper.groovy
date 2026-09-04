@@ -32,7 +32,7 @@ limitations under the License.
  * @param pipelineCommitSha  SHA of the ci-adoptium-pipelines checkout — stamped
  *                           into job descriptions for change detection.
  */
-void generateJobs(String configRepoUrl, String configRepoBranch, String pipelineCommitSha) {
+void generateJobs(String configRepoUrl, String configRepoBranch, String pipelineCommitSha, String configRepoCredentialsId = '') {
     // Run the CI-agnostic Python collator — the single source of truth for
     // stage parameter collation shared by seed, launch, and build jobs.
     // vendor-scripts/ lives in the workspace root (config repo SCM checkout).
@@ -63,10 +63,11 @@ void generateJobs(String configRepoUrl, String configRepoBranch, String pipeline
         removedViewAction:   'DELETE',
         additionalClasspath: 'pipelines/ci/jenkins/job-dsl',
         additionalParameters: [
-            CONFIG_REPO_URL:     configRepoUrl,
-            CONFIG_REPO_BRANCH:  configRepoBranch,
-            COLLATED_PARAMS_JSON: collatedJson,
-            PIPELINE_COMMIT_SHA: pipelineCommitSha,
+            CONFIG_REPO_URL:            configRepoUrl,
+            CONFIG_REPO_BRANCH:         configRepoBranch,
+            CONFIG_REPO_CREDENTIALS_ID: configRepoCredentialsId,
+            COLLATED_PARAMS_JSON:        collatedJson,
+            PIPELINE_COMMIT_SHA:         pipelineCommitSha,
         ]
     )
 }

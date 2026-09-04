@@ -92,9 +92,11 @@ pipeline {
                     // Keeping credential IDs out of the CI-agnostic adoptium_pipeline_config.json.
                     if (fileExists('jenkins_credential_config.json')) {
                         def credCfg = readJSON file: 'jenkins_credential_config.json'
-                        env.PIPELINES_REPO_CREDENTIALS_ID = credCfg.pipelineRepoCredentialsId ?: ''
+                        env.PIPELINES_REPO_CREDENTIALS_ID  = credCfg.pipelineRepoCredentialsId ?: ''
+                        env.CONFIG_REPO_CREDENTIALS_ID     = credCfg.configRepoCredentialsId   ?: ''
                     } else {
-                        env.PIPELINES_REPO_CREDENTIALS_ID = ''
+                        env.PIPELINES_REPO_CREDENTIALS_ID  = ''
+                        env.CONFIG_REPO_CREDENTIALS_ID     = ''
                     }
                 }
             }
@@ -136,7 +138,8 @@ pipeline {
                     seedHelper.generateJobs(
                         params.CONFIG_REPO_URL,
                         params.CONFIG_REPO_BRANCH,
-                        env.PIPELINES_COMMIT_SHA
+                        env.PIPELINES_COMMIT_SHA,
+                        env.CONFIG_REPO_CREDENTIALS_ID ?: ''
                     )
                 }
             }

@@ -79,6 +79,7 @@ Build stage (and every subsequent stage)
 ### Jenkins-specific notes
 
 - `WORKSPACE` is cleaned and **fully reconstructed** on every stage allocation (including `checkout scm` + config-repository sparse-checkout). Stages may run on different physical agents.
+- **Launch pipeline** (`Jenkinsfile.launch`): every agent-allocating stage (`Initialize`, `Fetch Configuration`, `Collate Stage Parameters`, `Determine Platforms`, `Create/Update Platform Jobs`) calls `cleanWs()` in its `post { always {} }` block. The `Launch Platform Builds` stage uses `agent none` and needs no cleanup.
 - `INPUT_ARTIFACTS_DIR` equals `WORKSPACE`. Artifacts copied in by `copyArtifacts` land at the workspace root. Stage scripts must not assume it is the same directory as `TARGET_DIR`.
 - `TARGET_DIR` is a **per-stage output sub-directory** of `WORKSPACE`. After archiving, it can be discarded.
 - Artifacts **never** touch the local filesystem between stages — they travel exclusively via `archiveArtifacts` → Jenkins artifact store → `copyArtifacts`.
@@ -343,6 +344,8 @@ The stage must call `archiveArtifacts` for its `TARGET_DIR` output, and the next
 ### `cleanWs()` or workspace cleanup not happening (Jenkins)
 
 `finalizeStage()` only calls `cleanWs()` when the `CLEAN_WORKSPACE_AFTER_STAGE` job parameter is `true`. The pre-stage `cleanWs()` inside `initializeStage()` always runs unconditionally.
+
+For the **launch pipeline**, workspace cleanup is unconditional — `post { always { cleanWs() } }` runs regardless of build result. The launch pipeline has no `CLEAN_WORKSPACE_AFTER_STAGE` parameter.
 
 ### Restart fails with "build_artifacts/ does not exist"
 

@@ -57,12 +57,13 @@ import jenkins.model.Jenkins
 // STEP 1: Validate binding variables
 // ============================================================================
 
-def jdkVersion         = binding.variables.get('JDK_VERSION')
-def platform           = binding.variables.get('PLATFORM')
-def collatedParamsJson = binding.variables.get('COLLATED_PARAMS_JSON') ?: ''
-def pipelineCommitSha  = binding.variables.get('PIPELINE_COMMIT_SHA')  ?: 'unknown'
-def configRepoUrl      = binding.variables.get('CONFIG_REPO_URL')       ?: ''
-def configRepoBranch   = binding.variables.get('CONFIG_REPO_BRANCH')    ?: ''
+def jdkVersion              = binding.variables.get('JDK_VERSION')
+def platform                = binding.variables.get('PLATFORM')
+def collatedParamsJson      = binding.variables.get('COLLATED_PARAMS_JSON')       ?: ''
+def pipelineCommitSha       = binding.variables.get('PIPELINE_COMMIT_SHA')        ?: 'unknown'
+def configRepoUrl           = binding.variables.get('CONFIG_REPO_URL')            ?: ''
+def configRepoBranch        = binding.variables.get('CONFIG_REPO_BRANCH')         ?: ''
+def configRepoCredentialsId = binding.variables.get('CONFIG_REPO_CREDENTIALS_ID') ?: ''
 
 final int SEPARATOR_WIDTH = 80
 final int DUPLICATE_ZERO  = 0
@@ -307,6 +308,12 @@ pipelineJob(jobName.replaceAll(/^\//, '')) {
             name('CONFIG_REPO_BRANCH')
             defaultValue(configRepoBranch)
             description('Vendor config repo branch — baked in at job-generation time')
+            trim(true)
+        }
+        stringParam {
+            name('CONFIG_REPO_CREDENTIALS_ID')
+            defaultValue(configRepoCredentialsId)
+            description('Jenkins credential ID for the vendor config repo — baked in at job-generation time. Leave empty for public repos.')
             trim(true)
         }
     }

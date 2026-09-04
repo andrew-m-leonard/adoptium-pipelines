@@ -103,7 +103,15 @@ For a fork or a pinned branch, change these values. Commit and push.
 
    > **Important**: do not declare these in `Jenkinsfile.seed`. A `parameters {}` block in a Jenkinsfile causes Jenkins to reset values to the Jenkinsfile defaults on every run, wiping whatever the operator set.
 
-   These values are baked into every generated launch job so `Jenkinsfile.launch` can check out the config repository at runtime on each build agent.
+  These values are baked into every generated launch job so `Jenkinsfile.launch` can check out the config repository at runtime on each build agent.
+
+  > **Private config repo**: if your vendor config repository requires authentication, add a third String Parameter:
+  >
+  > | Name | Default | Description |
+  > |---|---|---|
+  > | `CONFIG_REPO_CREDENTIALS_ID` | *(Jenkins credential ID)* | Jenkins credential ID used to check out the config repo — matches `configRepoCredentialsId` in `jenkins_credential_config.json`. Leave empty for public repos. |
+  >
+  > Alternatively, set `configRepoCredentialsId` in `jenkins_credential_config.json` and re-run the seed job — it will bake the value into all generated launch and platform build jobs automatically.
 
 1. Under **Pipeline**:
    - **Definition**: `Pipeline script from SCM`
@@ -287,6 +295,12 @@ Commit and push, then re-run the seed job.
 **Cause**: Seed job run without parameters.
 
 **Fix**: Use **Build with Parameters** and supply `CONFIG_REPO_URL` and `CONFIG_REPO_BRANCH`.
+
+### Config Repo Checkout Fails with Authentication Error
+
+**Cause**: The vendor config repository is private but no credential is configured.
+
+**Fix**: Set `configRepoCredentialsId` in `jenkins_credential_config.json` in your config repo and re-run the seed job. The credential ID is then baked into every generated launch and platform build job as the `CONFIG_REPO_CREDENTIALS_ID` parameter. Alternatively, add `CONFIG_REPO_CREDENTIALS_ID` as a String Parameter on the seed job UI directly.
 
 ### Seed Job Fails with "vendor-scripts/ not found"
 

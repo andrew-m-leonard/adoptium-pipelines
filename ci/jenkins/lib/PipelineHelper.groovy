@@ -104,7 +104,8 @@ Map initializeStage(String stageName, List<String> prerequisites = [], String ar
                 $class: 'GitSCM',
                 branches: [[name: "*/${params.CONFIG_REPO_BRANCH}"]],
                 userRemoteConfigs: [[
-                    url: params.CONFIG_REPO_URL
+                    url: params.CONFIG_REPO_URL,
+                    credentialsId: params.CONFIG_REPO_CREDENTIALS_ID ?: ''
                 ]],
                 extensions: [
                     [$class: 'SparseCheckoutPaths',

@@ -194,6 +194,7 @@ folder(inFolder('Build_openjdk')) {
 def pipelineRepoUrl           = pipelineConfig.repository?.url ?: 'https://github.com/adoptium/ci-adoptium-pipelines.git'
 def pipelineRepoBranch        = pipelineConfig.repository?.branch ?: 'main'
 def pipelineRepoCredentialsId = credentialConfig.pipelineRepoCredentialsId ?: ''
+def configRepoCredentialsId   = credentialConfig.configRepoCredentialsId   ?: ''
 def defaultParams             = jenkinsConfig.jobConfiguration?.defaultParameters ?: [:]
 
 println 'Creating launch orchestrator jobs for active JDK versions:'
@@ -315,6 +316,12 @@ pipelineConfig.activeJdkVersions.findAll { it.enabled }.each { versionInfo ->
                 name('CONFIG_REPO_BRANCH')
                 defaultValue(configRepoBranch)
                 description('Vendor config repo branch — baked in at job-generation time')
+                trim(true)
+            }
+            stringParam {
+                name('CONFIG_REPO_CREDENTIALS_ID')
+                defaultValue(configRepoCredentialsId)
+                description('Jenkins credential ID for the vendor config repo — baked in at job-generation time. Leave empty for public repos.')
                 trim(true)
             }
         }
