@@ -313,7 +313,7 @@ pipelineJob(jobName.replaceAll(/^\//, '')) {
         stringParam {
             name('CONFIG_REPO_CREDENTIALS_ID')
             defaultValue(configRepoCredentialsId)
-            description('Jenkins credential ID for the vendor config repo — baked in at job-generation time. Leave empty for public repos.')
+            description('Jenkins credential ID for the vendor config repo — baked in at job-generation time. Recommended even for public repos to avoid GitHub rate-limiting on unauthenticated git access.')
             trim(true)
         }
     }

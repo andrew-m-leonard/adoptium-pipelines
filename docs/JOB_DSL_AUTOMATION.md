@@ -109,7 +109,7 @@ For a fork or a pinned branch, change these values. Commit and push.
   >
   > | Name | Default | Description |
   > |---|---|---|
-  > | `CONFIG_REPO_CREDENTIALS_ID` | *(Jenkins credential ID)* | Jenkins credential ID used to check out the config repo — matches `configRepoCredentialsId` in `jenkins_credential_config.json`. Leave empty for public repos. |
+  > | `CONFIG_REPO_CREDENTIALS_ID` | *(Jenkins credential ID)* | Jenkins credential ID used to check out the config repo — matches `configRepoCredentialsId` in `jenkins_credential_config.json`. Recommended even for public repos to avoid GitHub rate-limiting on unauthenticated git access. |
   >
   > Alternatively, set `configRepoCredentialsId` in `jenkins_credential_config.json` and re-run the seed job — it will bake the value into all generated launch and platform build jobs automatically.
 

@@ -171,7 +171,7 @@ CI-agnostic `adoptium_pipeline_config.json`.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `pipelineRepoCredentialsId` | string | ☑️ optional | Jenkins credentials ID used to check out the `ci-adoptium-pipelines` repository. Empty string or absent for public repos |
-| `configRepoCredentialsId` | string | ☑️ optional | Jenkins credentials ID used to check out the vendor config repository itself. Empty string or absent for public repos |
+| `configRepoCredentialsId` | string | ☑️ optional | Jenkins credentials ID used to check out the vendor config repository itself. Recommended even for public repos to avoid GitHub rate-limiting on unauthenticated git access |
 | `credentials` | object | ☑️ optional | Map of credential name → definition. Names are arbitrary identifiers used in `stageCredentials` |
 | `credentials[name].type` | string | ✅ | One of `string`, `usernamePassword`, `sshUserPrivateKey`, `file` |
 | `credentials[name].credentialId` | string | ✅ | Jenkins credential store ID |
