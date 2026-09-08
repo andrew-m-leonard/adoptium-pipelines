@@ -74,12 +74,12 @@ CLI script. Writes `build-metadata.json` from explicit arguments and a small set
 
 Reads from env: `CONFIG_JAVA_TO_BUILD`, `CONFIG_TARGET_OS`, `CONFIG_ARCHITECTURE`, `CONFIG_VARIANT`.
 
-### [`scripts/lib/sbom-workspace-extractor.py`](../scripts/lib/sbom-workspace-extractor.py)
+### [`scripts/lib/sbom-field-extractor.py`](../scripts/lib/sbom-field-extractor.py)
 
-CLI script. Reads an Adoptium SBOM JSON file and prints the `"Build Workspace Directory"` property value to stdout. Used by `02-build.sh` to derive the workspace path length needed for reproducible build path padding.
+CLI script. Reads an Adoptium SBOM JSON file and prints the value of a named property from the first component to stdout. Used by `02-build.sh` to extract fields such as `"Build Workspace Directory"` and `"Build Timestamp"` for reproducible build setup.
 
 ```bash
-value=$(python3 sbom-workspace-extractor.py --sbom /path/to/sbom.json)
+value=$(python3 sbom-field-extractor.py --sbom /path/to/sbom.json --field "Build Workspace Directory")
 ```
 
 Exits 0 (prints empty line) when the property is absent; exits non-zero only on unreadable file or invalid JSON.

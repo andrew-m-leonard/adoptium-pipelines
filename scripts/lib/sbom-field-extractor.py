@@ -13,16 +13,15 @@
 # limitations under the License.
 ################################################################################
 """
-SBOM Workspace Extractor
+SBOM Field Extractor
 
-Reads an Adoptium SBOM JSON file and extracts the 'Build Workspace Directory'
-property from the first component.  Prints the value to stdout so the calling
-shell can capture it.  Exits with code 0 and prints an empty line when the
-property is absent; exits with a non-zero code only on hard errors (unreadable
-file, invalid JSON).
+Reads an Adoptium SBOM JSON file and extracts a named property from the first
+component.  Prints the value to stdout so the calling shell can capture it.
+Exits with code 0 and prints an empty line when the property is absent; exits
+with a non-zero code only on hard errors (unreadable file, invalid JSON).
 
 Usage:
-    value=$(python sbom-workspace-extractor.py --sbom /path/to/sbom.json)
+    value=$(python sbom-field-extractor.py --sbom /path/to/sbom.json --field "Build Workspace Directory")
 """
 
 from __future__ import print_function
@@ -32,15 +31,12 @@ import io
 import json
 import sys
 
-# The SBOM property name defined by the Adoptium build pipeline
-_PROPERTY_NAME = "Build Workspace Directory"
+class SbomFieldExtractor(object):
+    """Parses an Adoptium SBOM and retrieves a named property from the first component."""
 
-
-class SbomWorkspaceExtractor(object):
-    """Parses an Adoptium SBOM and retrieves the build workspace directory."""
-
-    def __init__(self, sbom_path):
+    def __init__(self, sbom_path, field_name):
         self._sbom_path = sbom_path
+        self._field_name = field_name
 
     def _load(self):
         try:
@@ -61,28 +57,29 @@ class SbomWorkspaceExtractor(object):
             sys.exit(1)
 
     def extract(self):
-        """Return the Build Workspace Directory value, or an empty string."""
+        """Return the named property value from the first component, or an empty string."""
         data = self._load()
         try:
             properties = data["components"][0]["properties"]
         except (KeyError, IndexError, TypeError):
             return ""
         for prop in properties:
-            if prop.get("name") == _PROPERTY_NAME:
+            if prop.get("name") == self._field_name:
                 return prop.get("value", "")
         return ""
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Extract Build Workspace Directory from an Adoptium SBOM",
+        description="Extract a named property from an Adoptium SBOM",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
     parser.add_argument("--sbom", required=True, help="Path to the SBOM JSON file")
+    parser.add_argument("--field", required=True, help="Property name to extract (e.g. \"Build Workspace Directory\")")
 
     args = parser.parse_args()
-    print(SbomWorkspaceExtractor(args.sbom).extract())
+    print(SbomFieldExtractor(args.sbom, args.field).extract())
     return 0
 
 

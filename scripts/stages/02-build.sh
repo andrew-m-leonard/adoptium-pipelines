@@ -133,10 +133,11 @@ main() {
 		log_info "CREATE_SBOM enabled - added --create-sbom to build args"
 	fi
 
-	# Setup path padding for reproducible builds if compare-build is enabled
-	# This must happen BEFORE cloning temurin-build so it clones into the padded workspace
+	# Setup reproducible build from SBOM if compare-build is enabled.
+	# This must happen BEFORE cloning temurin-build so it clones into the padded workspace.
+	# Also appends --build-reproducible-date for WEEKLY EA builds.
 	if [[ "${compare_build}" == "true" ]]; then
-		setup_reproducible_build_padding "${scm_ref}"
+		setup_reproducible_build_from_sbom "${scm_ref}" build_args
 	fi
 
 	# Clone temurin-build repository (after padding so it goes into the right place)
@@ -301,11 +302,17 @@ pad_build_dir_to_same_length() {
 	fi
 }
 
-# Setup reproducible build padding by fetching SBOM and extracting BUILD_WORKSPACE_DIRECTORY
-setup_reproducible_build_padding() {
+# Setup reproducible build from SBOM: path padding + (WEEKLY) build timestamp.
+#
+# Arguments:
+#   $1  scm_ref          - The SCM ref for this build (e.g. jdk-21.0.3+9_adopt)
+#   $2  build_args_var   - Name of the caller's build_args variable (passed by name so
+#                          --build-reproducible-date can be appended in-place)
+setup_reproducible_build_from_sbom() {
 	local scm_ref=$1
+	local -n _build_args=$2
 
-	log_section "Setting up reproducible build path padding"
+	log_section "Setting up reproducible build from SBOM"
 
 	# Use CONFIG_* env vars already set by the pipeline (avoids jq dependency)
 	local target_os="${CONFIG_TARGET_OS:-}"
@@ -358,9 +365,10 @@ setup_reproducible_build_padding() {
 	if curl -L -f -s -o "${sbom_file}" "${api_sbom_url}"; then
 		log_info "SBOM downloaded successfully"
 
+		# --- Path padding ---
 		# Extract BUILD_WORKSPACE_DIRECTORY from SBOM using Python (no jq dependency)
 		local build_workspace_directory
-		build_workspace_directory=$($(resolve_python) "${PIPELINE_LIB}/sbom-workspace-extractor.py" --sbom "${sbom_file}")
+		build_workspace_directory=$($(resolve_python) "${PIPELINE_LIB}/sbom-field-extractor.py" --sbom "${sbom_file}" --field "Build Workspace Directory")
 
 		if [[ -n "${build_workspace_directory}" && "${build_workspace_directory}" != "null" ]]; then
 			log_info "Found BUILD_WORKSPACE_DIRECTORY in SBOM: ${build_workspace_directory}"
@@ -389,6 +397,26 @@ setup_reproducible_build_padding() {
 			log_warn "BUILD_WORKSPACE_DIRECTORY not found in SBOM - skipping path padding"
 		fi
 
+		# --- WEEKLY EA: --build-reproducible-date ---
+		# For WEEKLY builds the build system needs the original build timestamp so the
+		# reproduction is byte-for-byte identical.  The SBOM "Build Timestamp" field
+		# contains a UTC datetime in "YYYY-MM-DD HH:MM:SS" format; convert it to the
+		# ISO 8601 UTC form required by --build-reproducible-date ("YYYY-MM-DDTHH:MM:SSZ").
+		if [[ "${release_type}" == "WEEKLY" ]]; then
+			local build_timestamp
+			build_timestamp=$($(resolve_python) "${PIPELINE_LIB}/sbom-field-extractor.py" --sbom "${sbom_file}" --field "Build Timestamp")
+
+			if [[ -n "${build_timestamp}" && "${build_timestamp}" != "null" ]]; then
+				# Convert "YYYY-MM-DD HH:MM:SS" → "YYYY-MM-DDTHH:MM:SSZ"
+				local reproducible_date="${build_timestamp/ /T}Z"
+				log_info "Found Build Timestamp in SBOM: ${build_timestamp}"
+				log_info "Using --build-reproducible-date: ${reproducible_date}"
+				_build_args="${_build_args:+${_build_args} }--build-reproducible-date ${reproducible_date}"
+			else
+				log_warn "Build Timestamp not found in SBOM - --build-reproducible-date will not be set"
+			fi
+		fi
+
 		# Clean up SBOM file
 		rm -f "${sbom_file}"
 	else
@@ -396,7 +424,7 @@ setup_reproducible_build_padding() {
 		log_warn "Path padding will be skipped - this may affect reproducibility"
 	fi
 
-	log_info "Reproducible build path padding setup complete"
+	log_info "Reproducible build from SBOM setup complete"
 }
 
 # Prepare workspace for build
