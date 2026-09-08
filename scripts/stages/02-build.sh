@@ -135,9 +135,11 @@ main() {
 
 	# Setup reproducible build from SBOM if compare-build is enabled.
 	# This must happen BEFORE cloning temurin-build so it clones into the padded workspace.
-	# Also appends --build-reproducible-date for WEEKLY EA builds.
+	# Returns --build-reproducible-date for WEEKLY EA builds which is appended to build_args.
 	if [[ "${compare_build}" == "true" ]]; then
-		setup_reproducible_build_from_sbom "${scm_ref}" build_args
+		local extra_build_args
+		extra_build_args=$(setup_reproducible_build_from_sbom "${scm_ref}")
+		build_args="${build_args:+${build_args} }${extra_build_args}"
 	fi
 
 	# Clone temurin-build repository (after padding so it goes into the right place)
@@ -305,12 +307,13 @@ pad_build_dir_to_same_length() {
 # Setup reproducible build from SBOM: path padding + (WEEKLY) build timestamp.
 #
 # Arguments:
-#   $1  scm_ref          - The SCM ref for this build (e.g. jdk-21.0.3+9_adopt)
-#   $2  build_args_var   - Name of the caller's build_args variable (passed by name so
-#                          --build-reproducible-date can be appended in-place)
+#   $1  scm_ref  - The SCM ref for this build (e.g. jdk-21.0.3+9_adopt)
+#
+# Stdout:
+#   Prints "--build-reproducible-date <date>" for WEEKLY builds (empty otherwise).
+#   Caller should capture and append to build_args.
 setup_reproducible_build_from_sbom() {
 	local scm_ref=$1
-	local -n _build_args=$2
 
 	log_section "Setting up reproducible build from SBOM"
 
@@ -411,7 +414,7 @@ setup_reproducible_build_from_sbom() {
 				local reproducible_date="${build_timestamp/ /T}Z"
 				log_info "Found Build Timestamp in SBOM: ${build_timestamp}"
 				log_info "Using --build-reproducible-date: ${reproducible_date}"
-				_build_args="${_build_args:+${_build_args} }--build-reproducible-date ${reproducible_date}"
+				echo "--build-reproducible-date ${reproducible_date}"
 			else
 				log_warn "Build Timestamp not found in SBOM - --build-reproducible-date will not be set"
 			fi
