@@ -40,11 +40,18 @@
 
 set -euo pipefail
 
-# Source shared utilities
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../lib/logging-utils.sh"
-source "${SCRIPT_DIR}/../lib/config-utils.sh"
-source "${SCRIPT_DIR}/../lib/artifact-utils.sh"
+# ---------------------------------------------------------------------------
+# Resolve shared library utilities from ci-adoptium-pipelines.
+# PIPELINE_ROOT: set by CI pipelines where WORKSPACE is not the location of
+#   the ci-adoptium-pipelines repo. Falls back to WORKSPACE if not set.
+# ---------------------------------------------------------------------------
+PIPELINE_LIB="${PIPELINE_ROOT:-${WORKSPACE}}/scripts/lib"
+# shellcheck disable=SC1091
+source "${PIPELINE_LIB}/logging-utils.sh"
+# shellcheck disable=SC1091
+source "${PIPELINE_LIB}/config-utils.sh"
+# shellcheck disable=SC1091
+source "${PIPELINE_LIB}/artifact-utils.sh"
 
 # Stage configuration
 STAGE_NAME="smoke-test"

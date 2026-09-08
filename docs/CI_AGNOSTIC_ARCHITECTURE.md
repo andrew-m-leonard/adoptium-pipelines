@@ -200,10 +200,12 @@ stage('Build') {
 # scripts/stages/02-build.sh
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../lib/logging-utils.sh"
-source "${SCRIPT_DIR}/../lib/config-utils.sh"
-source "${SCRIPT_DIR}/../lib/artifact-utils.sh"
+# PIPELINE_ROOT: set by CI pipelines where WORKSPACE is not the location of
+# the ci-adoptium-pipelines repo. Falls back to WORKSPACE if not set.
+PIPELINE_LIB="${PIPELINE_ROOT:-${WORKSPACE}}/scripts/lib"
+source "${PIPELINE_LIB}/logging-utils.sh"
+source "${PIPELINE_LIB}/config-utils.sh"
+source "${PIPELINE_LIB}/artifact-utils.sh"
 
 STAGE_NAME="build"
 BUILD_NUMBER="${BUILD_NUMBER:-local}"

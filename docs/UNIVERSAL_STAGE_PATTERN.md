@@ -26,16 +26,29 @@ When adding or modifying a stage, ensure all four artefacts are present and cons
 #   INPUT_ARTIFACTS_DIR - Where to read input artifacts from (if needed)
 #   BUILD_NUMBER        - Build identifier (optional, defaults to 'local')
 #
+# Optional Environment Variables
+#   PIPELINE_ROOT       - Root of the ci-adoptium-pipelines checkout.
+#                         Falls back to WORKSPACE when not set. Set
+#                         explicitly in CI environments where the pipeline
+#                         repo and WORKSPACE are in separate directories.
+#
 # Outputs
 #   ${TARGET_DIR}/**/*  - Stage output artifacts
 
 set -euo pipefail
 
-# Source shared utilities (paths relative to this script's location)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../lib/logging-utils.sh"
-source "${SCRIPT_DIR}/../lib/config-utils.sh"
-source "${SCRIPT_DIR}/../lib/artifact-utils.sh"
+# ---------------------------------------------------------------------------
+# Resolve shared library utilities from ci-adoptium-pipelines.
+# PIPELINE_ROOT: set by CI pipelines where WORKSPACE is not the location of
+#   the ci-adoptium-pipelines repo. Falls back to WORKSPACE if not set.
+# ---------------------------------------------------------------------------
+PIPELINE_LIB="${PIPELINE_ROOT:-${WORKSPACE}}/scripts/lib"
+# shellcheck disable=SC1091
+source "${PIPELINE_LIB}/logging-utils.sh"
+# shellcheck disable=SC1091
+source "${PIPELINE_LIB}/config-utils.sh"
+# shellcheck disable=SC1091
+source "${PIPELINE_LIB}/artifact-utils.sh"
 
 STAGE_NAME="<stage-name>"
 BUILD_NUMBER="${BUILD_NUMBER:-local}"
@@ -127,6 +140,7 @@ Every stage that introduces new parameters or has runtime gate conditions needs 
 | Rule | Reason |
 |---|---|
 | `set -euo pipefail` at the top | Any unhandled error exits immediately |
+| Set `PIPELINE_LIB="${PIPELINE_ROOT:-${WORKSPACE}}/scripts/lib"` and source from it | Works in core scripts, vendor overrides, and both Jenkins and local runner without any hardcoded path |
 | Source all three lib files | Ensures consistent logging and config access |
 | Call `validate_standard_environment` first | Fails fast if required vars are missing |
 | Read build config from `CONFIG_*` env vars | Pre-populated from `pipeline-config.json` by the orchestrator — no `jq` needed |

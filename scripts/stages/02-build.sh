@@ -34,11 +34,18 @@
 
 set -euo pipefail
 
-# Source shared utilities
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../lib/logging-utils.sh"
-source "${SCRIPT_DIR}/../lib/config-utils.sh"
-source "${SCRIPT_DIR}/../lib/artifact-utils.sh"
+# ---------------------------------------------------------------------------
+# Resolve shared library utilities from ci-adoptium-pipelines.
+# PIPELINE_ROOT: set by CI pipelines where WORKSPACE is not the location of
+#   the ci-adoptium-pipelines repo. Falls back to WORKSPACE if not set.
+# ---------------------------------------------------------------------------
+PIPELINE_LIB="${PIPELINE_ROOT:-${WORKSPACE}}/scripts/lib"
+# shellcheck disable=SC1091
+source "${PIPELINE_LIB}/logging-utils.sh"
+# shellcheck disable=SC1091
+source "${PIPELINE_LIB}/config-utils.sh"
+# shellcheck disable=SC1091
+source "${PIPELINE_LIB}/artifact-utils.sh"
 
 # Stage configuration
 STAGE_NAME="build"
@@ -353,7 +360,7 @@ setup_reproducible_build_padding() {
 
 		# Extract BUILD_WORKSPACE_DIRECTORY from SBOM using Python (no jq dependency)
 		local build_workspace_directory
-		build_workspace_directory=$($(resolve_python) "${SCRIPT_DIR}/../lib/sbom-workspace-extractor.py" --sbom "${sbom_file}")
+		build_workspace_directory=$($(resolve_python) "${PIPELINE_LIB}/sbom-workspace-extractor.py" --sbom "${sbom_file}")
 
 		if [[ -n "${build_workspace_directory}" && "${build_workspace_directory}" != "null" ]]; then
 			log_info "Found BUILD_WORKSPACE_DIRECTORY in SBOM: ${build_workspace_directory}"
@@ -541,7 +548,7 @@ extract_build_metadata() {
 
 	# Create build-metadata.json via a standalone Python script.
 	# Values are passed as CLI arguments — no shell interpolation inside Python.
-	$(resolve_python) "${SCRIPT_DIR}/../lib/build-metadata-writer.py" \
+	$(resolve_python) "${PIPELINE_LIB}/build-metadata-writer.py" \
 		--output "${WORKSPACE}/build-metadata.json" \
 		--version "${version}" \
 		--build-number "${BUILD_NUMBER}" \

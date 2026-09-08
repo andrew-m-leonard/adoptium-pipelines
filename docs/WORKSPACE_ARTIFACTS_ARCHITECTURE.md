@@ -306,8 +306,9 @@ Because `INPUT_ARTIFACTS_DIR`, `TARGET_DIR`, and `CONFIG_FILE` are always provid
 1. **Call `validate_standard_environment`** — it verifies `WORKSPACE` and `CONFIG_FILE` are set and provides the `TARGET_DIR` default
 
 ```bash
-# Correct — works on both Jenkins and local
-source "${SCRIPT_DIR}/../lib/config-utils.sh"
+# Correct — works on both Jenkins and local runner, and in vendor override scripts
+PIPELINE_LIB="${PIPELINE_ROOT:-${WORKSPACE}}/scripts/lib"
+source "${PIPELINE_LIB}/config-utils.sh"
 validate_standard_environment
 
 local config_file="${CONFIG_FILE}"

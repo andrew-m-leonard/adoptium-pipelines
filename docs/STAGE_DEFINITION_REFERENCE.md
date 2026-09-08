@@ -203,10 +203,12 @@ A vendor supplies a `config-repo/vendor-scripts/NN-stem.params.json` to:
 #
 # Required env: WORKSPACE, CONFIG_FILE, TARGET_DIR, INPUT_ARTIFACTS_DIR
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../lib/logging-utils.sh"
-source "${SCRIPT_DIR}/../lib/config-utils.sh"
-source "${SCRIPT_DIR}/../lib/artifact-utils.sh"
+# PIPELINE_ROOT: set by CI pipelines where WORKSPACE is not the location of
+# the ci-adoptium-pipelines repo. Falls back to WORKSPACE if not set.
+PIPELINE_LIB="${PIPELINE_ROOT:-${WORKSPACE}}/scripts/lib"
+source "${PIPELINE_LIB}/logging-utils.sh"
+source "${PIPELINE_LIB}/config-utils.sh"
+source "${PIPELINE_LIB}/artifact-utils.sh"
 
 STAGE_NAME="new-stage"
 
