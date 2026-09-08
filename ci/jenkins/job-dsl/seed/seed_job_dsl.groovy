@@ -55,12 +55,11 @@ import groovy.json.JsonSlurper
 // STEP 1: Validate binding variables
 // ============================================================================
 
-def configRepoUrl           = binding.variables.get('CONFIG_REPO_URL')            ?: ''
-def configRepoBranch        = binding.variables.get('CONFIG_REPO_BRANCH')         ?: ''
-def configRepoCredentialsId = binding.variables.get('CONFIG_REPO_CREDENTIALS_ID') ?: ''
-def pipelineCommitSha       = binding.variables.get('PIPELINE_COMMIT_SHA')        ?: 'unknown'
-def collatedParamsJson      = binding.variables.get('COLLATED_PARAMS_JSON')       ?: ''
-def pipelineBaseFolder      = (binding.variables.get('PIPELINE_BASE_FOLDER') ?: '').toString().trim().replaceAll(/\/+$/, '')
+def configRepoUrl      = binding.variables.get('CONFIG_REPO_URL')          ?: ''
+def configRepoBranch   = binding.variables.get('CONFIG_REPO_BRANCH')       ?: ''
+def pipelineCommitSha  = binding.variables.get('PIPELINE_COMMIT_SHA')      ?: 'unknown'
+def collatedParamsJson = binding.variables.get('COLLATED_PARAMS_JSON')     ?: ''
+def pipelineBaseFolder = (binding.variables.get('PIPELINE_BASE_FOLDER') ?: '').toString().trim().replaceAll(/\/+$/, '')
 
 final int SEPARATOR_WIDTH  = 80
 final int VERSION_MODULO   = 4
@@ -189,12 +188,7 @@ folder(inFolder('Build_openjdk')) {
 def pipelineRepoUrl           = pipelineConfig.repository?.url ?: 'https://github.com/adoptium/ci-adoptium-pipelines.git'
 def pipelineRepoBranch        = pipelineConfig.repository?.branch ?: 'main'
 def pipelineRepoCredentialsId = credentialConfig.pipelineRepoCredentialsId ?: ''
-// configRepoCredentialsId is read from the CONFIG_REPO_CREDENTIALS_ID binding at the top of this
-// script (threaded through SeedHelper from the seed job parameter); the credential config JSON
-// entry is kept as a fallback for operators who have not yet added the job UI parameter.
-if (!configRepoCredentialsId) {
-    configRepoCredentialsId = (credentialConfig.configRepoCredentialsId ?: '') as String
-}
+def configRepoCredentialsId   = credentialConfig.configRepoCredentialsId   ?: ''
 def defaultParams             = jenkinsConfig.jobConfiguration?.defaultParameters ?: [:]
 
 println 'Creating launch orchestrator jobs for active JDK versions:'

@@ -96,23 +96,15 @@ For a fork or a pinned branch, change these values. Commit and push.
 
 1. **Add Parameters** — click *This project is parameterized* and add the following String Parameters **in the Jenkins job configuration UI**:
 
-   | Name | Default | Description |
-   |---|---|---|
-   | `CONFIG_REPO_URL` | *(your config repository URL)* | URL of your vendor config repository — **REQUIRED** |
-   | `CONFIG_REPO_BRANCH` | `main` | Branch of your vendor config repository |
-   | `PIPELINE_BASE_FOLDER` | *(leave blank)* | Jenkins folder path under which all generated jobs and views are placed (e.g. `MyOrg/OpenJDK`). Leave blank to generate at the Jenkins root. Run the seed job with different values to populate multiple independent pipeline installations in the same Jenkins. |
+   | Name | Required | Default | Description |
+   |---|---|---|---|
+   | `CONFIG_REPO_URL` | ✅ required | *(your config repository URL)* | URL of your vendor config repository |
+   | `CONFIG_REPO_BRANCH` | ✅ required | `main` | Branch of your vendor config repository |
+   | `PIPELINE_BASE_FOLDER` | ☑️ optional | *(leave blank)* | Jenkins folder path under which all generated jobs and views are placed (e.g. `MyOrg/OpenJDK`). Leave blank to generate at the Jenkins root. Run the seed job with different values to populate multiple independent pipeline installations in the same Jenkins. |
 
    > **Important**: do not declare these in `Jenkinsfile.seed`. A `parameters {}` block in a Jenkinsfile causes Jenkins to reset values to the Jenkinsfile defaults on every run, wiping whatever the operator set.
 
-  These values are baked into every generated launch job so `Jenkinsfile.launch` can check out the config repository at runtime on each build agent.
-
-  > **Private config repo**: if your vendor config repository requires authentication, add a third String Parameter:
-  >
-  > | Name | Default | Description |
-  > |---|---|---|
-  > | `CONFIG_REPO_CREDENTIALS_ID` | *(Jenkins credential ID)* | Jenkins credential ID used to check out the config repo — matches `configRepoCredentialsId` in `jenkins_credential_config.json`. Recommended even for public repos to avoid GitHub rate-limiting on unauthenticated git access. |
-  >
-  > Alternatively, set `configRepoCredentialsId` in `jenkins_credential_config.json` and re-run the seed job — it will bake the value into all generated launch and platform build jobs automatically.
+   These values are baked into every generated launch job so `Jenkinsfile.launch` can check out the config repository at runtime on each build agent.
 
 1. Under **Pipeline**:
    - **Definition**: `Pipeline script from SCM`
@@ -142,6 +134,7 @@ For a fork or a pinned branch, change these values. Commit and push.
 1. Click **Build with Parameters**
 1. Set `CONFIG_REPO_URL` to your config repository URL (e.g. `https://github.com/adoptium/ci-temurin-config.git`)
 1. Set `CONFIG_REPO_BRANCH` to your branch (e.g. `main`)
+1. *(Optional)* Set `PIPELINE_BASE_FOLDER` to the Jenkins folder path where jobs should be created (e.g. `MyOrg/OpenJDK`). Leave blank to generate at the root.
 1. Click **Build**
 
 The job will:
@@ -308,7 +301,7 @@ Commit and push, then re-run the seed job.
 
 **Cause**: The vendor config repository is private but no credential is configured.
 
-**Fix**: Set `configRepoCredentialsId` in `jenkins_credential_config.json` in your config repo and re-run the seed job. The credential ID is then baked into every generated launch and platform build job as the `CONFIG_REPO_CREDENTIALS_ID` parameter. Alternatively, add `CONFIG_REPO_CREDENTIALS_ID` as a String Parameter on the seed job UI directly.
+**Fix**: Set `configRepoCredentialsId` in `jenkins_credential_config.json` in your config repo and re-run the seed job. The credential ID is baked into every generated launch and platform build job automatically.
 
 ### Seed Job Fails with "vendor-scripts/ not found"
 
