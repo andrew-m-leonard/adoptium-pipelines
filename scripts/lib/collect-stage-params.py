@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# ruff: noqa: UP006, UP007  (pre-3.10 type hint compat — do not remove)
+from __future__ import annotations
 ################################################################################
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
