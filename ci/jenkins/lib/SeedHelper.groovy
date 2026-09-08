@@ -27,12 +27,15 @@ limitations under the License.
  * Run the Python collator and invoke the Job DSL script to create/update all
  * launch jobs.
  *
- * @param configRepoUrl      Vendor config repo URL — baked into generated jobs.
- * @param configRepoBranch   Vendor config repo branch — baked into generated jobs.
- * @param pipelineCommitSha  SHA of the ci-adoptium-pipelines checkout — stamped
- *                           into job descriptions for change detection.
+ * @param configRepoUrl        Vendor config repo URL — baked into generated jobs.
+ * @param configRepoBranch     Vendor config repo branch — baked into generated jobs.
+ * @param pipelineCommitSha    SHA of the ci-adoptium-pipelines checkout — stamped
+ *                             into job descriptions for change detection.
+ * @param configRepoCredentialsId  Jenkins credential ID for the config repo (optional).
+ * @param pipelineBaseFolder   Jenkins folder path to place all generated jobs under
+ *                             (e.g. "MyOrg/OpenJDK"). Empty string means Jenkins root.
  */
-void generateJobs(String configRepoUrl, String configRepoBranch, String pipelineCommitSha, String configRepoCredentialsId = '') {
+void generateJobs(String configRepoUrl, String configRepoBranch, String pipelineCommitSha, String configRepoCredentialsId = '', String pipelineBaseFolder = '') {
     // Run the CI-agnostic Python collator — the single source of truth for
     // stage parameter collation shared by seed, launch, and build jobs.
     // vendor-scripts/ lives in the workspace root (config repo SCM checkout).
@@ -68,6 +71,7 @@ void generateJobs(String configRepoUrl, String configRepoBranch, String pipeline
             CONFIG_REPO_CREDENTIALS_ID: configRepoCredentialsId,
             COLLATED_PARAMS_JSON:        collatedJson,
             PIPELINE_COMMIT_SHA:         pipelineCommitSha,
+            PIPELINE_BASE_FOLDER:        pipelineBaseFolder,
         ]
     )
 }

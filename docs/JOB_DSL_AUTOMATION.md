@@ -94,12 +94,13 @@ For a fork or a pinned branch, change these values. Commit and push.
 
 1. In Jenkins, create a new **Pipeline** job named `openjdk-build-seed-job`
 
-1. **Add Parameters** — click *This project is parameterized* and add two String Parameters **in the Jenkins job configuration UI**:
+1. **Add Parameters** — click *This project is parameterized* and add the following String Parameters **in the Jenkins job configuration UI**:
 
    | Name | Default | Description |
    |---|---|---|
    | `CONFIG_REPO_URL` | *(your config repository URL)* | URL of your vendor config repository — **REQUIRED** |
    | `CONFIG_REPO_BRANCH` | `main` | Branch of your vendor config repository |
+   | `PIPELINE_BASE_FOLDER` | *(leave blank)* | Jenkins folder path under which all generated jobs and views are placed (e.g. `MyOrg/OpenJDK`). Leave blank to generate at the Jenkins root. Run the seed job with different values to populate multiple independent pipeline installations in the same Jenkins. |
 
    > **Important**: do not declare these in `Jenkinsfile.seed`. A `parameters {}` block in a Jenkinsfile causes Jenkins to reset values to the Jenkinsfile defaults on every run, wiping whatever the operator set.
 
@@ -128,6 +129,13 @@ For a fork or a pinned branch, change these values. Commit and push.
 > `configurations/`, and `vendor-scripts/` are all immediately available to the Job
 > DSL script without any additional checkout steps. Credentials are handled natively
 > by the Git plugin using the Jenkins Credentials store.
+
+> **Multiple installations**: because `PIPELINE_BASE_FOLDER` is a seed job parameter
+> (not a config-file value), you can run the **same seed job** multiple times with
+> different `PIPELINE_BASE_FOLDER` values to create independent pipeline installations
+> inside the same Jenkins instance — for example `staging` vs `production`, or one
+> folder per JDK vendor. Each invocation creates a self-contained set of folders,
+> launch jobs, and views under its own root folder.
 
 ### Step 3: Run the seed job
 

@@ -43,11 +43,10 @@ limitations under the License.
  *   CONFIG_REPO_BRANCH   — vendor config repo branch (baked into generated launch jobs)
  *   COLLATED_PARAMS_JSON — JSON produced by collect-stage-params.py
  *   PIPELINE_COMMIT_SHA  — SHA of the ci-adoptium-pipelines checkout
- *
- * jenkins_job_config.json fields consumed here:
- *   pipelineBaseFolder   — (optional) Jenkins folder path under which all generated
+ *   PIPELINE_BASE_FOLDER — (optional) Jenkins folder path under which all generated
  *                          jobs and views are placed (e.g. "MyOrg/OpenJDK").
  *                          Omit or set to "" to generate at the Jenkins root.
+ *                          Set as a parameter on the seed job — NOT in jenkins_job_config.json.
  */
 
 import groovy.json.JsonSlurper
@@ -56,10 +55,12 @@ import groovy.json.JsonSlurper
 // STEP 1: Validate binding variables
 // ============================================================================
 
-def configRepoUrl      = binding.variables.get('CONFIG_REPO_URL')       ?: ''
-def configRepoBranch   = binding.variables.get('CONFIG_REPO_BRANCH')    ?: ''
-def pipelineCommitSha  = binding.variables.get('PIPELINE_COMMIT_SHA')   ?: 'unknown'
-def collatedParamsJson = binding.variables.get('COLLATED_PARAMS_JSON')  ?: ''
+def configRepoUrl           = binding.variables.get('CONFIG_REPO_URL')            ?: ''
+def configRepoBranch        = binding.variables.get('CONFIG_REPO_BRANCH')         ?: ''
+def configRepoCredentialsId = binding.variables.get('CONFIG_REPO_CREDENTIALS_ID') ?: ''
+def pipelineCommitSha       = binding.variables.get('PIPELINE_COMMIT_SHA')        ?: 'unknown'
+def collatedParamsJson      = binding.variables.get('COLLATED_PARAMS_JSON')       ?: ''
+def pipelineBaseFolder      = (binding.variables.get('PIPELINE_BASE_FOLDER') ?: '').toString().trim().replaceAll(/\/+$/, '')
 
 final int SEPARATOR_WIDTH  = 80
 final int VERSION_MODULO   = 4
@@ -87,12 +88,12 @@ if (!collatedParamsJson?.trim()) {
 
 println '=' * SEPARATOR_WIDTH
 println 'SEED JOB'
-println "  CONFIG_REPO_URL    : ${configRepoUrl}"
-println "  CONFIG_REPO_BRANCH : ${configRepoBranch}"
-println "  PIPELINE_COMMIT_SHA: ${pipelineCommitSha}"
+println "  CONFIG_REPO_URL      : ${configRepoUrl}"
+println "  CONFIG_REPO_BRANCH   : ${configRepoBranch}"
+println "  PIPELINE_COMMIT_SHA  : ${pipelineCommitSha}"
+println "  PIPELINE_BASE_FOLDER : ${pipelineBaseFolder ?: '(root)'}"
 println '=' * SEPARATOR_WIDTH
 println ''
-// (pipelineBaseFolder is printed after jenkinsConfig is loaded below)
 
 // ============================================================================
 // STEP 2: Load configuration using readFileFromWorkspace
@@ -116,15 +117,9 @@ try {
     println 'ℹ️  jenkins_credential_config.json not found — no SCM credentials configured'
 }
 
-// Read optional base folder from jenkins_job_config.json.
-// Strip any trailing slashes so path construction is consistent.
-def pipelineBaseFolder = (jenkinsConfig?.pipelineBaseFolder ?: '').toString().trim().replaceAll(/\/+$/, '')
-
 // Helper: prefix a job/view/folder name with the base folder when one is set.
 // Returns the name unchanged when pipelineBaseFolder is empty (Jenkins root).
 def inFolder = { String name -> pipelineBaseFolder ? "${pipelineBaseFolder}/${name}" : name }
-
-println "  pipelineBaseFolder : ${pipelineBaseFolder ?: '(root)'}\n"
 
 // ============================================================================
 // STEP 3: Parse collated stage parameters from pre-computed JSON
@@ -194,7 +189,12 @@ folder(inFolder('Build_openjdk')) {
 def pipelineRepoUrl           = pipelineConfig.repository?.url ?: 'https://github.com/adoptium/ci-adoptium-pipelines.git'
 def pipelineRepoBranch        = pipelineConfig.repository?.branch ?: 'main'
 def pipelineRepoCredentialsId = credentialConfig.pipelineRepoCredentialsId ?: ''
-def configRepoCredentialsId   = credentialConfig.configRepoCredentialsId   ?: ''
+// configRepoCredentialsId is read from the CONFIG_REPO_CREDENTIALS_ID binding at the top of this
+// script (threaded through SeedHelper from the seed job parameter); the credential config JSON
+// entry is kept as a fallback for operators who have not yet added the job UI parameter.
+if (!configRepoCredentialsId) {
+    configRepoCredentialsId = (credentialConfig.configRepoCredentialsId ?: '') as String
+}
 def defaultParams             = jenkinsConfig.jobConfiguration?.defaultParameters ?: [:]
 
 println 'Creating launch orchestrator jobs for active JDK versions:'
@@ -322,6 +322,12 @@ pipelineConfig.activeJdkVersions.findAll { it.enabled }.each { versionInfo ->
                 name('CONFIG_REPO_CREDENTIALS_ID')
                 defaultValue(configRepoCredentialsId)
                 description('Jenkins credential ID for the vendor config repo — baked in at job-generation time. Recommended even for public repos to avoid GitHub rate-limiting on unauthenticated git access.')
+                trim(true)
+            }
+            stringParam {
+                name('PIPELINE_BASE_FOLDER')
+                defaultValue(pipelineBaseFolder)
+                description('Jenkins folder path under which all generated jobs live — baked in at job-generation time by the seed job PIPELINE_BASE_FOLDER parameter')
                 trim(true)
             }
         }

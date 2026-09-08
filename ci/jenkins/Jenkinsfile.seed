@@ -37,10 +37,15 @@ limitations under the License.
  *      - Script Path    : Jenkinsfile.seed   (or wherever you placed this file)
  *
  * 4. In the Jenkins job configuration UI, click "This project is parameterized"
- *    and add two String Parameters (do NOT declare them in this Jenkinsfile —
+ *    and add the following String Parameters (do NOT declare them in this Jenkinsfile —
  *    Jenkins overwrites Jenkinsfile defaults on every run):
- *      CONFIG_REPO_URL    — URL of this vendor config repository
- *      CONFIG_REPO_BRANCH — Branch of this vendor config repository (e.g. main)
+ *      CONFIG_REPO_URL       — URL of this vendor config repository
+ *      CONFIG_REPO_BRANCH    — Branch of this vendor config repository (e.g. main)
+ *      PIPELINE_BASE_FOLDER  — (optional) Jenkins folder path under which all generated
+ *                              jobs and views are placed (e.g. "MyOrg/OpenJDK").
+ *                              Omit or leave blank to generate at the Jenkins root.
+ *                              The same seed job can be run multiple times with different
+ *                              values to populate independent installations in one Jenkins.
  *
  * 5. Run the seed job with those parameters set.  It will:
  *      - Read PIPELINES_REPO_URL and PIPELINES_REPO_BRANCH from
@@ -65,10 +70,10 @@ limitations under the License.
 pipeline {
     agent any
 
-    // NOTE: Do NOT declare CONFIG_REPO_URL / CONFIG_REPO_BRANCH here.
+    // NOTE: Do NOT declare CONFIG_REPO_URL / CONFIG_REPO_BRANCH / PIPELINE_BASE_FOLDER here.
     // A parameters{} block in the Jenkinsfile causes Jenkins to reset parameter
     // values to the Jenkinsfile defaults on every run, wiping the operator's values.
-    // Define these two String Parameters in the Jenkins job configuration UI instead.
+    // Define these String Parameters in the Jenkins job configuration UI instead.
 
     options {
         timestamps()
@@ -139,7 +144,8 @@ pipeline {
                         params.CONFIG_REPO_URL,
                         params.CONFIG_REPO_BRANCH,
                         env.PIPELINES_COMMIT_SHA,
-                        env.CONFIG_REPO_CREDENTIALS_ID ?: ''
+                        env.CONFIG_REPO_CREDENTIALS_ID ?: '',
+                        (params.PIPELINE_BASE_FOLDER ?: '').toString().trim()
                     )
                 }
             }

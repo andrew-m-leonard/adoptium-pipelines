@@ -23,16 +23,9 @@ migrate-groovy-pipeline-configs.py   ← top-level: run this
 **Usage**:
 
 ```bash
-# Basic migration (jobs created at the Jenkins root)
 python3 tools/migrate-groovy-pipeline-configs.py \
     --source ~/workspace/ci-jenkins-pipelines/pipelines/jobs/configurations \
     --output ~/workspace/ci-temurin-config
-
-# Place all generated jobs inside a Jenkins folder
-python3 tools/migrate-groovy-pipeline-configs.py \
-    --source ~/workspace/ci-jenkins-pipelines/pipelines/jobs/configurations \
-    --output ~/workspace/ci-temurin-config \
-    --pipeline-base-folder MyOrg/OpenJDK
 ```
 
 **Options**:
@@ -41,7 +34,6 @@ python3 tools/migrate-groovy-pipeline-configs.py \
 |---|---|
 | `--source` / `-s` | Source directory containing `*_pipeline_config.groovy` files (required) |
 | `--output` / `-o` | Output directory — receives `jenkins_job_config.json` and `configurations/*.json` (required) |
-| `--pipeline-base-folder FOLDER` | Jenkins folder path under which all generated jobs and views will be placed (e.g. `MyOrg/OpenJDK`). Written as `pipelineBaseFolder` in `jenkins_job_config.json`. Omit to generate at the Jenkins root. |
 | `--dry-run` / `-n` | Preview what would be converted without writing files |
 | `--verbose` / `-v` | Show detailed conversion output |
 | `--force` / `-f` | Overwrite existing JSON files |
@@ -106,17 +98,6 @@ python3 tools/migrate-groovy-pipeline-configs.py \
 }
 ```
 
-When `--pipeline-base-folder` is supplied the field is inserted between `pipelineTimeoutHours` and `jobConfiguration`:
-
-```json
-{
-  "jenkinsfilePath": "ci/jenkins/Jenkinsfile.declarative",
-  "pipelineTimeoutHours": 8,
-  "pipelineBaseFolder": "MyOrg/OpenJDK",
-  "jobConfiguration": { "...": "..." },
-  "stageAgentLabels": { "...": "..." }
-}
-```
 
 > **Note**: Both `adoptium_pipeline_config.json` and `jenkins_job_config.json` are generated as starting-point templates. Review and update `repository.url` and other site-specific values before committing. See [CODE_CONFIG_SEPARATION.md](../docs/CODE_CONFIG_SEPARATION.md) for the distinction between CI-agnostic and CI-specific config.
 
@@ -181,14 +162,7 @@ python3 tools/migrate-groovy-pipeline-configs.py \
     --output ~/workspace/ci-temurin-config
 ```
 
-To place all generated Jenkins jobs inside a folder (e.g. `MyOrg/OpenJDK`), add `--pipeline-base-folder`:
-
-```bash
-python3 tools/migrate-groovy-pipeline-configs.py \
-    --source ~/workspace/ci-jenkins-pipelines/pipelines/jobs/configurations \
-    --output ~/workspace/ci-temurin-config \
-    --pipeline-base-folder MyOrg/OpenJDK
-```
+> **Placing jobs in a folder**: set the `PIPELINE_BASE_FOLDER` parameter on the seed job in Jenkins instead — this allows the same generated config to be deployed into multiple folders without re-running the migration tool.
 
 Expected output:
 

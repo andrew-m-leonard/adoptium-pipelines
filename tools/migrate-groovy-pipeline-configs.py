@@ -417,7 +417,7 @@ _STAGE_AGENT_LABEL_DEFAULTS: Dict[str, str] = {
 }
 
 
-def generate_jenkins_job_config(pipeline_base_folder: str = "") -> Dict[str, Any]:
+def generate_jenkins_job_config() -> Dict[str, Any]:
     """Generate jenkins_job_config.json — Jenkins-specific configuration.
 
     stageAgentLabels keys are derived from scripts/stages/pipeline-stages.json
@@ -425,11 +425,6 @@ def generate_jenkins_job_config(pipeline_base_folder: str = "") -> Dict[str, Any
     as keys, matching what Jenkinsfile.declarative and load-jenkins-json-config.py
     expect.  Any stage present in the registry but absent from
     _STAGE_AGENT_LABEL_DEFAULTS receives 'ci.role.worker' as a safe default.
-
-    Args:
-        pipeline_base_folder: Optional Jenkins folder path under which all
-            generated jobs and views will be placed (e.g. "MyOrg/OpenJDK").
-            Empty string means Jenkins root (the default).
     """
     stages = load_pipeline_stages()
     stage_agent_labels: Dict[str, str] = {"__any__": "ci.role.worker"}
@@ -443,11 +438,6 @@ def generate_jenkins_job_config(pipeline_base_folder: str = "") -> Dict[str, Any
         "jenkinsfilePath": "ci/jenkins/Jenkinsfile.declarative",
         "pipelineTimeoutHours": 8,
     }
-
-    # Only emit pipelineBaseFolder when explicitly provided — omitting it is
-    # equivalent to the Jenkins root and avoids confusing blank fields.
-    if pipeline_base_folder:
-        config["pipelineBaseFolder"] = pipeline_base_folder
 
     config["jobConfiguration"] = {
         "defaultParameters": {
@@ -480,11 +470,6 @@ Examples:
   # Convert all configs and generate jenkins_job_config.json
   %(prog)s --source ../ci-jenkins-pipelines/pipelines/jobs/configurations \\
            --output ../ci-temurin-config
-
-  # Place all generated jobs inside a Jenkins folder
-  %(prog)s --source ../ci-jenkins-pipelines/pipelines/jobs/configurations \\
-           --output ../ci-temurin-config \\
-           --pipeline-base-folder MyOrg/OpenJDK
 
   # Dry run to preview
   %(prog)s --source ./configs --output ./output --dry-run
@@ -528,17 +513,6 @@ Examples:
         help="Overwrite existing JSON files without prompting",
     )
 
-    parser.add_argument(
-        "--pipeline-base-folder",
-        metavar="FOLDER",
-        default="",
-        help=(
-            "Jenkins folder path under which all generated jobs and views will "
-            "be placed (e.g. 'MyOrg/OpenJDK'). Written as pipelineBaseFolder in "
-            "jenkins_job_config.json. Omit to generate at the Jenkins root."
-        ),
-    )
-
     args = parser.parse_args()
 
     # Print header
@@ -564,8 +538,6 @@ Examples:
                 print(f"Would use converter: {converter}")
                 print(f"Source: {args.source}")
                 print(f"Output: {args.output}")
-                if args.pipeline_base_folder:
-                    print(f"Pipeline base folder: {args.pipeline_base_folder}")
                 print()
                 print("Process:")
                 print("1. Convert Groovy files to JSON (temp directory)")
@@ -719,17 +691,13 @@ Examples:
                 print()
                 print("Step 4: Generating jenkins_job_config.json...")
 
-                jenkins_config = generate_jenkins_job_config(
-                    pipeline_base_folder=args.pipeline_base_folder,
-                )
+                jenkins_config = generate_jenkins_job_config()
                 jenkins_config_file = args.output / "jenkins_job_config.json"
 
                 with open(jenkins_config_file, "w", encoding="utf-8") as f:
                     json.dump(jenkins_config, f, indent=2)
 
                 print(f"  Created: {jenkins_config_file.name}")
-                if args.pipeline_base_folder:
-                    print(f"  pipelineBaseFolder: {args.pipeline_base_folder}")
 
             # Print summary
             print()

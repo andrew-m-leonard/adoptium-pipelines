@@ -34,13 +34,11 @@ limitations under the License.
  *                           launch job workspace (env.GIT_COMMIT from Jenkinsfile.launch).
  *                           Used to detect when the build job was generated from a
  *                           different commit and must be regenerated.
+ *   PIPELINE_BASE_FOLDER  — (optional) Jenkins folder path prefix for the generated
+ *                           build job (e.g. "MyOrg/OpenJDK").  Supplied by Jenkinsfile.launch
+ *                           from the baked-in PIPELINE_BASE_FOLDER job parameter.
  *
- * jenkins_job_config.json fields consumed here:
- *   pipelineBaseFolder    — (optional) Jenkins folder path prefix for the generated
- *                           build job (e.g. "MyOrg/OpenJDK").  Must match what the
- *                           seed job used.  Omit or set to "" for the Jenkins root.
- *
- * Creates: [pipelineBaseFolder/]Build_openjdk/Build_openjdk<version>_<distro>_<arch>_<os>
+ * Creates: [PIPELINE_BASE_FOLDER/]Build_openjdk/Build_openjdk<version>_<distro>_<arch>_<os>
  *
  * Regeneration logic (automatic — no manual parameter needed):
  *   The generated job's description embeds the SHA it was created from as
@@ -64,6 +62,7 @@ def pipelineCommitSha       = binding.variables.get('PIPELINE_COMMIT_SHA')      
 def configRepoUrl           = binding.variables.get('CONFIG_REPO_URL')            ?: ''
 def configRepoBranch        = binding.variables.get('CONFIG_REPO_BRANCH')         ?: ''
 def configRepoCredentialsId = binding.variables.get('CONFIG_REPO_CREDENTIALS_ID') ?: ''
+def pipelineBaseFolder      = (binding.variables.get('PIPELINE_BASE_FOLDER') ?: '').toString().trim().replaceAll(/\/+$/, '')
 
 final int SEPARATOR_WIDTH = 80
 final int DUPLICATE_ZERO  = 0
@@ -79,11 +78,12 @@ if (!collatedParamsJson?.trim()) {
 
 println '=' * SEPARATOR_WIDTH
 println 'openjdk_build_pipeline'
-println "  JDK_VERSION         : ${jdkVersion}"
-println "  PLATFORM            : ${platform}"
-println "  PIPELINE_COMMIT_SHA : ${pipelineCommitSha}"
-println "  CONFIG_REPO_URL     : ${configRepoUrl}"
-println "  CONFIG_REPO_BRANCH  : ${configRepoBranch}"
+println "  JDK_VERSION          : ${jdkVersion}"
+println "  PLATFORM             : ${platform}"
+println "  PIPELINE_COMMIT_SHA  : ${pipelineCommitSha}"
+println "  CONFIG_REPO_URL      : ${configRepoUrl}"
+println "  CONFIG_REPO_BRANCH   : ${configRepoBranch}"
+println "  PIPELINE_BASE_FOLDER : ${pipelineBaseFolder ?: '(root)'}"
 println '=' * SEPARATOR_WIDTH
 
 // ============================================================================
@@ -107,10 +107,7 @@ try {
     println 'ℹ️  jenkins_credential_config.json not found — no SCM credentials configured'
 }
 
-// Read optional base folder — must match what the seed job used.
-def pipelineBaseFolder = (jenkinsConfig?.pipelineBaseFolder ?: '').toString().trim().replaceAll(/\/+$/, '')
 def inFolder = { String name -> pipelineBaseFolder ? "${pipelineBaseFolder}/${name}" : name }
-println "  pipelineBaseFolder : ${pipelineBaseFolder ?: '(root)'}"
 
 def jdkConfig = slurper.parseText(readFileFromWorkspace("config-repo/configurations/jdk${jdkVersion}_pipeline_config.json"))
 

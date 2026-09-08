@@ -260,12 +260,12 @@ pipeline {
                             }
                         }
                         env.PIPELINE_TIMEOUT_HOURS = (jenkinsJobConfig?.pipelineTimeoutHours ?: 8).toString()
-                        // Capture the optional base folder so downstream stages can
-                        // build the correct job path when triggering platform builds.
-                        env.PIPELINE_BASE_FOLDER = ((jenkinsJobConfig?.pipelineBaseFolder ?: '') as String).trim().replaceAll(/\/+$/, '')
-                        if (env.PIPELINE_BASE_FOLDER) {
-                            echo "✓ Pipeline base folder: ${env.PIPELINE_BASE_FOLDER}"
-                        }
+                    }
+                    // PIPELINE_BASE_FOLDER is baked into this job by the seed job as a parameter;
+                    // strip any accidental trailing slash for consistent path construction.
+                    env.PIPELINE_BASE_FOLDER = (params.PIPELINE_BASE_FOLDER ?: '').toString().trim().replaceAll(/\/+$/, '')
+                    if (env.PIPELINE_BASE_FOLDER) {
+                        echo "✓ Pipeline base folder: ${env.PIPELINE_BASE_FOLDER}"
                     }
                     // Resolve worker label now that CONFIG_STAGE_AGENT_LABELS is populated.
                     env.WORKER_LABEL = getWorkerLabel()
@@ -346,7 +346,8 @@ pipeline {
                                     PIPELINE_COMMIT_SHA:         env.GIT_COMMIT,
                                     CONFIG_REPO_URL:             params.CONFIG_REPO_URL,
                                     CONFIG_REPO_BRANCH:          params.CONFIG_REPO_BRANCH,
-                                    CONFIG_REPO_CREDENTIALS_ID: params.CONFIG_REPO_CREDENTIALS_ID ?: ''
+                                    CONFIG_REPO_CREDENTIALS_ID: params.CONFIG_REPO_CREDENTIALS_ID ?: '',
+                                    PIPELINE_BASE_FOLDER:        env.PIPELINE_BASE_FOLDER ?: ''
                                 ]
                         )
                     }
