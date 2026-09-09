@@ -236,37 +236,36 @@ setup_temurin_build() {
 		rm -rf "${build_repo_dir}"
 	fi
 
-	# Clone repository
+	# Clone repository.
+	# git clone --branch does not accept raw commit SHAs, only branch/tag names.
+	# When build_ref is a full 40-char SHA, clone without --branch then checkout.
 	log_info "Cloning repository..."
-	if git clone --branch "${build_ref}" "${build_repo_url}" "${build_repo_dir}"; then
-		log_info "Repository cloned successfully"
+	if [[ "${build_ref}" =~ ^[0-9a-f]{40}$ ]]; then
+		if ! git clone "${build_repo_url}" "${build_repo_dir}"; then
+			log_error "Failed to clone repository from ${build_repo_url}"
+			exit 1
+		fi
+		log_info "Checking out commit ${build_ref}..."
+		if ! git -C "${build_repo_dir}" checkout "${build_ref}"; then
+			log_error "Failed to checkout commit ${build_ref}"
+			exit 1
+		fi
 	else
-		log_error "Failed to clone repository from ${build_repo_url}"
-		log_error "Branch/ref: ${build_ref}"
-		exit 1
+		if ! git clone --branch "${build_ref}" "${build_repo_url}" "${build_repo_dir}"; then
+			log_error "Failed to clone repository from ${build_repo_url}"
+			log_error "Branch/ref: ${build_ref}"
+			exit 1
+		fi
 	fi
+	log_info "Repository cloned successfully"
 
-	# Verify the exact commit that was checked out
-	local actual_commit
+	# Verify HEAD is at the expected commit by resolving both sides to a SHA.
+	local actual_commit requested_commit
 	actual_commit=$(git -C "${build_repo_dir}" rev-parse HEAD)
+	requested_commit=$(git -C "${build_repo_dir}" rev-parse "${build_ref}^{commit}" 2>/dev/null || echo "")
 	log_info "Verified HEAD commit: ${actual_commit}"
-
-	# Check whether build_ref resolved to a tag or a branch and verify accordingly
-	local actual_tag
-	if actual_tag=$(git -C "${build_repo_dir}" describe --tags --exact-match HEAD 2>/dev/null); then
-		# HEAD is exactly at a tag
-		log_info "Verified HEAD tag:    ${actual_tag}"
-		if [[ "${actual_tag}" != "${build_ref}" ]]; then
-			log_warn "HEAD tag '${actual_tag}' does not match requested ref '${build_ref}'"
-		fi
-	else
-		# HEAD is not at a tag — confirm the branch name matches
-		local actual_branch
-		actual_branch=$(git -C "${build_repo_dir}" symbolic-ref --short HEAD 2>/dev/null || echo "(detached HEAD)")
-		log_info "Verified HEAD branch: ${actual_branch}"
-		if [[ "${actual_branch}" != "${build_ref}" ]]; then
-			log_warn "HEAD branch '${actual_branch}' does not match requested ref '${build_ref}'"
-		fi
+	if [[ -n "${requested_commit}" && "${actual_commit}" != "${requested_commit}" ]]; then
+		log_warn "HEAD commit '${actual_commit}' does not match requested ref '${build_ref}' (${requested_commit})"
 	fi
 
 	# Verify build script exists
