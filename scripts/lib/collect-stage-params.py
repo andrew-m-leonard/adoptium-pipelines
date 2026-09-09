@@ -131,6 +131,19 @@ from pathlib import Path
 # Add entries here only when a group must always appear first in the Jenkins UI.
 PRIORITY_GROUPS: list[str] = ["Stage Selections"]
 
+# Fixed job-level / pipeline built-in parameters that are always present in the
+# pipeline environment and Jenkins job definitions (not emitted by stage sidecars),
+# but are valid targets for stageCondition gates.
+BUILTIN_PIPELINE_PARAMS: set[str] = {
+    "JDK_VERSION",
+    "TARGET_OS",
+    "ARCHITECTURE",
+    "RELEASE_TYPE",
+    "GROUP_UID",
+    "CLEAN_WORKSPACE_AFTER_STAGE",
+    "PIPELINE_TIMEOUT_HOURS",
+}
+
 
 # ---------------------------------------------------------------------------
 # Validation helpers
@@ -781,7 +794,7 @@ def collect(
 
     # --- Validate stageCondition cross-references ---
     # Build the full param name set from the reordered output groups
-    all_collated_param_names: set[str] = set()
+    all_collated_param_names: set[str] = set(BUILTIN_PIPELINE_PARAMS)
     for grp in output_groups:
         for p in grp["parameters"]:
             all_collated_param_names.add(p["name"])

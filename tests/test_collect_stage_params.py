@@ -555,6 +555,25 @@ class TestStageCondition(unittest.TestCase):
 
         self.assertIn("NONEXISTENT_PARAM", str(ctx.exception))
 
+    def test_builtin_pipeline_params_valid_in_stage_condition(self):
+        """Built-in pipeline parameters (e.g. RELEASE_TYPE) can be referenced in stageCondition."""
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            _write_params_json(
+                d,
+                "16-publish",
+                [_make_group("Stage Selections", [_make_bool_param("PUBLISH_ARTIFACTS", False, "desc")])],
+                stage_condition=[
+                    {"param": "PUBLISH_ARTIFACTS", "value": True},
+                    {"param": "RELEASE_TYPE", "value": "regex:^(RELEASE|WEEKLY)$"},
+                ],
+            )
+            result = _collect(d)
+
+        self.assertIn("PUBLISH_ARTIFACTS", result["paramNames"])
+        # Builtin params should not be erroneously emitted into paramNames unless declared
+        self.assertNotIn("RELEASE_TYPE", result["paramNames"])
+
     def test_gate_only_file_valid_refs_ok(self):
         """Gate-only params.json with valid stageCondition refs passes validation."""
         with tempfile.TemporaryDirectory() as tmp:
