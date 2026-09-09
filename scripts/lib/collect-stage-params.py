@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: UP006, UP007  (pre-3.10 type hint compat — do not remove)
-from __future__ import annotations
 ################################################################################
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -121,6 +119,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
 
 # ---------------------------------------------------------------------------
 # Priority group ordering
@@ -129,12 +128,12 @@ from pathlib import Path
 # Groups whose names appear here are moved to the front of the collated output,
 # in the order listed.  All other groups follow in natural discovery order.
 # Add entries here only when a group must always appear first in the Jenkins UI.
-PRIORITY_GROUPS: list[str] = ["Stage Selections"]
+PRIORITY_GROUPS: List[str] = ["Stage Selections"]
 
 # Fixed job-level / pipeline built-in parameters that are always present in the
 # pipeline environment and Jenkins job definitions (not emitted by stage sidecars),
 # but are valid targets for stageCondition gates.
-BUILTIN_PIPELINE_PARAMS: set[str] = {
+BUILTIN_PIPELINE_PARAMS: Set[str] = {
     "JDK_VERSION",
     "TARGET_OS",
     "ARCHITECTURE",
@@ -236,7 +235,7 @@ def _validate_params_file(data: dict, source: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _load_json_local(path: Path) -> dict | None:
+def _load_json_local(path: Path) -> Optional[dict]:
     """Load a JSON file from a local path. Returns None if the file does not exist."""
     if not path.exists():
         return None
@@ -244,7 +243,7 @@ def _load_json_local(path: Path) -> dict | None:
         return json.load(f)
 
 
-def _load_json_url(url: str) -> dict | None:
+def _load_json_url(url: str) -> Optional[dict]:
     """Fetch and parse a JSON file from a URL. Returns None on 404, raises on other errors."""
     try:
         with urllib.request.urlopen(url, timeout=15) as resp:
@@ -268,7 +267,7 @@ def _params_list_to_map(params: list) -> dict:
 
 
 def _resolve_stage_disabled(
-    default_data: dict | None, vendor_data: dict | None
+    default_data: Optional[dict], vendor_data: Optional[dict]
 ) -> bool:
     """
     Resolve the effective stageDisabled value after vendor overlay.
@@ -284,7 +283,7 @@ def _resolve_stage_disabled(
 
 
 def _resolve_stage_condition(
-    default_data: dict | None, vendor_data: dict | None
+    default_data: Optional[dict], vendor_data: Optional[dict]
 ) -> list:
     """
     Resolve the effective stageCondition list after vendor overlay.
@@ -300,7 +299,7 @@ def _resolve_stage_condition(
 
 
 def _resolve_stage_timeout(
-    default_data: dict | None, vendor_data: dict | None
+    default_data: Optional[dict], vendor_data: Optional[dict]
 ) -> int:
     """
     Resolve the effective stageTimeoutMinutes value after vendor overlay.
@@ -316,7 +315,7 @@ def _resolve_stage_timeout(
 
 
 def _merge_stage(
-    default_data: dict | None, vendor_data: dict | None, stage_stem: str
+    default_data: Optional[dict], vendor_data: Optional[dict], stage_stem: str
 ) -> list:
     """
     Merge default and vendor parameterGroups for one stage stem.
@@ -338,8 +337,8 @@ def _merge_stage(
 
     # Build the default group map: group_name → group dict
     # and a reverse index: param_name → group_name
-    default_groups: dict[str, dict] = {}
-    default_param_to_group: dict[str, str] = {}
+    default_groups: Dict[str, dict] = {}
+    default_param_to_group: Dict[str, str] = {}
 
     if default_data:
         for grp in default_data.get("parameterGroups") or []:
@@ -437,7 +436,7 @@ def _merge_stage(
 # ---------------------------------------------------------------------------
 
 
-def _reorder_by_priority(groups: list[dict]) -> list[dict]:
+def _reorder_by_priority(groups: List[dict]) -> List[dict]:
     """
     Move groups whose names appear in PRIORITY_GROUPS to the front of the list,
     merging all groups that share a priority name into a single entry.
@@ -459,8 +458,8 @@ def _reorder_by_priority(groups: list[dict]) -> list[dict]:
     """
     priority_set = set(PRIORITY_GROUPS)
     # priority_map: group name → merged group dict
-    priority_map: dict[str, dict] = {}
-    remainder: list[dict] = []
+    priority_map: Dict[str, dict] = {}
+    remainder: List[dict] = []
 
     for grp in groups:
         name = grp["name"]
@@ -517,14 +516,14 @@ def _reorder_by_priority(groups: list[dict]) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def _validate_stage_conditions(groups: list[dict], param_names: set[str]) -> None:
+def _validate_stage_conditions(groups: List[dict], param_names: Set[str]) -> None:
     """
     Verify that every param name referenced in any stageCondition exists in
     the final collated paramNames set.  Raises ValueError listing all dangling
     references so they can be fixed in one pass.
     """
-    errors: list[str] = []
-    seen: set[tuple[str, str]] = set()  # (stageId, param) — avoid duplicate messages
+    errors: List[str] = []
+    seen: Set[Tuple[str, str]] = set()  # (stageId, param) — avoid duplicate messages
 
     for grp in groups:
         stage_id = grp.get("stageId", "?")
@@ -554,9 +553,9 @@ def _validate_stage_conditions(groups: list[dict], param_names: set[str]) -> Non
 
 def collect(
     default_stages_dir: Path,
-    vendor_scripts_dir: Path | None,
-    vendor_raw_base_url: str | None,
-    orchestrated_stages: set[str] | None = None,
+    vendor_scripts_dir: Optional[Path],
+    vendor_raw_base_url: Optional[str],
+    orchestrated_stages: Optional[Set[str]] = None,
 ) -> dict:
     """
     Collate stage *.params.json files into a single structured output dict.
@@ -603,8 +602,8 @@ def collect(
 
     # Collect stage stems from default params files, preserving sort order.
     # When orchestrated_stages is set, skip any stem not in that allowlist.
-    stems_seen: list[str] = []
-    stems_set: set[str] = set()
+    stems_seen: List[str] = []
+    stems_set: Set[str] = set()
 
     for path in sorted(default_stages_dir.glob("*.params.json")):
         stem = path.name.replace(".params.json", "")
@@ -626,11 +625,11 @@ def collect(
 
     # Track all param names for cross-stage deduplication.
     # Maps param name → (source_label, group_name, index into output_groups, index in parameters)
-    all_param_names: dict[str, tuple[str, str, int, int]] = {}
-    output_groups: list[dict] = []
+    all_param_names: Dict[str, Tuple[str, str, int, int]] = {}
+    output_groups: List[dict] = []
     # Track stageConditions for ALL non-disabled stems (including gate-only files
     # that have no parameterGroups) so the cross-reference validator covers them too.
-    all_stage_conditions: dict[str, list[dict]] = {}
+    all_stage_conditions: Dict[str, List[dict]] = {}
 
     for stem in stems_seen:
         default_data = _load_json_local(default_stages_dir / f"{stem}.params.json")
@@ -659,7 +658,7 @@ def collect(
         merged_groups = _merge_stage(default_data, vendor_data, stem)
 
         for grp in merged_groups:
-            clean_params: list[dict] = []
+            clean_params: List[dict] = []
             for p in grp["parameters"]:
                 source_label = f"{stem}/{grp['name']}/{p['name']}"
                 if p["name"] in all_param_names:
@@ -794,7 +793,7 @@ def collect(
 
     # --- Validate stageCondition cross-references ---
     # Build the full param name set from the reordered output groups
-    all_collated_param_names: set[str] = set(BUILTIN_PIPELINE_PARAMS)
+    all_collated_param_names: Set[str] = set(BUILTIN_PIPELINE_PARAMS)
     for grp in output_groups:
         for p in grp["parameters"]:
             all_collated_param_names.add(p["name"])
@@ -822,8 +821,8 @@ def collect(
     )
 
     # Build flat ordered param name list
-    param_names_ordered: list[str] = []
-    seen_names: set[str] = set()
+    param_names_ordered: List[str] = []
+    seen_names: Set[str] = set()
     for grp in output_groups:
         for p in grp["parameters"]:
             if p["name"] not in seen_names:
@@ -911,7 +910,7 @@ Examples:
 
     vendor_dir = Path(args.vendor_scripts_dir) if args.vendor_scripts_dir else None
 
-    orchestrated: set[str] | None = None
+    orchestrated: Optional[Set[str]] = None
     if args.orchestrated_stages:
         orchestrated = {
             s.strip() for s in args.orchestrated_stages.split(",") if s.strip()

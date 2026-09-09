@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from __future__ import annotations
 ################################################################################
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,6 +52,7 @@ import json
 import sys
 import urllib.request
 from pathlib import Path
+from typing import List, Optional
 
 CONFIG_FILENAME = "adoptium_pipeline_config.json"
 
@@ -91,7 +91,7 @@ def load_from_remote(repo_url: str, branch: str) -> dict:
         sys.exit(1)
 
 
-def get_active_versions(config: dict) -> list[str]:
+def get_active_versions(config: dict) -> List[str]:
     """Return list of enabled JDK version strings."""
     return [
         v["version"]
@@ -100,7 +100,7 @@ def get_active_versions(config: dict) -> list[str]:
     ]
 
 
-def output_json(config: dict, field: str | None):
+def output_json(config: dict, field: Optional[str]):
     """Output as JSON."""
     if field:
         value = config.get(field)
