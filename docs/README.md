@@ -10,6 +10,7 @@ This directory contains reference documentation for the Adoptium CI pipeline inf
 |---|---|
 | Set up Jenkins from scratch | [JOB_DSL_AUTOMATION.md](./JOB_DSL_AUTOMATION.md) |
 | Check Jenkins instance requirements | [JENKINS_REQUIREMENTS.md](./JENKINS_REQUIREMENTS.md) |
+| Fix a build stuck on "Stopping part of…" | [JENKINS_PLACEHOLDER_TASK_BUG.md](./JENKINS_PLACEHOLDER_TASK_BUG.md) |
 | Understand the job naming convention | [BUILD_JOB_NAMING_CONVENTION.md](./BUILD_JOB_NAMING_CONVENTION.md) |
 | Understand the overall design | [CI_AGNOSTIC_ARCHITECTURE.md](./CI_AGNOSTIC_ARCHITECTURE.md) |
 | Configure a build | [CODE_CONFIG_SEPARATION.md](./CODE_CONFIG_SEPARATION.md) |
@@ -42,6 +43,7 @@ This directory contains reference documentation for the Adoptium CI pipeline inf
 - **[BUILD_JOB_NAMING_CONVENTION.md](./BUILD_JOB_NAMING_CONVENTION.md)** — Job naming schema (`Build_openjdk<version>_<distro>_<arch>_<os>`), folder layout, and AQA convention alignment
 - **[JOB_DSL_AUTOMATION.md](./JOB_DSL_AUTOMATION.md)** — Complete seed job and Job DSL setup guide; how launch jobs and platform build jobs are created
 - **[BUILD_UID_INTEGRATION.md](./BUILD_UID_INTEGRATION.md)** — `BUILD_UID` and `GROUP_UID` lifecycle; `BUILD_STAGE_RESULTS` serialisation; prerequisite validation
+- **[JENKINS_PLACEHOLDER_TASK_BUG.md](./JENKINS_PLACEHOLDER_TASK_BUG.md)** — Known Jenkins bug: build hangs permanently with "Stopping part of…"; diagnosis and Script Console fix
 
 ## Workspace Management
 
