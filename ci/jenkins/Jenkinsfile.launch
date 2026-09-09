@@ -260,10 +260,17 @@ pipeline {
                             }
                         }
                         env.PIPELINE_TIMEOUT_HOURS = (jenkinsJobConfig?.pipelineTimeoutHours ?: 8).toString()
-                        // Read pipelineBaseFolder from config — single source of truth.
-                        env.PIPELINE_BASE_FOLDER = (jenkinsJobConfig?.pipelineBaseFolder ?: '').toString().trim().replaceAll(/\/+$/, '')
+                        // Derive the effective base folder from this job's own full path.
+                        // JOB_NAME is e.g. "andrew-pipeline-sandbox/beta/Build_openjdk_launchers/Build_openjdk21_launch"
+                        // Strip the trailing "Build_openjdk_launchers/<jobname>" to get the deployment folder.
+                        // This is authoritative — it works regardless of what pipelineBaseFolder says.
+                        String jobFolder = env.JOB_NAME
+                            .replaceAll(/\/Build_openjdk_launchers\/[^\/]+$/, '')
+                            .replaceAll(/\/+$/, '')
+                        // Only use jobFolder if it differs from the leaf job name (i.e. there is a real parent folder).
+                        env.PIPELINE_BASE_FOLDER = (jobFolder == env.JOB_NAME) ? '' : jobFolder
                         if (env.PIPELINE_BASE_FOLDER) {
-                            echo "✓ Pipeline base folder: ${env.PIPELINE_BASE_FOLDER}"
+                            echo "✓ Pipeline base folder (from JOB_NAME): ${env.PIPELINE_BASE_FOLDER}"
                         }
                     }
                     // Resolve worker label now that CONFIG_STAGE_AGENT_LABELS is populated.

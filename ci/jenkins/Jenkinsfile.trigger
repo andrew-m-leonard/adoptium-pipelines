@@ -237,52 +237,54 @@ String checkExistingBuildForScmRef(String launchJobPath, String scmRef) {
 /**
  * Trigger the launch job for the given version.
  *
- * @param launchJobBase     Jenkins path to the Build_openjdk_launchers folder
- * @param jdkVersion        Version string, e.g. "jdk21"
+ * Only per-run overrides are sent — the remaining parameters keep their
+ * baked-in defaults (set by the seed job) so the "Build with parameters"
+ * UI and the triggered-build sidebar both show the correct declared ordering
+ * and group separators.  Forwarding all deploymentDefaults as individual
+ * string/booleanParam values is intentionally avoided: it produces a flat,
+ * ungrouped sidebar on the triggered build because Jenkins renders the
+ * ParametersAction in the order params were passed, not the declared order.
+ *
+ * Per-run overrides sent:
+ *   RELEASE_TYPE           — trigger-specific (WEEKLY / RELEASE)
+ *   PLATFORMS              — always "all" from a trigger
+ *   SCM_REF                — when provided by the trigger script
+ *   OVERRIDE_PUBLISH_NAME  — when provided by the trigger script
+ *   RUN_TESTS              — honours suppressTestingConditions evaluation
+ *
+ * @param launchJobBase      Jenkins path to the Build_openjdk_launchers folder
+ * @param jdkVersion         Version string, e.g. "jdk21"
  * @param deploymentDefaults Merged default parameters for this deployment
- * @param versionConfig     Version entry from trigger_config.json (for suppressTestingConditions)
- * @param triggerResult     Parsed trigger-result.json Map from the trigger script
- * @param releaseType       RELEASE_TYPE value to forward, e.g. "WEEKLY" or "RELEASE"
+ * @param versionConfig      Version entry from trigger_config.json (for suppressTestingConditions)
+ * @param triggerResult      Parsed trigger-result.json Map from the trigger script
+ * @param releaseType        RELEASE_TYPE value to forward, e.g. "WEEKLY" or "RELEASE"
  */
 void triggerLaunchJob(String launchJobBase, String jdkVersion, Map deploymentDefaults,
                       Map versionConfig, Map triggerResult, String releaseType) {
     String vnum    = jdkVersion.replaceAll(/[^\d]/, '')
     String jobPath = "${launchJobBase}/Build_openjdk${vnum}_launch"
 
-    // Build the effective parameter map for suppressTestingConditions evaluation
+    // Evaluate suppressTestingConditions against the effective params for this run.
     Map effectiveParams = [:] + deploymentDefaults
     effectiveParams['RELEASE_TYPE'] = releaseType
-
     boolean enableTesting = deploymentDefaults.getOrDefault('RUN_TESTS', true) as boolean
     if (shouldSuppressTesting(versionConfig, effectiveParams)) {
         enableTesting = false
     }
 
+    // Send only the values that vary per trigger run.  All other parameters
+    // retain their baked-in defaults, preserving declared order and grouping.
     List jobParams = [
         string(name: 'RELEASE_TYPE', value: releaseType),
         string(name: 'PLATFORMS',    value: 'all'),
+        booleanParam(name: 'RUN_TESTS', value: enableTesting),
     ]
-
     if (triggerResult.scmRef) {
         jobParams << string(name: 'SCM_REF', value: triggerResult.scmRef as String)
     }
     if (triggerResult.publishName) {
         jobParams << string(name: 'OVERRIDE_PUBLISH_NAME', value: triggerResult.publishName as String)
     }
-
-    // Forward deployment default parameters, excluding those already set above
-    Set skipKeys = ['RELEASE_TYPE', 'RUN_TESTS'] as Set
-    deploymentDefaults.each { String k, v ->
-        if (!skipKeys.contains(k)) {
-            if (v instanceof Boolean) {
-                jobParams << booleanParam(name: k, value: v as boolean)
-            } else {
-                jobParams << string(name: k, value: v as String)
-            }
-        }
-    }
-    // RUN_TESTS applied last with the (potentially suppressed) value
-    jobParams << booleanParam(name: 'RUN_TESTS', value: enableTesting)
 
     echo "Triggering ${jobPath} | SCM_REF=${triggerResult.scmRef ?: '(HEAD)'} | RELEASE_TYPE=${releaseType} | RUN_TESTS=${enableTesting}"
     build(job: jobPath, parameters: jobParams, wait: false, propagate: false)
