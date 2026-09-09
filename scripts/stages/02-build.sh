@@ -417,7 +417,12 @@ setup_reproducible_build_from_sbom() {
 				export WORKSPACE="${padded_workspace}"
 				log_info "WORKSPACE updated to: ${WORKSPACE}"
 			else
-				log_info "No padding needed - workspace paths already match"
+				local current_build_dir="${WORKSPACE}/${build_folder}"
+				if [[ "${#current_build_dir}" -ne "${#build_workspace_directory}" ]]; then
+					log_warn "Workspace path cannot be padded to match SBOM build directory length - reproducibility may be affected"
+				else
+					log_info "No padding needed - workspace paths already match"
+				fi
 			fi
 		else
 			log_warn "BUILD_WORKSPACE_DIRECTORY not found in SBOM - skipping path padding"
