@@ -478,7 +478,7 @@ if (deployments && triggerConfig.triggers) {
                         trim(true)
                     }
                     textParam('TRIGGER_VERSIONS_JSON',
-                        groovy.json.JsonOutput.toJson(versions),
+                        groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(versions)),
                         'JSON array of enabled version configs for this trigger type — baked in at generation time')
                     stringParam {
                         name('LAUNCH_JOB_BASE_PATH')
@@ -487,7 +487,7 @@ if (deployments && triggerConfig.triggers) {
                         trim(true)
                     }
                     textParam('DEFAULT_PARAMETERS_JSON',
-                        groovy.json.JsonOutput.toJson(effectiveDefaultParams),
+                        groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(effectiveDefaultParams)),
                         'Merged default parameters for this deployment — baked in at generation time')
                     stringParam {
                         name('CONFIG_REPO_URL')
