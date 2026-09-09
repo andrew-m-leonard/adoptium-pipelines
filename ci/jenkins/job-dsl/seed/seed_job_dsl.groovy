@@ -458,8 +458,6 @@ if (deployments && triggerConfig.triggers) {
                     <p>Targets: <code>${launchJobBasePath}</code></p>
                     <p style="color:#6a6a6a;font-size:0.85em">pipeline-sha:${pipelineCommitSha}</p>""".stripIndent().trim())
 
-                triggers { cron(cronSchedule) }
-
                 parameters {
                     stringParam {
                         name('DEPLOYMENT_NAME')
@@ -523,11 +521,20 @@ if (deployments && triggerConfig.triggers) {
                 }
 
                 properties {
+                    pipelineTriggers {
+                        triggers {
+                            cron {
+                                spec(cronSchedule)
+                            }
+                        }
+                    }
                     buildDiscarder {
                         strategy {
                             logRotator {
-                                daysToKeepStr('30')
-                                numToKeepStr('50')
+                                daysToKeepStr(jenkinsConfig.jobConfiguration?.logRotation?.daysToKeep?.toString() ?: '30')
+                                numToKeepStr(jenkinsConfig.jobConfiguration?.logRotation?.numToKeep?.toString() ?: '50')
+                                artifactDaysToKeepStr(jenkinsConfig.jobConfiguration?.logRotation?.artifactDaysToKeep?.toString() ?: '30')
+                                artifactNumToKeepStr(jenkinsConfig.jobConfiguration?.logRotation?.artifactNumToKeep?.toString() ?: '10')
                             }
                         }
                     }
