@@ -164,8 +164,8 @@ main() {
 	# Execute build using build-farm/make-adopt-build-farm.sh
 	execute_build "${java_to_build}" "${target_os}" "${architecture}" "${variant}" "${build_args}" "${scm_ref}" "${configure_args}" "${make_args}"
 
-	# Extract and save metadata
-	extract_build_metadata
+	# Extract and save metadata (pass final resolved refs so they are recorded)
+	extract_build_metadata "${build_repo_url}" "${build_ref}"
 
 	# Copy outputs to standard location
 	organize_build_outputs
@@ -640,7 +640,12 @@ execute_build() {
 }
 
 # Extract build metadata
+# $1  build_repo_url  - the temurin-build repository URL actually used
+# $2  build_ref       - the temurin-build ref actually used (may differ from the
+#                       input param when it was overridden by SBOM comparison)
 extract_build_metadata() {
+	local build_repo_url="${1:-}"
+	local build_ref="${2:-}"
 	log_info "Extracting build metadata"
 
 	local version="unknown"
@@ -673,7 +678,9 @@ extract_build_metadata() {
 		--stage "${STAGE_NAME}" \
 		--workspace "${WORKSPACE}" \
 		--build-uid "${BUILD_UID:-}" \
-		--group-uid "${GROUP_UID:-}"
+		--group-uid "${GROUP_UID:-}" \
+		--build-ref "${build_ref}" \
+		--build-repo-url "${build_repo_url}"
 
 	log_info "Build metadata saved to build-metadata.json"
 }

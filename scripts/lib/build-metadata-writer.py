@@ -29,8 +29,10 @@ Usage:
         --workspace /workspace/build
 
 Optional arguments (fall back to empty string when absent):
-    --build-uid   <uid>
-    --group-uid   <uid>
+    --build-uid      <uid>
+    --group-uid      <uid>
+    --build-ref      <ref>       Exact temurin-build ref/commit used (after any SBOM override)
+    --build-repo-url <url>       temurin-build repository URL used
 
 The following fields are read from environment variables (set by the pipeline):
     CONFIG_JAVA_TO_BUILD
@@ -73,6 +75,8 @@ class BuildMetadataWriter(object):
         self._group_uid = args.group_uid or ""
         self._stage = args.stage
         self._workspace = args.workspace
+        self._build_ref = args.build_ref or ""
+        self._build_repo_url = args.build_repo_url or ""
 
     def _collect(self):
         now = time.time()
@@ -89,6 +93,8 @@ class BuildMetadataWriter(object):
             "targetOS": os.environ.get("CONFIG_TARGET_OS", ""),
             "architecture": os.environ.get("CONFIG_ARCHITECTURE", ""),
             "variant": os.environ.get("CONFIG_VARIANT", ""),
+            "buildRef": self._build_ref,
+            "buildRepoUrl": self._build_repo_url,
         }
 
     def write(self):
@@ -127,6 +133,16 @@ def main():
     )
     parser.add_argument("--build-uid", default="", help="Build UID (optional)")
     parser.add_argument("--group-uid", default="", help="Group UID (optional)")
+    parser.add_argument(
+        "--build-ref",
+        default="",
+        help="Exact temurin-build ref/commit used (after any SBOM override)",
+    )
+    parser.add_argument(
+        "--build-repo-url",
+        default="",
+        help="temurin-build repository URL used",
+    )
 
     args = parser.parse_args()
     BuildMetadataWriter(args).write()
