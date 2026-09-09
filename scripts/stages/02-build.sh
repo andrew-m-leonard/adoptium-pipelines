@@ -237,6 +237,29 @@ setup_temurin_build() {
 		exit 1
 	fi
 
+	# Verify the exact commit that was checked out
+	local actual_commit
+	actual_commit=$(git -C "${build_repo_dir}" rev-parse HEAD)
+	log_info "Verified HEAD commit: ${actual_commit}"
+
+	# Check whether build_ref resolved to a tag or a branch and verify accordingly
+	local actual_tag
+	if actual_tag=$(git -C "${build_repo_dir}" describe --tags --exact-match HEAD 2>/dev/null); then
+		# HEAD is exactly at a tag
+		log_info "Verified HEAD tag:    ${actual_tag}"
+		if [[ "${actual_tag}" != "${build_ref}" ]]; then
+			log_warn "HEAD tag '${actual_tag}' does not match requested ref '${build_ref}'"
+		fi
+	else
+		# HEAD is not at a tag — confirm the branch name matches
+		local actual_branch
+		actual_branch=$(git -C "${build_repo_dir}" symbolic-ref --short HEAD 2>/dev/null || echo "(detached HEAD)")
+		log_info "Verified HEAD branch: ${actual_branch}"
+		if [[ "${actual_branch}" != "${build_ref}" ]]; then
+			log_warn "HEAD branch '${actual_branch}' does not match requested ref '${build_ref}'"
+		fi
+	fi
+
 	# Verify build script exists
 	local build_script="${build_repo_dir}/build-farm/make-adopt-build-farm.sh"
 	if [[ ! -f "${build_script}" ]]; then
