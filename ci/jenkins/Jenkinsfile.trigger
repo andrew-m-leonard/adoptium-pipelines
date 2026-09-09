@@ -242,7 +242,7 @@ String checkExistingBuildForScmRef(String launchJobPath, String scmRef) {
  * @param deploymentDefaults Merged default parameters for this deployment
  * @param versionConfig     Version entry from trigger_config.json (for suppressTestingConditions)
  * @param triggerResult     Parsed trigger-result.json Map from the trigger script
- * @param releaseType       RELEASE_TYPE value to forward, e.g. "Weekly" or "Release"
+ * @param releaseType       RELEASE_TYPE value to forward, e.g. "WEEKLY" or "RELEASE"
  */
 void triggerLaunchJob(String launchJobBase, String jdkVersion, Map deploymentDefaults,
                       Map versionConfig, Map triggerResult, String releaseType) {
@@ -358,7 +358,7 @@ pipeline {
                                     // ── Script verified targetRepo — trust its shouldTrigger ──
                                     if (result.shouldTrigger == true) {
                                         triggerLaunchJob(launchJobBase, version, deploymentDefaults,
-                                            versionConfig, result, result.releaseType as String ?: 'Weekly')
+                                            versionConfig, result, (result.releaseType as String ?: 'WEEKLY').toUpperCase())
                                     } else {
                                         echo "↷ ${version}: already published or no new tag — skipping"
                                     }
@@ -366,7 +366,7 @@ pipeline {
                                 } else if (triggerType == 'weekly-head') {
                                     // ── Always trigger — no dedup ──
                                     triggerLaunchJob(launchJobBase, version, deploymentDefaults,
-                                        versionConfig, result, 'Weekly')
+                                        versionConfig, result, 'WEEKLY')
 
                                 } else {
                                     // ── detect-ga-tag and unknown vendor types ──
@@ -406,7 +406,7 @@ pipeline {
                                     } else {
                                         // NOT_FOUND or API_ERROR (fail open) — trigger
                                         triggerLaunchJob(launchJobBase, version, deploymentDefaults,
-                                            versionConfig, result, 'Release')
+                                            versionConfig, result, 'RELEASE')
                                     }
                                 }
                             }
