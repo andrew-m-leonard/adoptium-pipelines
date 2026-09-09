@@ -435,7 +435,11 @@ if (deployments && triggerConfig.triggers) {
         def triggerFolder          = inDeploymentFolder(dep, 'Triggers')
         def launchJobBasePath      = inDeploymentFolder(dep, 'Build_openjdk_launchers')
 
-        depTriggers.each { String triggerType ->
+        depTriggers.each { triggerEntry ->
+            // Each entry may be a plain String or a Map { type, cronSchedule }
+            String triggerType     = (triggerEntry instanceof Map) ? triggerEntry.type    : triggerEntry as String
+            String overrideCron    = (triggerEntry instanceof Map) ? triggerEntry.cronSchedule : null
+
             List versions = (triggerVersionsMap[triggerType] ?: []).findAll { it.enabled }
             if (!versions) {
                 println "  [${dep.name}] ${triggerType}: no enabled versions — skipping"
@@ -444,8 +448,10 @@ if (deployments && triggerConfig.triggers) {
 
             println "  [${dep.name}] → ${triggerType} (${versions.size()} version(s))"
 
-            // Cron schedule: daily for detect-* types, weekly on Sunday for weekly-head
-            String cronSchedule = (triggerType == 'weekly-head') ? 'H 4 * * 0' : 'H 3 * * *'
+            // Cron schedule: prefer explicit override from jenkins_job_config, then fall back to
+            // built-in defaults (weekly on Sunday for weekly-head, daily otherwise).
+            String defaultCron     = (triggerType == 'weekly-head') ? 'H 4 * * 0' : 'H 3 * * *'
+            String cronSchedule    = overrideCron ?: defaultCron
 
             def jobName = "${triggerFolder}/Trigger_${triggerType.replaceAll(/[^a-zA-Z0-9_-]/, '_')}"
 
