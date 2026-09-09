@@ -135,11 +135,20 @@ main() {
 
 	# Setup reproducible build from SBOM if compare-build is enabled.
 	# This must happen BEFORE cloning temurin-build so it clones into the padded workspace.
-	# Returns --build-reproducible-date for WEEKLY EA builds which is appended to build_args.
+	# Called directly (not in a subshell) so that WORKSPACE, SBOM_EXTRA_BUILD_ARGS and
+	# SBOM_BUILD_REF set inside the function are visible here.
 	if [[ "${compare_build}" == "true" ]]; then
-		local extra_build_args
-		extra_build_args=$(setup_reproducible_build_from_sbom "${scm_ref}")
-		build_args="${build_args:+${build_args} }${extra_build_args}"
+		SBOM_EXTRA_BUILD_ARGS=""
+		SBOM_BUILD_REF=""
+		setup_reproducible_build_from_sbom "${scm_ref}" "${build_ref}"
+
+		[[ -n "${SBOM_EXTRA_BUILD_ARGS}" ]] && build_args="${build_args:+${build_args} }${SBOM_EXTRA_BUILD_ARGS}"
+
+		if [[ -n "${SBOM_BUILD_REF}" ]]; then
+			build_ref="${SBOM_BUILD_REF}"
+			build_ref_source="sbom"
+			log_info "Build Ref overridden by SBOM: ${build_ref}"
+		fi
 	fi
 
 	# Clone temurin-build repository (after padding so it goes into the right place)
@@ -327,16 +336,22 @@ pad_build_dir_to_same_length() {
 	fi
 }
 
-# Setup reproducible build from SBOM: path padding + (WEEKLY) build timestamp.
+# Setup reproducible build from SBOM: path padding + (WEEKLY) build timestamp +
+# temurin-build ref override.
+#
+# Must be called directly (not inside $()) so that variable assignments survive.
 #
 # Arguments:
-#   $1  scm_ref  - The SCM ref for this build (e.g. jdk-21.0.3+9_adopt)
+#   $1  scm_ref    - The SCM ref for this build (e.g. jdk-21.0.3+9_adopt)
+#   $2  build_ref  - The currently resolved temurin-build ref (param or default)
 #
-# Stdout:
-#   Prints "--build-reproducible-date <date>" for WEEKLY builds (empty otherwise).
-#   Caller should capture and append to build_args.
+# Sets in caller scope:
+#   WORKSPACE            - updated to the padded path when path padding is applied
+#   SBOM_EXTRA_BUILD_ARGS - "--build-reproducible-date <date>" for WEEKLY builds
+#   SBOM_BUILD_REF       - exact temurin-build commit SHA from the SBOM
 setup_reproducible_build_from_sbom() {
 	local scm_ref=$1
+	local caller_build_ref="${2:-}"
 
 	log_section "Setting up reproducible build from SBOM"
 
@@ -442,10 +457,55 @@ setup_reproducible_build_from_sbom() {
 				local reproducible_date="${build_timestamp/ /T}Z"
 				log_info "Found Build Timestamp in SBOM: ${build_timestamp}"
 				log_info "Using --build-reproducible-date: ${reproducible_date}"
-				echo "--build-reproducible-date ${reproducible_date}"
+				SBOM_EXTRA_BUILD_ARGS="--build-reproducible-date ${reproducible_date}"
 			else
 				log_warn "Build Timestamp not found in SBOM - --build-reproducible-date will not be set"
 			fi
+		fi
+
+		# --- Temurin Build Ref ---
+		# Extract the exact temurin-build commit used for the original build so we
+		# clone the same code when reproducing.  The SBOM value is a full GitHub
+		# commit URL, e.g.:
+		#   https://github.com/adoptium/temurin-build/commit/<sha>
+		local sbom_build_ref_url
+		sbom_build_ref_url=$($(resolve_python) "${PIPELINE_LIB}/sbom-field-extractor.py" --sbom "${sbom_file}" --field "Temurin Build Ref")
+
+		if [[ -n "${sbom_build_ref_url}" && "${sbom_build_ref_url}" != "null" ]]; then
+			log_info "Found Temurin Build Ref in SBOM: ${sbom_build_ref_url}"
+
+			# Extract the commit SHA from the trailing path component of the URL
+			local sbom_commit="${sbom_build_ref_url##*/}"
+
+			# If the caller already specified a build_ref, compare its resolved commit
+			# against the SBOM commit and warn if they differ.
+			if [[ -n "${caller_build_ref}" ]]; then
+				log_info "Comparing caller build_ref '${caller_build_ref}' against SBOM commit '${sbom_commit}'"
+				# Resolve the caller_build_ref to a commit SHA via the remote without cloning
+				local caller_commit
+				caller_commit=$(git ls-remote "${build_repo_url:-https://github.com/adoptium/temurin-build.git}" "${caller_build_ref}" 2>/dev/null | awk '{print $1}' | head -n1 || true)
+				if [[ -n "${caller_commit}" ]]; then
+					# Normalise: compare only as many characters as the shorter value to
+					# handle a full SHA vs abbreviated SHA or ref mismatch gracefully.
+					local min_len=$(( ${#caller_commit} < ${#sbom_commit} ? ${#caller_commit} : ${#sbom_commit} ))
+					if [[ "${caller_commit:0:${min_len}}" != "${sbom_commit:0:${min_len}}" ]]; then
+						log_warn "Caller build_ref '${caller_build_ref}' resolves to commit '${caller_commit}'"
+						log_warn "  but SBOM Temurin Build Ref is '${sbom_commit}'"
+						log_warn "  SBOM build ref will be used to ensure reproducibility"
+					else
+						log_info "Caller build_ref '${caller_build_ref}' matches SBOM commit - no override needed"
+					fi
+				else
+					log_warn "Could not resolve caller build_ref '${caller_build_ref}' to a commit SHA via remote"
+					log_warn "  SBOM build ref will be used to ensure reproducibility"
+				fi
+			fi
+
+			# Set SBOM_BUILD_REF so the caller uses the exact commit when cloning.
+			SBOM_BUILD_REF="${sbom_commit}"
+			log_info "SBOM_BUILD_REF set to: ${SBOM_BUILD_REF}"
+		else
+			log_warn "Temurin Build Ref not found in SBOM - temurin-build will use the caller-supplied or default ref"
 		fi
 
 		# Clean up SBOM file
