@@ -259,22 +259,22 @@ def mergedDefaultParams = { Map dep ->
 // Helper: create the launch job parameter block (closure reused per deployment).
 def createLaunchJobParams = { Map dep, String version, List platforms, Map defaultParams ->
     def versionNum = version.replaceAll(/[^\d]/, '').toInteger()
-    return { parameters ->
-        parameters.stringParam {
+    return {
+        stringParam {
             name('JDK_VERSION')
             defaultValue(version.replaceAll(/[^\d]/, ''))
             description('JDK version number — fixed for this launch job')
             trim(true)
         }
-        parameters.stringParam {
+        stringParam {
             name('GROUP_UID')
             defaultValue('')
             description('Group identifier for this launch run. Auto-generated if empty.')
             trim(true)
         }
-        parameters.choiceParam('PLATFORMS', ['all'] + platforms,
+        choiceParam('PLATFORMS', ['all'] + platforms,
             'Select platform to build, or "all" for all available platforms')
-        parameters.choiceParam('RELEASE_TYPE',
+        choiceParam('RELEASE_TYPE',
             ['NIGHTLY', 'WEEKLY', 'RELEASE'],
             'Type of release build (NIGHTLY = default nightly, WEEKLY = EA beta, RELEASE = official)')
 
@@ -285,7 +285,7 @@ def createLaunchJobParams = { Map dep, String version, List platforms, Map defau
             def stageHeader = group.stageIds.size() == 1
                 ? "stage: ${group.stageIds[DUPLICATE_ZERO]}"
                 : "stages: ${group.stageIds.join(', ')}"
-            parameters.separator {
+            separator {
                 name("__sep_${stageLabel}_${group.name.replaceAll(/\W+/, '_')}")
                 sectionHeader("${group.name}  [${stageHeader}]")
                 sectionHeaderStyle('')
@@ -297,12 +297,12 @@ def createLaunchJobParams = { Map dep, String version, List platforms, Map defau
                     def boolDefault = defaultParams?.containsKey(p.name)
                         ? defaultParams[p.name] == true
                         : p.default == true
-                    parameters.booleanParam(p.name, boolDefault, p.description ?: '')
+                    booleanParam(p.name, boolDefault, p.description ?: '')
                 } else {
                     def strDefault = defaultParams?.containsKey(p.name)
                         ? (defaultParams[p.name] ?: '')
                         : (p.default ?: '')
-                    parameters.stringParam {
+                    stringParam {
                         name(p.name)
                         defaultValue(strDefault)
                         description(p.description ?: '')
@@ -313,26 +313,26 @@ def createLaunchJobParams = { Map dep, String version, List platforms, Map defau
         }
 
         // Config repo coordinates — baked in at generation time
-        parameters.separator {
+        separator {
             name('__sep_config_repo')
             sectionHeader('Config Repository')
             sectionHeaderStyle('')
             description('Vendor config repo coordinates — baked in at job-generation time. Do not edit manually.')
             separatorStyle('')
         }
-        parameters.stringParam {
+        stringParam {
             name('CONFIG_REPO_URL')
             defaultValue(configRepoUrl)
             description('Vendor config repo URL — baked in at job-generation time')
             trim(true)
         }
-        parameters.stringParam {
+        stringParam {
             name('CONFIG_REPO_BRANCH')
             defaultValue(configRepoBranch)
             description('Vendor config repo branch — baked in at job-generation time')
             trim(true)
         }
-        parameters.stringParam {
+        stringParam {
             name('CONFIG_REPO_CREDENTIALS_ID')
             defaultValue(configRepoCredentialsId)
             description('Jenkins credential ID for the vendor config repo — baked in at job-generation time.')
