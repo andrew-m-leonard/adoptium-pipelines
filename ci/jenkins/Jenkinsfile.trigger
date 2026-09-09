@@ -53,18 +53,25 @@ limitations under the License.
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import java.time.DayOfWeek
-import java.time.temporal.ChronoUnit
-import java.time.temporal.TemporalAdjusters
 
 // ---------------------------------------------------------------------------
 // suppressTestingConditions evaluation
 // ---------------------------------------------------------------------------
 
 /**
- * Resolve a named window event to [windowStart, windowEnd] ZonedDateTime pair.
+ * Return a UTC Calendar set to midnight (start-of-day) of the given calendar.
+ * Uses only sandbox-safe java.util.Calendar operations.
+ */
+Calendar _utcMidnight(Calendar cal) {
+    cal.set(Calendar.HOUR_OF_DAY, 0)
+    cal.set(Calendar.MINUTE, 0)
+    cal.set(Calendar.SECOND, 0)
+    cal.set(Calendar.MILLISECOND, 0)
+    return cal
+}
+
+/**
+ * Resolve a named window event to [windowStartMs, windowEndMs] epoch-millis pair.
  *
  * Built-in event names:
  *   OPENJDK_RELEASE_DAY — the 3rd Tuesday of the current UTC month.
@@ -73,25 +80,37 @@ import java.time.temporal.TemporalAdjusters
  * is NOT suppressed for unknown events to avoid accidentally blocking builds).
  */
 List resolveEventWindow(String eventName, int daysBefore, int daysAfter) {
-    ZonedDateTime now = ZonedDateTime.now(ZoneId.of('UTC'))
-    ZonedDateTime eventDay
+    // Use Calendar (UTC) — fully sandbox-safe; java.time APIs are sandbox-blocked.
+    Calendar now = Calendar.getInstance(TimeZone.getTimeZone('UTC'))
+    Calendar eventDay
 
     switch (eventName) {
         case 'OPENJDK_RELEASE_DAY':
             // 3rd Tuesday of the current month
-            eventDay = now.withDayOfMonth(1)
-                .with(TemporalAdjusters.dayOfWeekInMonth(3, DayOfWeek.TUESDAY))
+            eventDay = Calendar.getInstance(TimeZone.getTimeZone('UTC'))
+            eventDay.set(Calendar.DAY_OF_MONTH, 1)
+            _utcMidnight(eventDay)
+            // Advance to first Tuesday, then add 14 days for the 3rd Tuesday
+            while (eventDay.get(Calendar.DAY_OF_WEEK) != Calendar.TUESDAY) {
+                eventDay.add(Calendar.DAY_OF_MONTH, 1)
+            }
+            eventDay.add(Calendar.DAY_OF_MONTH, 14)
             break
         default:
             echo "⚠️  Unknown suppressTestingConditions event '${eventName}' — ignoring window, testing NOT suppressed"
             return null
     }
 
-    ZonedDateTime windowStart = eventDay.minusDays(daysBefore).truncatedTo(java.time.temporal.ChronoUnit.DAYS)
-    ZonedDateTime windowEnd   = eventDay.plusDays(daysAfter).plusDays(1).truncatedTo(java.time.temporal.ChronoUnit.DAYS)
+    Calendar windowStart = eventDay.clone() as Calendar
+    windowStart.add(Calendar.DAY_OF_MONTH, -daysBefore)
+    _utcMidnight(windowStart)
 
-    echo "Event '${eventName}': ${eventDay.toLocalDate()} | Window: ${windowStart.toLocalDate()} to ${windowEnd.toLocalDate().minusDays(1)} (daysBefore=${daysBefore}, daysAfter=${daysAfter})"
-    return [windowStart, windowEnd]
+    Calendar windowEnd = eventDay.clone() as Calendar
+    windowEnd.add(Calendar.DAY_OF_MONTH, daysAfter + 1)
+    _utcMidnight(windowEnd)
+
+    echo "Event '${eventName}': ${eventDay.format('yyyy-MM-dd')} | Window: ${windowStart.format('yyyy-MM-dd')} to ${windowEnd.format('yyyy-MM-dd')} (exclusive) (daysBefore=${daysBefore}, daysAfter=${daysAfter})"
+    return [windowStart.getTimeInMillis(), windowEnd.getTimeInMillis()]
 }
 
 /**
@@ -117,7 +136,7 @@ boolean shouldSuppressTesting(Map versionConfig, Map effectiveParams) {
     List conditions = versionConfig.suppressTestingConditions ?: []
     if (!conditions) { return false }
 
-    ZonedDateTime now = ZonedDateTime.now(ZoneId.of('UTC'))
+    long nowMs = Calendar.getInstance(TimeZone.getTimeZone('UTC')).getTimeInMillis()
 
     boolean allMatch = conditions.every { Map cond ->
         // Check param value match
@@ -139,10 +158,11 @@ boolean shouldSuppressTesting(Map versionConfig, Map effectiveParams) {
             int daysAfter     = (window.daysAfter  ?: 0) as int
             List windowRange  = resolveEventWindow(eventName, daysBefore, daysAfter)
             if (windowRange == null) { return false }   // unknown event — don't suppress
-            ZonedDateTime windowStart = windowRange[0]
-            ZonedDateTime windowEnd   = windowRange[1]
-            boolean inWindow = !now.isBefore(windowStart) && now.isBefore(windowEnd)
-            echo "Window check: now=${now.toLocalDate()} | inWindow=${inWindow}"
+            long windowStart = windowRange[0] as long
+            long windowEnd   = windowRange[1] as long
+            boolean inWindow = nowMs >= windowStart && nowMs < windowEnd
+            Calendar nowCal = Calendar.getInstance(TimeZone.getTimeZone('UTC'))
+            echo "Window check: now=${nowCal.format('yyyy-MM-dd')} | inWindow=${inWindow}"
             return inWindow
         }
 
