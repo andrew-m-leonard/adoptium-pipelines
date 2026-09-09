@@ -317,7 +317,7 @@ pipeline {
             agent { label 'ci.role.worker' }
             steps {
                 script {
-                    checkout scm   // ci-adoptium-pipelines — for scripts/triggers/ and scripts/lib/
+                    checkout scm   // ci-adoptium-pipelines — for scripts/triggers/, scripts/lib/, job-dsl/
 
                     dir('config-repo') {
                         checkout([
@@ -329,6 +329,23 @@ pipeline {
                             ]]
                         ])
                     }
+
+                    // ── Reseed launch jobs ────────────────────────────────────────────
+                    // Re-run the seed DSL before firing any launch job to ensure every
+                    // launch job's parameter definitions match the config repo exactly.
+                    // This corrects any admin drift (e.g. a default value manually
+                    // changed in the Jenkins UI) before the trigger build is scheduled.
+                    // The config repo is always the source of truth — if a version has
+                    // been removed from activeJdkVersions its job is deleted here, just
+                    // as a scheduled seed run would do.
+                    echo "=== Reseeding launch jobs before trigger ==="
+                    def seedHelper = load('ci/jenkins/lib/SeedHelper.groovy')
+                    seedHelper.reseedForTrigger(
+                        params.CONFIG_REPO_URL,
+                        params.CONFIG_REPO_BRANCH,
+                        env.GIT_COMMIT  // SHA of the pipeline repo checked out above
+                    )
+                    echo "✓ Launch jobs reseeded"
 
                     def triggerRunner = load('ci/jenkins/lib/TriggerScriptRunner.groovy')
 

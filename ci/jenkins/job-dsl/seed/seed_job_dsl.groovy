@@ -61,6 +61,12 @@ def pipelineCommitSha  = binding.variables.get('PIPELINE_COMMIT_SHA')  ?: 'unkno
 def collatedParamsJson = binding.variables.get('COLLATED_PARAMS_JSON') ?: ''
 def triggerConfigJson  = binding.variables.get('TRIGGER_CONFIG_JSON')  ?: ''
 
+// CONFIG_REPO_PREFIX: optional path prefix for all readFileFromWorkspace calls.
+// Empty string (default) → seed layout: config files at workspace root.
+// 'config-repo/' → trigger layout: config files under config-repo/ subdirectory.
+def configRepoPrefix   = (binding.variables.get('CONFIG_REPO_PREFIX') ?: '').toString()
+if (configRepoPrefix && !configRepoPrefix.endsWith('/')) { configRepoPrefix += '/' }
+
 final int SEPARATOR_WIDTH  = 80
 final int VERSION_MODULO   = 4
 final int LTS_BASE_VERSION = 17
@@ -99,11 +105,11 @@ println ''
 
 def slurper = new JsonSlurper()
 
-def pipelineConfig = slurper.parseText(readFileFromWorkspace('adoptium_pipeline_config.json'))
+def pipelineConfig = slurper.parseText(readFileFromWorkspace("${configRepoPrefix}adoptium_pipeline_config.json"))
 println '✓ Loaded adoptium_pipeline_config.json'
 println "  Active JDK versions: ${pipelineConfig.activeJdkVersions.findAll { it.enabled }*.version.join(', ')}"
 
-def jenkinsConfig = slurper.parseText(readFileFromWorkspace('jenkins_job_config.json'))
+def jenkinsConfig = slurper.parseText(readFileFromWorkspace("${configRepoPrefix}jenkins_job_config.json"))
 println '✓ Loaded jenkins_job_config.json'
 
 // pipelineBaseFolder and deployments come from jenkins_job_config.json — single source of truth.
@@ -115,7 +121,7 @@ println "  deployments        : ${deployments.collect { it.name }.join(', ') ?: 
 // jenkins_credential_config.json is optional — absent for public-repo setups.
 def credentialConfig = [:]
 try {
-    credentialConfig = slurper.parseText(readFileFromWorkspace('jenkins_credential_config.json'))
+    credentialConfig = slurper.parseText(readFileFromWorkspace("${configRepoPrefix}jenkins_credential_config.json"))
     println '✓ Loaded jenkins_credential_config.json'
 } catch (Exception e) {
     println 'ℹ️  jenkins_credential_config.json not found — no SCM credentials configured'
@@ -352,7 +358,7 @@ launchDeployments.each { Map dep ->
 
     pipelineConfig.activeJdkVersions.findAll { it.enabled }.each { versionInfo ->
         def version    = versionInfo.version
-        def configFile = "${pipelineConfig.configFilePrefix ?: 'configurations/'}${version}${pipelineConfig.configFileSuffix ?: '_pipeline_config.json'}"
+        def configFile = "${configRepoPrefix}${pipelineConfig.configFilePrefix ?: 'configurations/'}${version}${pipelineConfig.configFileSuffix ?: '_pipeline_config.json'}"
         def versionNum = version.replaceAll(/[^\d]/, '').toInteger()
         def isLts      = (versionNum == 8 || versionNum == 11 || (versionNum >= LTS_BASE_VERSION && (versionNum - LTS_BASE_VERSION) % VERSION_MODULO == 0))
 
