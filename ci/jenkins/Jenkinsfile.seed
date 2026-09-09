@@ -141,8 +141,7 @@ pipeline {
                     seedHelper.generateJobs(
                         params.CONFIG_REPO_URL,
                         params.CONFIG_REPO_BRANCH,
-                        env.PIPELINES_COMMIT_SHA,
-                        (params.PIPELINE_BASE_FOLDER ?: '').toString().trim()
+                        env.PIPELINES_COMMIT_SHA
                     )
                 }
             }

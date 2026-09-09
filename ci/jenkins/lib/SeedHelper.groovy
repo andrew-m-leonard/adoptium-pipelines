@@ -21,29 +21,27 @@ limitations under the License.
  * Usage (from Jenkinsfile.seed Generate jobs stage):
  *   def seedHelper = load('pipelines/ci/jenkins/lib/SeedHelper.groovy')
  *   seedHelper.generateJobs(params.CONFIG_REPO_URL, params.CONFIG_REPO_BRANCH, env.PIPELINES_COMMIT_SHA)
+ *
+ * Reads pipelineBaseFolder and deployments[] from jenkins_job_config.json.
+ * Generates all deployments in a single pass — no per-deployment parameter needed.
  */
+
+import groovy.json.JsonSlurper
 
 /**
  * Run the Python collator and invoke the Job DSL script to create/update all
- * launch jobs.
+ * launch and trigger jobs for every deployment declared in jenkins_job_config.json.
  *
  * @param configRepoUrl      Vendor config repo URL — baked into generated jobs.
  * @param configRepoBranch   Vendor config repo branch — baked into generated jobs.
  * @param pipelineCommitSha  SHA of the ci-adoptium-pipelines checkout — stamped
  *                           into job descriptions for change detection.
- * @param pipelineBaseFolder Jenkins folder path to place all generated jobs under
- *                           (e.g. "MyOrg/OpenJDK"). Empty string means Jenkins root.
  */
-void generateJobs(String configRepoUrl, String configRepoBranch, String pipelineCommitSha, String pipelineBaseFolder = '') {
-    // Run the CI-agnostic Python collator — the single source of truth for
-    // stage parameter collation shared by seed, launch, and build jobs.
+void generateJobs(String configRepoUrl, String configRepoBranch, String pipelineCommitSha) {
+    // Run the CI-agnostic Python collator — single source of truth for stage
+    // parameter collation shared by seed, launch, and build jobs.
     // vendor-scripts/ lives in the workspace root (config repo SCM checkout).
     // pipelines/ contains the default *.params.json files.
-    //
-    // Load the canonical stage list from PipelineStages.groovy so that
-    // --orchestrated-stages is defined in exactly one place.
-    // Note: pipelines/ prefix because the seed job checks out ci-adoptium-pipelines
-    // into pipelines/ (see Jenkinsfile.seed dir('pipelines') block).
     def ps = load('pipelines/ci/jenkins/lib/PipelineStages.groovy')
     String collectCmd = 'python3 pipelines/scripts/lib/collect-stage-params.py' +
         ' --default-stages-dir pipelines/scripts/stages' +
@@ -59,17 +57,23 @@ void generateJobs(String configRepoUrl, String configRepoBranch, String pipeline
         error('collect-stage-params.py produced empty output — ensure the pipeline repo checkout succeeded.')
     }
 
+    // Read trigger_config.json (optional — absent for setups without trigger jobs)
+    String triggerConfigJson = ''
+    if (fileExists('trigger_config.json')) {
+        triggerConfigJson = readFile('trigger_config.json')
+    }
+
     jobDsl(
         targets:             'pipelines/ci/jenkins/job-dsl/seed/seed_job_dsl.groovy',
         removedJobAction:    'DELETE',
         removedViewAction:   'DELETE',
         additionalClasspath: 'pipelines/ci/jenkins/job-dsl',
         additionalParameters: [
-            CONFIG_REPO_URL:     configRepoUrl,
-            CONFIG_REPO_BRANCH:  configRepoBranch,
+            CONFIG_REPO_URL:      configRepoUrl,
+            CONFIG_REPO_BRANCH:   configRepoBranch,
             COLLATED_PARAMS_JSON: collatedJson,
             PIPELINE_COMMIT_SHA:  pipelineCommitSha,
-            PIPELINE_BASE_FOLDER: pipelineBaseFolder,
+            TRIGGER_CONFIG_JSON:  triggerConfigJson,
         ]
     )
 }

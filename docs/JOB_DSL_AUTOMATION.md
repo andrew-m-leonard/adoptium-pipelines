@@ -100,11 +100,12 @@ For a fork or a pinned branch, change these values. Commit and push.
    |---|---|---|---|
    | `CONFIG_REPO_URL` | ✅ required | *(your config repository URL)* | URL of your vendor config repository |
    | `CONFIG_REPO_BRANCH` | ✅ required | `main` | Branch of your vendor config repository |
-   | `PIPELINE_BASE_FOLDER` | ☑️ optional | *(leave blank)* | Jenkins folder path under which all generated jobs and views are placed (e.g. `MyOrg/OpenJDK`). Leave blank to generate at the Jenkins root. Run the seed job with different values to populate multiple independent pipeline installations in the same Jenkins. |
 
    > **Important**: do not declare these in `Jenkinsfile.seed`. A `parameters {}` block in a Jenkinsfile causes Jenkins to reset values to the Jenkinsfile defaults on every run, wiping whatever the operator set.
 
-   These values are baked into every generated launch job so `Jenkinsfile.launch` can check out the config repository at runtime on each build agent.
+   The folder layout (`pipelineBaseFolder`, deployment subfolders) is read from
+   `jenkins_job_config.json` in the config repository — no seed job parameter
+   controls it. Edit the config file to change folder names and re-run the seed.
 
 1. Under **Pipeline**:
    - **Definition**: `Pipeline script from SCM`
@@ -122,19 +123,15 @@ For a fork or a pinned branch, change these values. Commit and push.
 > DSL script without any additional checkout steps. Credentials are handled natively
 > by the Git plugin using the Jenkins Credentials store.
 
-> **Multiple installations**: because `PIPELINE_BASE_FOLDER` is a seed job parameter
-> (not a config-file value), you can run the **same seed job** multiple times with
-> different `PIPELINE_BASE_FOLDER` values to create independent pipeline installations
-> inside the same Jenkins instance — for example `staging` vs `production`, or one
-> folder per JDK vendor. Each invocation creates a self-contained set of folders,
-> launch jobs, and views under its own root folder.
+> **Multiple deployments**: the folder layout and security boundaries are defined
+> in `jenkins_job_config.json` via `pipelineBaseFolder` and `deployments[]`. A
+> single seed run generates all deployments. See [Deployments](#deployments) below.
 
 ### Step 3: Run the seed job
 
 1. Click **Build with Parameters**
 1. Set `CONFIG_REPO_URL` to your config repository URL (e.g. `https://github.com/adoptium/ci-temurin-config.git`)
 1. Set `CONFIG_REPO_BRANCH` to your branch (e.g. `main`)
-1. *(Optional)* Set `PIPELINE_BASE_FOLDER` to the Jenkins folder path where jobs should be created (e.g. `MyOrg/OpenJDK`). Leave blank to generate at the root.
 1. Click **Build**
 
 The job will:
@@ -142,7 +139,8 @@ The job will:
 - Check out `ci-adoptium-pipelines` into `pipelines/`
 - Collate stage parameters from `pipelines/scripts/stages/` and `vendor-scripts/`
 - Read `adoptium_pipeline_config.json` and `jenkins_job_config.json` from the config repository
-- Create the `Build_openjdk_launchers/` and `Build_openjdk/` folders
+- Read `trigger_config.json` if present
+- Create one set of folders per deployment under `pipelineBaseFolder`
 - Create one launch job per enabled JDK version under `Build_openjdk_launchers/`
 - Create `Build_openjdk_launchers` and `Build_openjdk` Jenkins views
 
@@ -239,6 +237,68 @@ Default parameter values come from `jenkins_job_config.json` in the config repos
   }
 }
 ```
+
+## Deployments
+
+Deployments define independent Jenkins folder namespaces for the pipeline — each
+with its own set of launch jobs, build jobs, trigger jobs, and security boundary.
+
+Declare deployments in `jenkins_job_config.json`:
+
+```json
+{
+  "pipelineBaseFolder": "temurin",
+  "deployments": [
+    {
+      "name": "release",
+      "folder": "release",
+      "description": "Production release pipeline — restricted access",
+      "triggers": ["detect-ga-tag"],
+      "defaultParameterOverrides": {
+        "RELEASE_TYPE": "RELEASE",
+        "PUBLISH_ARTIFACTS": false
+      }
+    },
+    {
+      "name": "beta",
+      "folder": "beta",
+      "description": "EA/beta and weekly HEAD builds",
+      "triggers": ["detect-build-tag-for-github-release", "weekly-head"],
+      "defaultParameterOverrides": {
+        "RELEASE_TYPE": "WEEKLY",
+        "PUBLISH_ARTIFACTS": true
+      }
+    }
+  ]
+}
+```
+
+The effective folder for each deployment is `pipelineBaseFolder/deployment.folder`:
+
+```
+Jenkins root
+└── temurin/
+    ├── release/
+    │   ├── Build_openjdk_launchers/   — launch jobs
+    │   ├── Build_openjdk/             — platform build jobs (lazy-created)
+    │   └── Triggers/
+    │       └── Trigger_detect-ga-tag  — daily cron (secure to release team)
+    └── beta/
+        ├── Build_openjdk_launchers/
+        ├── Build_openjdk/
+        └── Triggers/
+            ├── Trigger_detect-build-tag-for-github-release  — daily cron
+            └── Trigger_weekly-head                          — weekly cron
+```
+
+`defaultParameterOverrides` are merged on top of `jobConfiguration.defaultParameters`
+for all launch jobs and trigger jobs in that deployment. The base defaults apply
+to all deployments unless overridden.
+
+Apply Jenkins folder-level security to `temurin/release/` after the first seed
+run to restrict access to the release deployment.
+
+For automated trigger configuration, see [`docs/TRIGGER_ARCHITECTURE.md`](./TRIGGER_ARCHITECTURE.md).
 
 ## Maintenance
 

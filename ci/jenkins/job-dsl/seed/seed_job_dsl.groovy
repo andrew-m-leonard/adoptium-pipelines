@@ -55,11 +55,11 @@ import groovy.json.JsonSlurper
 // STEP 1: Validate binding variables
 // ============================================================================
 
-def configRepoUrl      = binding.variables.get('CONFIG_REPO_URL')          ?: ''
-def configRepoBranch   = binding.variables.get('CONFIG_REPO_BRANCH')       ?: ''
-def pipelineCommitSha  = binding.variables.get('PIPELINE_COMMIT_SHA')      ?: 'unknown'
-def collatedParamsJson = binding.variables.get('COLLATED_PARAMS_JSON')     ?: ''
-def pipelineBaseFolder = (binding.variables.get('PIPELINE_BASE_FOLDER') ?: '').toString().trim().replaceAll(/\/+$/, '')
+def configRepoUrl      = binding.variables.get('CONFIG_REPO_URL')      ?: ''
+def configRepoBranch   = binding.variables.get('CONFIG_REPO_BRANCH')   ?: ''
+def pipelineCommitSha  = binding.variables.get('PIPELINE_COMMIT_SHA')  ?: 'unknown'
+def collatedParamsJson = binding.variables.get('COLLATED_PARAMS_JSON') ?: ''
+def triggerConfigJson  = binding.variables.get('TRIGGER_CONFIG_JSON')  ?: ''
 
 final int SEPARATOR_WIDTH  = 80
 final int VERSION_MODULO   = 4
@@ -87,10 +87,9 @@ if (!collatedParamsJson?.trim()) {
 
 println '=' * SEPARATOR_WIDTH
 println 'SEED JOB'
-println "  CONFIG_REPO_URL      : ${configRepoUrl}"
-println "  CONFIG_REPO_BRANCH   : ${configRepoBranch}"
-println "  PIPELINE_COMMIT_SHA  : ${pipelineCommitSha}"
-println "  PIPELINE_BASE_FOLDER : ${pipelineBaseFolder ?: '(root)'}"
+println "  CONFIG_REPO_URL     : ${configRepoUrl}"
+println "  CONFIG_REPO_BRANCH  : ${configRepoBranch}"
+println "  PIPELINE_COMMIT_SHA : ${pipelineCommitSha}"
 println '=' * SEPARATOR_WIDTH
 println ''
 
@@ -107,6 +106,12 @@ println "  Active JDK versions: ${pipelineConfig.activeJdkVersions.findAll { it.
 def jenkinsConfig = slurper.parseText(readFileFromWorkspace('jenkins_job_config.json'))
 println '✓ Loaded jenkins_job_config.json'
 
+// pipelineBaseFolder and deployments come from jenkins_job_config.json — single source of truth.
+def pipelineBaseFolder = (jenkinsConfig.pipelineBaseFolder ?: '').toString().trim().replaceAll(/\/+$/, '')
+def deployments        = jenkinsConfig.deployments ?: []
+println "  pipelineBaseFolder : ${pipelineBaseFolder ?: '(root)'}"
+println "  deployments        : ${deployments.collect { it.name }.join(', ') ?: '(none)'}"
+
 // jenkins_credential_config.json is optional — absent for public-repo setups.
 def credentialConfig = [:]
 try {
@@ -116,9 +121,34 @@ try {
     println 'ℹ️  jenkins_credential_config.json not found — no SCM credentials configured'
 }
 
+// trigger_config.json — optional; absent for setups without automated triggers.
+def triggerConfig = [triggers: []]
+if (triggerConfigJson?.trim()) {
+    triggerConfig = slurper.parseText(triggerConfigJson)
+    println "✓ Loaded trigger_config.json (${triggerConfig.triggers?.size() ?: 0} trigger type(s))"
+} else {
+    println 'ℹ️  trigger_config.json not provided — no trigger jobs will be created'
+}
+
 // Helper: prefix a job/view/folder name with the base folder when one is set.
 // Returns the name unchanged when pipelineBaseFolder is empty (Jenkins root).
 def inFolder = { String name -> pipelineBaseFolder ? "${pipelineBaseFolder}/${name}" : name }
+
+// Helper: compute the effective folder path for a deployment.
+// e.g. pipelineBaseFolder="temurin", deployment.folder="release" → "temurin/release"
+def deploymentFolder = { Map dep ->
+    String depFolder = (dep.folder ?: '').toString().trim().replaceAll(/\/+$/, '')
+    if (pipelineBaseFolder && depFolder) { return "${pipelineBaseFolder}/${depFolder}" }
+    if (pipelineBaseFolder)              { return pipelineBaseFolder }
+    if (depFolder)                       { return depFolder }
+    return ''
+}
+
+// Helper: like inFolder but scoped to a deployment's effective folder.
+def inDeploymentFolder = { Map dep, String name ->
+    String base = deploymentFolder(dep)
+    base ? "${base}/${name}" : name
+}
 
 // ============================================================================
 // STEP 3: Parse collated stage parameters from pre-computed JSON
@@ -160,9 +190,7 @@ println "✓ Received ${rawGroups.size()} raw group(s), merged to ${collatedPara
 // STEP 4: Create folders
 // ============================================================================
 
-// If a base folder is specified, ensure every ancestor folder in the path
-// exists before creating the leaf folders.  Job DSL's folder() only creates
-// the leaf; intermediate path segments must each be declared explicitly.
+// Ensure every ancestor folder in pipelineBaseFolder exists.
 if (pipelineBaseFolder) {
     List parts = pipelineBaseFolder.tokenize('/')
     parts.eachWithIndex { String part, int idx ->
@@ -171,14 +199,44 @@ if (pipelineBaseFolder) {
     }
 }
 
-folder(inFolder('Build_openjdk_launchers')) {
-    displayName('Build_openjdk_launchers')
-    description('Launch orchestrator jobs that trigger platform-specific builds across all selected platforms for a given JDK version')
-}
-
-folder(inFolder('Build_openjdk')) {
-    displayName('Build_openjdk')
-    description('OpenJDK platform build pipeline jobs, named using the AQA-style Build_openjdk<version>_<distro>_<arch>_<os> convention')
+// Create per-deployment folders and their subfolders.
+// If no deployments are declared, fall back to creating the standard folders
+// directly under pipelineBaseFolder (backwards-compatible behaviour).
+if (deployments) {
+    deployments.each { Map dep ->
+        String depBase = deploymentFolder(dep)
+        if (depBase) {
+            // Ensure all ancestor segments of the deployment folder exist
+            List parts = depBase.tokenize('/')
+            parts.eachWithIndex { String part, int idx ->
+                folder(parts[0..idx].join('/')) { }
+            }
+        }
+        folder(inDeploymentFolder(dep, 'Build_openjdk_launchers')) {
+            displayName('Build_openjdk_launchers')
+            description("Launch orchestrator jobs for the '${dep.name}' deployment")
+        }
+        folder(inDeploymentFolder(dep, 'Build_openjdk')) {
+            displayName('Build_openjdk')
+            description("Platform build jobs for the '${dep.name}' deployment (AQA-style naming)")
+        }
+        if (dep.triggers) {
+            folder(inDeploymentFolder(dep, 'Triggers')) {
+                displayName('Triggers')
+                description("Automated trigger jobs for the '${dep.name}' deployment")
+            }
+        }
+    }
+} else {
+    // No deployments declared — create standard folders under pipelineBaseFolder
+    folder(inFolder('Build_openjdk_launchers')) {
+        displayName('Build_openjdk_launchers')
+        description('Launch orchestrator jobs that trigger platform-specific builds across all selected platforms for a given JDK version')
+    }
+    folder(inFolder('Build_openjdk')) {
+        displayName('Build_openjdk')
+        description('OpenJDK platform build pipeline jobs, named using the AQA-style Build_openjdk<version>_<distro>_<arch>_<os> convention')
+    }
 }
 
 // ============================================================================
@@ -189,180 +247,167 @@ def pipelineRepoUrl           = pipelineConfig.repository?.url ?: 'https://githu
 def pipelineRepoBranch        = pipelineConfig.repository?.branch ?: 'main'
 def pipelineRepoCredentialsId = credentialConfig.pipelineRepoCredentialsId ?: ''
 def configRepoCredentialsId   = credentialConfig.configRepoCredentialsId   ?: ''
-def defaultParams             = jenkinsConfig.jobConfiguration?.defaultParameters ?: [:]
+def baseDefaultParams         = jenkinsConfig.jobConfiguration?.defaultParameters ?: [:]
 
-println 'Creating launch orchestrator jobs for active JDK versions:'
-pipelineConfig.activeJdkVersions.findAll { it.enabled }.each { versionInfo ->
-    def version    = versionInfo.version
-    def configFile = "${pipelineConfig.configFilePrefix ?: 'configurations/'}${version}${pipelineConfig.configFileSuffix ?: '_pipeline_config.json'}"
+// Helper: merge base default parameters with a deployment's defaultParameterOverrides.
+def mergedDefaultParams = { Map dep ->
+    Map merged = new LinkedHashMap(baseDefaultParams)
+    (dep.defaultParameterOverrides ?: [:]).each { k, v -> merged[k] = v }
+    return merged
+}
 
+// Helper: create the launch job parameter block (closure reused per deployment).
+def createLaunchJobParams = { Map dep, String version, List platforms, Map defaultParams ->
     def versionNum = version.replaceAll(/[^\d]/, '').toInteger()
-    def isLts      = (versionNum == 8 || versionNum == 11 || (versionNum >= LTS_BASE_VERSION && (versionNum - LTS_BASE_VERSION) % VERSION_MODULO == 0))
+    return { parameters ->
+        parameters.stringParam {
+            name('JDK_VERSION')
+            defaultValue(version.replaceAll(/[^\d]/, ''))
+            description('JDK version number — fixed for this launch job')
+            trim(true)
+        }
+        parameters.stringParam {
+            name('GROUP_UID')
+            defaultValue('')
+            description('Group identifier for this launch run. Auto-generated if empty.')
+            trim(true)
+        }
+        parameters.choiceParam('PLATFORMS', ['all'] + platforms,
+            'Select platform to build, or "all" for all available platforms')
+        parameters.choiceParam('RELEASE_TYPE',
+            ['NIGHTLY', 'WEEKLY', 'RELEASE'],
+            'Type of release build (NIGHTLY = default nightly, WEEKLY = EA beta, RELEASE = official)')
 
-    println "  → JDK ${version}${isLts ? ' [LTS]' : ''}"
-
-    // Load platform list from the per-version config file
-    def platforms = []
-    try {
-        def jdkConfig = slurper.parseText(readFileFromWorkspace(configFile))
-        platforms = (jdkConfig.buildConfigurations?.keySet() as List)?.sort() ?: []
-        println "    Available platforms: ${platforms.join(', ')}"
-    } catch (Exception e) {
-        println "    WARNING: ${configFile} not found — using 'all' as default platform choice"
-        platforms = ['all']
-    }
-
-    def jobName = inFolder("Build_openjdk_launchers/Build_openjdk${version.replaceAll(/[^\d]/, '')}_launch")
-
-    pipelineJob(jobName) {
-        displayName("Build_openjdk${version.replaceAll(/[^\d]/, '')}_launch${isLts ? ' (LTS)' : ''}")
-        description("""\
-            <p>Launch orchestrator for JDK <strong>${version}</strong> builds.${isLts ? ' <span style="color:#b8860b">&#9733; Long Term Support (LTS)</span>' : ''}</p>
-            <p>This job:</p>
-            <ol>
-              <li>Reads platform configuration from: <code>${configFile}</code></li>
-              <li>Creates/updates platform-specific build jobs when the pipeline SHA changes</li>
-              <li>Launches builds for selected platforms in parallel</li>
-              <li>Aggregates and reports results</li>
-            </ol>
-            <p>Stage parameters are collated from <code>scripts/stages/*.params.json</code> and any
-            <code>vendor-scripts/*.params.json</code> overrides in the config repo.
-            All collated parameters are forwarded automatically to every platform build job launched.</p>
-            <p style="color:#6a6a6a;font-size:0.85em">pipeline-sha:${pipelineCommitSha}</p>""".stripIndent().trim())
-
-        quietPeriod(5)
-
-        parameters {
-            stringParam {
-                name('JDK_VERSION')
-                defaultValue(version.replaceAll(/[^\d]/, ''))
-                description('JDK version number — fixed for this launch job')
-                trim(true)
-            }
-            stringParam {
-                name('GROUP_UID')
-                defaultValue('')
-                description('Group identifier for this launch run. Auto-generated if empty.')
-                trim(true)
-            }
-            choiceParam('PLATFORMS', ['all'] + platforms,
-                'Select platform to build, or "all" for all available platforms')
-            choiceParam('RELEASE_TYPE',
-                ['NIGHTLY', 'WEEKLY', 'RELEASE'],
-                'Type of release build (NIGHTLY = default nightly, WEEKLY = EA beta, RELEASE = official)')
-
-            // ── Collated stage parameters ─────────────────────────────────────────
-            // Stage-gate booleans (RUN_TESTS, SIGN_ARTIFACTS, etc.) and all other
-            // stage-specific params are emitted here from the collated params JSON.
-            // Groups where stageDisabled=true are skipped — no parameters generated.
-            // Priority group ordering (Stage Selections first) is already applied
-            // by collect-stage-params.py — collatedParamGroups preserves that order.
-            collatedParamGroups.each { group ->
-                if (group.stageDisabled == true) { return }
-                def stageLabel  = group.stageIds.join('_').replaceAll(/\W+/, '_')
-                def stageHeader = group.stageIds.size() == 1
-                    ? "stage: ${group.stageIds[DUPLICATE_ZERO]}"
-                    : "stages: ${group.stageIds.join(', ')}"
-                separator {
-                    name("__sep_${stageLabel}_${group.name.replaceAll(/\W+/, '_')}")
-                    sectionHeader("${group.name}  [${stageHeader}]")
-                    sectionHeaderStyle('')
-                    if (group.description) {
-                        description(group.description)
-                    }
-                    separatorStyle('')
-                }
-                group.parameters?.each { p ->
-                    if (p.type == 'boolean') {
-                        def boolDefault = defaultParams?.containsKey(p.name)
-                            ? defaultParams[p.name] == true
-                            : p.default == true
-                        booleanParam(p.name, boolDefault, p.description ?: '')
-                    } else {
-                        def strDefault = defaultParams?.containsKey(p.name)
-                            ? (defaultParams[p.name] ?: '')
-                            : (p.default ?: '')
-                        stringParam {
-                            name(p.name)
-                            defaultValue(strDefault)
-                            description(p.description ?: '')
-                            trim(true)
-                        }
-                    }
-                }
-            }
-
-            // Values baked in at generation time by the seed job — do not edit manually.
-            separator {
-                name('__sep_config_repo')
-                sectionHeader('Config Repository')
+        // Collated stage parameters
+        collatedParamGroups.each { group ->
+            if (group.stageDisabled == true) { return }
+            def stageLabel  = group.stageIds.join('_').replaceAll(/\W+/, '_')
+            def stageHeader = group.stageIds.size() == 1
+                ? "stage: ${group.stageIds[DUPLICATE_ZERO]}"
+                : "stages: ${group.stageIds.join(', ')}"
+            parameters.separator {
+                name("__sep_${stageLabel}_${group.name.replaceAll(/\W+/, '_')}")
+                sectionHeader("${group.name}  [${stageHeader}]")
                 sectionHeaderStyle('')
-                description('Vendor config repo coordinates — baked in at job-generation time. Do not edit manually.')
+                if (group.description) { description(group.description) }
                 separatorStyle('')
             }
-            stringParam {
-                name('CONFIG_REPO_URL')
-                defaultValue(configRepoUrl)
-                description('Vendor config repo URL — baked in at job-generation time')
-                trim(true)
-            }
-            stringParam {
-                name('CONFIG_REPO_BRANCH')
-                defaultValue(configRepoBranch)
-                description('Vendor config repo branch — baked in at job-generation time')
-                trim(true)
-            }
-            stringParam {
-                name('CONFIG_REPO_CREDENTIALS_ID')
-                defaultValue(configRepoCredentialsId)
-                description('Jenkins credential ID for the vendor config repo — baked in at job-generation time. Recommended even for public repos to avoid GitHub rate-limiting on unauthenticated git access.')
-                trim(true)
-            }
-            stringParam {
-                name('PIPELINE_BASE_FOLDER')
-                defaultValue(pipelineBaseFolder)
-                description('Jenkins folder path under which all generated jobs live — baked in at job-generation time by the seed job PIPELINE_BASE_FOLDER parameter')
-                trim(true)
+            group.parameters?.each { p ->
+                if (p.type == 'boolean') {
+                    def boolDefault = defaultParams?.containsKey(p.name)
+                        ? defaultParams[p.name] == true
+                        : p.default == true
+                    parameters.booleanParam(p.name, boolDefault, p.description ?: '')
+                } else {
+                    def strDefault = defaultParams?.containsKey(p.name)
+                        ? (defaultParams[p.name] ?: '')
+                        : (p.default ?: '')
+                    parameters.stringParam {
+                        name(p.name)
+                        defaultValue(strDefault)
+                        description(p.description ?: '')
+                        trim(true)
+                    }
+                }
             }
         }
 
-        definition {
-            cpsScm {
-                scm {
-                    git {
-                        remote {
-                            url(pipelineRepoUrl)
-                            if (pipelineRepoCredentialsId) {
-                                credentials(pipelineRepoCredentialsId)
+        // Config repo coordinates — baked in at generation time
+        parameters.separator {
+            name('__sep_config_repo')
+            sectionHeader('Config Repository')
+            sectionHeaderStyle('')
+            description('Vendor config repo coordinates — baked in at job-generation time. Do not edit manually.')
+            separatorStyle('')
+        }
+        parameters.stringParam {
+            name('CONFIG_REPO_URL')
+            defaultValue(configRepoUrl)
+            description('Vendor config repo URL — baked in at job-generation time')
+            trim(true)
+        }
+        parameters.stringParam {
+            name('CONFIG_REPO_BRANCH')
+            defaultValue(configRepoBranch)
+            description('Vendor config repo branch — baked in at job-generation time')
+            trim(true)
+        }
+        parameters.stringParam {
+            name('CONFIG_REPO_CREDENTIALS_ID')
+            defaultValue(configRepoCredentialsId)
+            description('Jenkins credential ID for the vendor config repo — baked in at job-generation time.')
+            trim(true)
+        }
+    }
+}
+
+// Determine the set of deployment folder prefixes to create launch jobs under.
+// If no deployments declared, create a single set under pipelineBaseFolder directly.
+def launchDeployments = deployments ?: [[name: '(default)', folder: '', defaultParameterOverrides: [:]]]
+
+println 'Creating launch orchestrator jobs:'
+launchDeployments.each { Map dep ->
+    def effectiveDefaultParams = mergedDefaultParams(dep)
+    def launchFolder = deployments ? inDeploymentFolder(dep, 'Build_openjdk_launchers') : inFolder('Build_openjdk_launchers')
+
+    pipelineConfig.activeJdkVersions.findAll { it.enabled }.each { versionInfo ->
+        def version    = versionInfo.version
+        def configFile = "${pipelineConfig.configFilePrefix ?: 'configurations/'}${version}${pipelineConfig.configFileSuffix ?: '_pipeline_config.json'}"
+        def versionNum = version.replaceAll(/[^\d]/, '').toInteger()
+        def isLts      = (versionNum == 8 || versionNum == 11 || (versionNum >= LTS_BASE_VERSION && (versionNum - LTS_BASE_VERSION) % VERSION_MODULO == 0))
+
+        println "  [${dep.name}] → JDK ${version}${isLts ? ' [LTS]' : ''}"
+
+        def platforms = []
+        try {
+            def jdkConfig = slurper.parseText(readFileFromWorkspace(configFile))
+            platforms = (jdkConfig.buildConfigurations?.keySet() as List)?.sort() ?: []
+        } catch (Exception e) {
+            println "    WARNING: ${configFile} not found — using 'all' as default platform choice"
+            platforms = ['all']
+        }
+
+        def jobName = "${launchFolder}/Build_openjdk${version.replaceAll(/[^\d]/, '')}_launch"
+
+        pipelineJob(jobName) {
+            displayName("Build_openjdk${version.replaceAll(/[^\d]/, '')}_launch${isLts ? ' (LTS)' : ''}")
+            description("""\
+                <p>Launch orchestrator for JDK <strong>${version}</strong> — deployment: <strong>${dep.name}</strong>.${isLts ? ' <span style="color:#b8860b">&#9733; LTS</span>' : ''}</p>
+                <p>pipeline-sha:${pipelineCommitSha}</p>""".stripIndent().trim())
+
+            quietPeriod(5)
+
+            parameters(createLaunchJobParams(dep, version, platforms, effectiveDefaultParams))
+
+            definition {
+                cpsScm {
+                    scm {
+                        git {
+                            remote {
+                                url(pipelineRepoUrl)
+                                if (pipelineRepoCredentialsId) { credentials(pipelineRepoCredentialsId) }
                             }
-                        }
-                        branch("*/${pipelineRepoBranch}")
-                        extensions {
-                            cleanBeforeCheckout()
+                            branch("*/${pipelineRepoBranch}")
+                            extensions { cleanBeforeCheckout() }
                         }
                     }
+                    scriptPath('ci/jenkins/Jenkinsfile.launch')
+                    lightweight(true)
                 }
-                scriptPath('ci/jenkins/Jenkinsfile.launch')
-                lightweight(true)
             }
-        }
 
-        properties {
-            buildDiscarder {
-                strategy {
-                    logRotator {
-                        daysToKeepStr(jenkinsConfig.jobConfiguration.logRotation.daysToKeep.toString())
-                        numToKeepStr(jenkinsConfig.jobConfiguration.logRotation.numToKeep.toString())
-                        artifactDaysToKeepStr(jenkinsConfig.jobConfiguration.logRotation.artifactDaysToKeep.toString())
-                        artifactNumToKeepStr(jenkinsConfig.jobConfiguration.logRotation.artifactNumToKeep.toString())
+            properties {
+                buildDiscarder {
+                    strategy {
+                        logRotator {
+                            daysToKeepStr(jenkinsConfig.jobConfiguration.logRotation.daysToKeep.toString())
+                            numToKeepStr(jenkinsConfig.jobConfiguration.logRotation.numToKeep.toString())
+                            artifactDaysToKeepStr(jenkinsConfig.jobConfiguration.logRotation.artifactDaysToKeep.toString())
+                            artifactNumToKeepStr(jenkinsConfig.jobConfiguration.logRotation.artifactNumToKeep.toString())
+                        }
                     }
                 }
             }
-            // disableResume() is intentionally omitted: the launch job uses
-            // build(wait:true) to track downstream platform builds across
-            // potential controller restarts.  PERFORMANCE_OPTIMIZED durability
-            // (set by disableResume) interferes with the downstream build's
-            // PlaceholderTask lifecycle and causes it to be stopped immediately.
         }
     }
 }
@@ -370,56 +415,173 @@ pipelineConfig.activeJdkVersions.findAll { it.enabled }.each { versionInfo ->
 println '✓ Launch orchestrator jobs created successfully\n'
 
 // ============================================================================
-// STEP 6: Create Views
+// STEP 6: Create Trigger Jobs (one per trigger type per deployment)
 // ============================================================================
 
-// listView("a/b/viewName") creates a view named "viewName" inside folder "a/b".
-// The jobs{} regex is matched against job names relative to the view's *parent*
-// folder (i.e. "a/b"), so the prefix must include the immediate subfolder that
-// holds the jobs.
-//
-// Layout when pipelineBaseFolder = "temurin-pipelines":
-//   View path  : temurin-pipelines/Build_openjdk_launchers
-//   Job path   : temurin-pipelines/Build_openjdk_launchers/Build_openjdkNN_launch
-//   Regex base : Build_openjdk_launchers/   (relative to temurin-pipelines)
-//
-// Layout when pipelineBaseFolder is empty (Jenkins root):
-//   View path  : Build_openjdk_launchers
-//   Job path   : Build_openjdk_launchers/Build_openjdkNN_launch
-//   Regex base : Build_openjdk_launchers/   (relative to root — same pattern)
-//
-// In both cases the regex prefix is always just the immediate subfolder name.
-listView(inFolder('Build_openjdk_launchers')) {
-    description('Launch orchestrator jobs for coordinating platform builds (Build_openjdk<version>_launch)')
-    jobs {
-        regex('Build_openjdk_launchers/Build_openjdk\\d+_launch')
+if (deployments && triggerConfig.triggers) {
+    // Build a lookup map: triggerType → versions list from trigger_config.json
+    def triggerVersionsMap = [:]
+    triggerConfig.triggers.each { Map t -> triggerVersionsMap[t.type] = t.versions ?: [] }
+
+    println 'Creating trigger jobs:'
+    deployments.each { Map dep ->
+        List depTriggers = dep.triggers ?: []
+        if (!depTriggers) {
+            println "  [${dep.name}] no triggers declared — skipping"
+            return
+        }
+
+        def effectiveDefaultParams = mergedDefaultParams(dep)
+        def triggerFolder          = inDeploymentFolder(dep, 'Triggers')
+        def launchJobBasePath      = inDeploymentFolder(dep, 'Build_openjdk_launchers')
+
+        depTriggers.each { String triggerType ->
+            List versions = (triggerVersionsMap[triggerType] ?: []).findAll { it.enabled }
+            if (!versions) {
+                println "  [${dep.name}] ${triggerType}: no enabled versions — skipping"
+                return
+            }
+
+            println "  [${dep.name}] → ${triggerType} (${versions.size()} version(s))"
+
+            // Cron schedule: daily for detect-* types, weekly on Sunday for weekly-head
+            String cronSchedule = (triggerType == 'weekly-head') ? 'H 4 * * 0' : 'H 3 * * *'
+
+            def jobName = "${triggerFolder}/Trigger_${triggerType.replaceAll(/[^a-zA-Z0-9_-]/, '_')}"
+
+            pipelineJob(jobName) {
+                displayName("Trigger_${triggerType}")
+                description("""\
+                    <p>Automated trigger for type <strong>${triggerType}</strong> — deployment: <strong>${dep.name}</strong>.</p>
+                    <p>${dep.description ?: ''}</p>
+                    <p>Runs on cron: <code>${cronSchedule}</code></p>
+                    <p>Targets: <code>${launchJobBasePath}</code></p>
+                    <p style="color:#6a6a6a;font-size:0.85em">pipeline-sha:${pipelineCommitSha}</p>""".stripIndent().trim())
+
+                triggers { cron(cronSchedule) }
+
+                parameters {
+                    stringParam {
+                        name('DEPLOYMENT_NAME')
+                        defaultValue(dep.name as String)
+                        description('Deployment name — baked in at generation time')
+                        trim(true)
+                    }
+                    stringParam {
+                        name('TRIGGER_TYPE')
+                        defaultValue(triggerType)
+                        description('Trigger type stem — baked in at generation time')
+                        trim(true)
+                    }
+                    textParam('TRIGGER_VERSIONS_JSON',
+                        groovy.json.JsonOutput.toJson(versions),
+                        'JSON array of enabled version configs for this trigger type — baked in at generation time')
+                    stringParam {
+                        name('LAUNCH_JOB_BASE_PATH')
+                        defaultValue(launchJobBasePath)
+                        description('Jenkins path to the Build_openjdk_launchers folder — baked in at generation time')
+                        trim(true)
+                    }
+                    textParam('DEFAULT_PARAMETERS_JSON',
+                        groovy.json.JsonOutput.toJson(effectiveDefaultParams),
+                        'Merged default parameters for this deployment — baked in at generation time')
+                    stringParam {
+                        name('CONFIG_REPO_URL')
+                        defaultValue(configRepoUrl)
+                        description('Vendor config repo URL — baked in at generation time')
+                        trim(true)
+                    }
+                    stringParam {
+                        name('CONFIG_REPO_BRANCH')
+                        defaultValue(configRepoBranch)
+                        description('Vendor config repo branch — baked in at generation time')
+                        trim(true)
+                    }
+                    stringParam {
+                        name('CONFIG_REPO_CREDENTIALS_ID')
+                        defaultValue(configRepoCredentialsId)
+                        description('Jenkins credential ID for the config repo — baked in at generation time')
+                        trim(true)
+                    }
+                }
+
+                definition {
+                    cpsScm {
+                        scm {
+                            git {
+                                remote {
+                                    url(pipelineRepoUrl)
+                                    if (pipelineRepoCredentialsId) { credentials(pipelineRepoCredentialsId) }
+                                }
+                                branch("*/${pipelineRepoBranch}")
+                                extensions { cleanBeforeCheckout() }
+                            }
+                        }
+                        scriptPath('ci/jenkins/Jenkinsfile.trigger')
+                        lightweight(true)
+                    }
+                }
+
+                properties {
+                    buildDiscarder {
+                        strategy {
+                            logRotator {
+                                daysToKeepStr('30')
+                                numToKeepStr('50')
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
-    recurse(true)
-    columns {
-        status()
-        weather()
-        name()
-        lastSuccess()
-        lastFailure()
-        lastDuration()
-        buildButton()
-    }
+    println '✓ Trigger jobs created successfully\n'
+} else {
+    println 'ℹ️  No deployments with triggers or no trigger_config.json — skipping trigger job creation\n'
 }
 
-listView(inFolder('Build_openjdk')) {
-    description('Platform-specific build jobs — AQA-style naming: Build_openjdk<version>_<distro>_<arch>_<os>')
-    jobs {
-        regex('Build_openjdk/Build_openjdk\\d+_[^_]+_[^_]+_[^_]+')
+// ============================================================================
+// STEP 7: Create Views (per deployment when deployments are declared)
+// ============================================================================
+
+if (deployments) {
+    deployments.each { Map dep ->
+        def launchFolderPath = inDeploymentFolder(dep, 'Build_openjdk_launchers')
+        def buildFolderPath  = inDeploymentFolder(dep, 'Build_openjdk')
+
+        listView(launchFolderPath) {
+            description("Launch orchestrator jobs — ${dep.name} deployment")
+            jobs { regex('Build_openjdk_launchers/Build_openjdk\\d+_launch') }
+            recurse(true)
+            columns {
+                status(); weather(); name(); lastSuccess(); lastFailure(); lastDuration(); buildButton()
+            }
+        }
+        listView(buildFolderPath) {
+            description("Platform build jobs — ${dep.name} deployment")
+            jobs { regex('Build_openjdk/Build_openjdk\\d+_[^_]+_[^_]+_[^_]+') }
+            recurse(true)
+            columns {
+                status(); weather(); name(); lastSuccess(); lastFailure(); lastDuration(); buildButton()
+            }
+        }
     }
-    recurse(true)
-    columns {
-        status()
-        weather()
-        name()
-        lastSuccess()
-        lastFailure()
-        lastDuration()
-        buildButton()
+} else {
+    listView(inFolder('Build_openjdk_launchers')) {
+        description('Launch orchestrator jobs for coordinating platform builds (Build_openjdk<version>_launch)')
+        jobs { regex('Build_openjdk_launchers/Build_openjdk\\d+_launch') }
+        recurse(true)
+        columns {
+            status(); weather(); name(); lastSuccess(); lastFailure(); lastDuration(); buildButton()
+        }
+    }
+    listView(inFolder('Build_openjdk')) {
+        description('Platform-specific build jobs — AQA-style naming: Build_openjdk<version>_<distro>_<arch>_<os>')
+        jobs { regex('Build_openjdk/Build_openjdk\\d+_[^_]+_[^_]+_[^_]+') }
+        recurse(true)
+        columns {
+            status(); weather(); name(); lastSuccess(); lastFailure(); lastDuration(); buildButton()
+        }
     }
 }
 
