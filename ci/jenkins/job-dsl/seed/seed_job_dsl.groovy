@@ -360,8 +360,13 @@ launchDeployments.each { Map dep ->
 
         def platforms = []
         try {
-            def jdkConfig = slurper.parseText(readFileFromWorkspace(configFile))
-            platforms = (jdkConfig.buildConfigurations?.keySet() as List)?.sort() ?: []
+            def jdkConfig  = slurper.parseText(readFileFromWorkspace(configFile))
+            def allKeys    = (jdkConfig.buildConfigurations?.keySet() as List) ?: []
+            def targetList = jdkConfig.targetConfigurations as List
+            // targetConfigurations is the active subset; fall back to all keys when absent.
+            platforms = (targetList != null && !targetList.isEmpty())
+                ? targetList.findAll { allKeys.contains(it) }.sort()
+                : allKeys.sort()
         } catch (Exception e) {
             println "    WARNING: ${configFile} not found — using 'all' as default platform choice"
             platforms = ['all']

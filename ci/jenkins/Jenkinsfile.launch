@@ -241,9 +241,20 @@ pipeline {
                             error("Configuration file not found: ${configFile}")
                         }
                         String configText = readFile(configFile)
-                        env.VERSION_CONFIG       = configText
-                        env.AVAILABLE_PLATFORMS  = new JsonSlurper()
-                            .parseText(configText).buildConfigurations.keySet().join(',')
+                        env.VERSION_CONFIG = configText
+                        Map parsedConfig   = new JsonSlurper().parseText(configText)
+                        // targetConfigurations (array) is the active subset of buildConfigurations.
+                        // Fall back to all keys only when targetConfigurations is absent.
+                        List targetList = parsedConfig.targetConfigurations as List
+                        List allKeys    = parsedConfig.buildConfigurations?.keySet() as List ?: []
+                        List active     = (targetList != null && !targetList.isEmpty())
+                            ? targetList.findAll { allKeys.contains(it) }
+                            : allKeys
+                        if (active.isEmpty()) {
+                            error("No active platforms found in ${configFile}: " +
+                                  "targetConfigurations is empty or none of its entries exist in buildConfigurations")
+                        }
+                        env.AVAILABLE_PLATFORMS = active.join(',')
                         echo "✓ Available platforms: ${env.AVAILABLE_PLATFORMS}"
                     }
                     // Populate CONFIG_STAGE_AGENT_LABELS from jenkins_job_config.json so
