@@ -230,7 +230,7 @@ void triggerLaunchJob(String launchJobBase, String jdkVersion, Map deploymentDef
     String jobPath = "${launchJobBase}/Build_openjdk${vnum}_launch"
 
     // Build the effective parameter map for suppressTestingConditions evaluation
-    Map effectiveParams = new LinkedHashMap(deploymentDefaults)
+    Map effectiveParams = [:] + deploymentDefaults
     effectiveParams['RELEASE_TYPE'] = releaseType
 
     boolean enableTesting = deploymentDefaults.getOrDefault('RUN_TESTS', true) as boolean
