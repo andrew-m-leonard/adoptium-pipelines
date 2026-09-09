@@ -274,12 +274,7 @@ void triggerLaunchJob(String launchJobBase, String jdkVersion, Map deploymentDef
 
     // Send only the values that vary per trigger run.  All other parameters
     // retain their baked-in defaults, preserving declared order and grouping.
-    // A leading "Trigger Parameters" separator groups these overrides visually
-    // in the triggered build's sidebar, making it clear which values were set
-    // by the trigger (vs baked-in job defaults).
     List jobParams = [
-        [$class: 'jenkins.plugins.parameter_separator.ParameterSeparatorValue',
-         name: '__sep_trigger_parameters', sectionHeader: 'Trigger Parameters'],
         string(name: 'RELEASE_TYPE', value: releaseType),
         string(name: 'PLATFORMS',    value: 'all'),
         booleanParam(name: 'RUN_TESTS', value: enableTesting),
