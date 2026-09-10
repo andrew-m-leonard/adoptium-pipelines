@@ -31,8 +31,8 @@ limitations under the License.
  *
  * Environment variables set for the script:
  *   WORKSPACE                   — current Jenkins workspace
- *   TARGET_DIR                  — <WORKSPACE>/trigger-<type>-output
- *   TRIGGER_VERSION_CONFIG_FILE — <WORKSPACE>/trigger-version-config.json
+ *   TARGET_DIR                  — <WORKSPACE>/trigger-<type>-<version>-output
+ *   TRIGGER_VERSION_CONFIG_FILE — <WORKSPACE>/trigger-version-config-<version>.json
  *   PIPELINE_ROOT               — path to ci-adoptium-pipelines checkout
  *   GITHUB_TOKEN                — injected via withCredentials if configured
  *
@@ -93,13 +93,14 @@ Map run(String triggerType, Map versionConfig) {
 
     echo "▶ Running trigger script: ${found} (type: '${triggerType}')"
 
-    String targetDir    = "${env.WORKSPACE}/trigger-${triggerType}-output"
-    String configFile   = "${env.WORKSPACE}/trigger-version-config.json"
+    String version      = versionConfig.version as String
+    String targetDir    = "${env.WORKSPACE}/trigger-${triggerType}-${version}-output"
+    String configFile   = "${env.WORKSPACE}/trigger-version-config-${version}.json"
     String pipelineRoot = env.WORKSPACE
 
     // Write trigger-version-config.json for the script to read
-    writeJSON file: 'trigger-version-config.json', json: versionConfig, pretty: 2
-    echo "✓ Wrote trigger-version-config.json for version '${versionConfig.version}'"
+    writeJSON file: "trigger-version-config-${version}.json", json: versionConfig, pretty: 2
+    echo "✓ Wrote trigger-version-config-${version}.json for version '${version}'"
 
     sh "mkdir -p '${targetDir}'"
 

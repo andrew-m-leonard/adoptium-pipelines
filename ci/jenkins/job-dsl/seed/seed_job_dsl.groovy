@@ -128,9 +128,71 @@ try {
 }
 
 // trigger_config.json — optional; absent for setups without automated triggers.
+
+/**
+ * Validate trigger_config.json structure and fail fast on known misconfigurations.
+ *
+ * Rules:
+ *   1. No two entries may share the same "type" value — a type must appear at most
+ *      once.  Duplicating a type entry is always a copy-paste mistake because all
+ *      versions for a given type must be listed in a single "versions" array.
+ *
+ *   2. Within a type's "versions" array, every "version" value must be unique.
+ *      Duplicate version entries under the same type would cause both parallel
+ *      branches to share the same workspace paths, producing corrupted results
+ *      (exactly the jdk21/jdk25 cross-contamination bug this guards against).
+ *
+ * Note: the same version appearing under different trigger types is intentional
+ * and valid — e.g. jdk21 can legitimately appear under both "detect-ga-tag"
+ * (stable release detection) and "detect-build-tag-for-github-release" (EA tag
+ * detection).  Each type runs as a separate parallel branch with its own
+ * version-scoped workspace paths, so there is no collision.
+ *
+ * Throws IllegalStateException listing every violation found so the seed fails
+ * before creating any jobs.
+ */
+def validateTriggerConfig = { List triggers ->
+    List errors = []
+
+    // Rule 1 — duplicate type entries
+    Map typeSeen = [:]    // type → first index (0-based)
+    triggers.eachWithIndex { Map t, int i ->
+        String type = t.type as String ?: "(missing type at index ${i})"
+        if (typeSeen.containsKey(type)) {
+            errors << "  Duplicate trigger type '${type}' at index ${i} (first seen at index ${typeSeen[type]}). " +
+                      "All versions for a given type must be listed in a single 'versions' array."
+        } else {
+            typeSeen[type] = i
+        }
+    }
+
+    // Rule 2 — duplicate version within the same type
+    triggers.each { Map t ->
+        String type = t.type as String ?: '(unknown type)'
+        List versions = t.versions ?: []
+        Set seenInThisType = [] as Set
+        versions.eachWithIndex { Map v, int j ->
+            String ver = v.version as String ?: "(missing version at index ${j} under type '${type}')"
+            if (!seenInThisType.add(ver)) {
+                errors << "  Duplicate version '${ver}' under trigger type '${type}'. " +
+                          "Each version must appear at most once per type."
+            }
+        }
+    }
+
+    if (errors) {
+        throw new IllegalStateException(
+            "trigger_config.json validation failed with ${errors.size()} error(s):\n" +
+            errors.join('\n') + '\n' +
+            'Fix trigger_config.json before re-running the seed.'
+        )
+    }
+}
+
 def triggerConfig = [triggers: []]
 if (triggerConfigJson?.trim()) {
     triggerConfig = slurper.parseText(triggerConfigJson)
+    validateTriggerConfig(triggerConfig.triggers ?: [])
     println "✓ Loaded trigger_config.json (${triggerConfig.triggers?.size() ?: 0} trigger type(s))"
 } else {
     println 'ℹ️  trigger_config.json not provided — no trigger jobs will be created'
