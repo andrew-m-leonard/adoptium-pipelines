@@ -311,6 +311,12 @@ pipeline {
         stage('Detect & Trigger') {
             agent { label 'ci.role.worker' }
             steps {
+                // Clean any leftovers from a previous aborted or failed run before
+                // the checkouts and trigger scripts write their output files.
+                // cleanWs() in post{always} handles the normal case; this guards
+                // the abnormal case (agent lost, build aborted mid-run) where the
+                // post block never ran and stale trigger-result.json files remain.
+                cleanWs()
                 script {
                     checkout scm   // ci-adoptium-pipelines — for scripts/triggers/, scripts/lib/, job-dsl/
 
