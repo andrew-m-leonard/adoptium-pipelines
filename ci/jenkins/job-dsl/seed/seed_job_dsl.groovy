@@ -288,7 +288,7 @@ if (deployments) {
                         if (dep.authorization) {
                             authorization {
                                 if (dep.authorization.inheritParent == false) {
-                                    blocksInheritance(true)
+                                    blocksInheritance()
                                 }
                                 dep.authorization.permissions?.each { Map perm ->
                                     if (perm.permission && perm.grantee) {
