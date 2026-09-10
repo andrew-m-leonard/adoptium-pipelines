@@ -277,7 +277,28 @@ if (deployments) {
             // Ensure all ancestor segments of the deployment folder exist
             List parts = depBase.tokenize('/')
             parts.eachWithIndex { String part, int idx ->
-                folder(parts[0..idx].join('/')) { }
+                String currentFolder = parts[0..idx].join('/')
+                boolean isDeploymentFolder = (idx == parts.size() - 1)
+                folder(currentFolder) {
+                    if (isDeploymentFolder) {
+                        displayName(dep.name)
+                        if (dep.description) {
+                            description(dep.description)
+                        }
+                        if (dep.authorization) {
+                            authorization {
+                                if (dep.authorization.inheritParent == false) {
+                                    blocksInheritance(true)
+                                }
+                                dep.authorization.permissions?.each { Map perm ->
+                                    if (perm.permission && perm.grantee) {
+                                        permission(perm.permission, perm.grantee)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         folder(inDeploymentFolder(dep, 'Build_openjdk_launchers')) {
