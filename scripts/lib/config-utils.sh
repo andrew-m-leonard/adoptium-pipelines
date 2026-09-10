@@ -66,9 +66,9 @@ _json_get() {
 	local json_path=$2
 
 	if [[ -f "${config}" ]]; then
-		python3 "${_JSON_UTILS}" get "${json_path}" "${config}"
+		"${SCRIPT_DIR}/python-runner.sh" "${_JSON_UTILS}" get "${json_path}" "${config}"
 	else
-		echo "${config}" | python3 "${_JSON_UTILS}" get "${json_path}" -
+		echo "${config}" | "${SCRIPT_DIR}/python-runner.sh" "${_JSON_UTILS}" get "${json_path}" -
 	fi
 }
 

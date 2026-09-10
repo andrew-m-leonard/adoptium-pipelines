@@ -55,7 +55,7 @@ source "${PIPELINE_LIB}/logging-utils.sh"
 # shellcheck source=scripts/lib/config-utils.sh
 source "${PIPELINE_LIB}/config-utils.sh"
 
-TRIGGER_UTILS="python3 ${PIPELINE_LIB}/trigger-utils.py"
+TRIGGER_UTILS="${PIPELINE_LIB}/python-runner.sh ${PIPELINE_LIB}/trigger-utils.py"
 
 # ---------------------------------------------------------------------------
 # main

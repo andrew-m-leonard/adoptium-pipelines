@@ -74,7 +74,7 @@ List collateAndMergeGroups() {
     // Load the canonical stage list so --orchestrated-stages is never duplicated here.
     def ps = load('ci/jenkins/lib/PipelineStages.groovy')
     sh(script: """\
-        python3 scripts/lib/collect-stage-params.py \\
+        scripts/lib/python-runner.sh scripts/lib/collect-stage-params.py \\
             --default-stages-dir scripts/stages \\
             --vendor-scripts-dir config-repo/vendor-scripts \\
             --orchestrated-stages ${ps.orchestratedStages()} \\

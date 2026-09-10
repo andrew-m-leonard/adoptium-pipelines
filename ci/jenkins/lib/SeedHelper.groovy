@@ -109,13 +109,15 @@ private void _runSeedDsl(Map args) {
 
     String psPath    = pipelinesDir ? "${pipelinesDir}/ci/jenkins/lib/PipelineStages.groovy"
                                     : 'ci/jenkins/lib/PipelineStages.groovy'
+    String runnerPath = pipelinesDir ? "${pipelinesDir}/scripts/lib/python-runner.sh"
+                                     : 'scripts/lib/python-runner.sh'
     String pyPath    = pipelinesDir ? "${pipelinesDir}/scripts/lib/collect-stage-params.py"
                                     : 'scripts/lib/collect-stage-params.py'
     String stagesDir = pipelinesDir ? "${pipelinesDir}/scripts/stages" : 'scripts/stages'
     String dslDir    = pipelinesDir ? "${pipelinesDir}/ci/jenkins/job-dsl" : 'ci/jenkins/job-dsl'
 
     def ps = load(psPath)
-    String collectCmd = "python3 '${pyPath}'" +
+    String collectCmd = "${runnerPath} '${pyPath}'" +
         " --default-stages-dir '${stagesDir}'" +
         " --orchestrated-stages ${ps.orchestratedStages()}" +
         ' --output collated-stage-params.json'
