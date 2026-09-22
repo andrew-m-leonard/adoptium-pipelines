@@ -44,6 +44,8 @@ limitations under the License.
  *       IN_PROGRESS or ALREADY_BUILT → skip (any completed result: SUCCESS, UNSTABLE,
  *                                            FAILURE, ABORTED — do not re-trigger)
  *       NOT_FOUND                    → trigger
+ *     jenkinsApiCredentialsId MUST be configured — the job fails if it is absent,
+ *     since triggering without a dedup check risks duplicate GA releases.
  *
  *   weekly-head:
  *     No dedup — always trigger. Idempotent by design.
@@ -427,7 +429,9 @@ pipeline {
                                             buildStatus = checkExistingBuildForScmRef(launchJob, scmRef)
                                         }
                                     } else {
-                                        echo "⚠️  jenkinsApiCredentialsId not configured — skipping dedup, triggering directly"
+                                        error "jenkinsApiCredentialsId is not configured in jenkins_credential_config.json — " +
+                                            "cannot perform dedup check for detect-ga-tag. " +
+                                            "Set jenkinsApiCredentialsId to a Jenkins API token credential and re-run."
                                     }
 
                                     if (buildStatus == 'IN_PROGRESS') {
