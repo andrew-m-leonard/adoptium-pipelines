@@ -144,6 +144,7 @@ CI-agnostic `adoptium_pipeline_config.json`.
 {
   "pipelineRepoCredentialsId": "github-pipelines-credential",
   "configRepoCredentialsId":   "github-config-repo-credential",
+  "jenkinsApiCredentialsId":   "jenkins-api-token",
   "credentials": {
     "GITHUB_TOKEN": {
       "type": "string",
@@ -171,6 +172,7 @@ CI-agnostic `adoptium_pipeline_config.json`.
 |---|---|---|---|
 | `pipelineRepoCredentialsId` | string | ☑️ optional | Jenkins credentials ID used to check out the `ci-adoptium-pipelines` repository. Empty string or absent for public repos |
 | `configRepoCredentialsId` | string | ☑️ optional | Jenkins credentials ID used to check out the vendor config repository itself. Recommended even for public repos to avoid GitHub rate-limiting on unauthenticated git access |
+| `jenkinsApiCredentialsId` | string | ✅ **required** for `detect-ga-tag` | Jenkins **Username with password** credential whose username is a Jenkins service account and password is its API token. Used by `Jenkinsfile.trigger` to query build history before triggering a GA release, preventing duplicate triggers. The job fails immediately if this is absent when `detect-ga-tag` runs |
 | `credentials` | object | ☑️ optional | Map of credential name → definition. Names are arbitrary identifiers used in `stageCredentials` |
 | `credentials[name].type` | string | ✅ | One of `string`, `usernamePassword`, `sshUserPrivateKey`, `file` |
 | `credentials[name].credentialId` | string | ✅ | Jenkins credential store ID |
