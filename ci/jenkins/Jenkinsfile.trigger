@@ -41,7 +41,8 @@ limitations under the License.
  *   detect-ga-tag:
  *     If detected=true: query Jenkins API for an existing completed or in-progress
  *     build with matching SCM_REF on the launch job.
- *       IN_PROGRESS or ALREADY_BUILT → skip (build running or built, awaiting publish)
+ *       IN_PROGRESS or ALREADY_BUILT → skip (any completed result: SUCCESS, UNSTABLE,
+ *                                            FAILURE, ABORTED — do not re-trigger)
  *       NOT_FOUND                    → trigger
  *
  *   weekly-head:
@@ -184,6 +185,11 @@ boolean shouldSuppressTesting(Map versionConfig, Map effectiveParams) {
  * build with the given SCM_REF parameter already exists or is running.
  *
  * Returns one of: 'IN_PROGRESS', 'ALREADY_BUILT', 'NOT_FOUND', 'API_ERROR'
+ *   IN_PROGRESS  — a build for this SCM_REF is currently running
+ *   ALREADY_BUILT — a completed build exists (any result: SUCCESS, UNSTABLE,
+ *                   FAILURE, ABORTED, etc.) — do not re-trigger
+ *   NOT_FOUND    — no build for this SCM_REF in history — safe to trigger
+ *   API_ERROR    — Jenkins API unreachable — fail open (trigger anyway)
  *
  * Requires JENKINS_API_USER and JENKINS_API_TOKEN in the environment
  * (injected via withCredentials by the caller).
@@ -220,7 +226,7 @@ String checkExistingBuildForScmRef(String launchJobPath, String scmRef) {
                 echo "→ Found IN_PROGRESS build #${build.number} for SCM_REF=${scmRef}"
                 return 'IN_PROGRESS'
             }
-            if (build.result in ['SUCCESS', 'UNSTABLE']) {
+            if (build.building != true && build.result != null) {
                 echo "→ Found ALREADY_BUILT build #${build.number} (${build.result}) for SCM_REF=${scmRef}"
                 return 'ALREADY_BUILT'
             }
