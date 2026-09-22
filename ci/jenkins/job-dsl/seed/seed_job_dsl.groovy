@@ -287,13 +287,17 @@ if (deployments) {
                         }
                         if (dep.authorization) {
                             authorization {
-                                if (dep.authorization.inheritParent == false) {
-                                    blocksInheritance()
-                                }
                                 dep.authorization.permissions?.each { Map perm ->
                                     if (perm.permission && perm.grantee) {
                                         permission(perm.permission, perm.grantee)
                                     }
+                                }
+                            }
+                            if (dep.authorization.inheritParent == false) {
+                                configure { Node folderNode ->
+                                    def props = folderNode / 'properties'
+                                    def authMatrix = props / 'com.cloudbees.hudson.plugins.folder.properties.AuthorizationMatrixProperty'
+                                    authMatrix.appendNode('inheritanceStrategy', [class: 'org.jenkinsci.plugins.matrixauth.inheritance.NonInheritingStrategy'])
                                 }
                             }
                         }
