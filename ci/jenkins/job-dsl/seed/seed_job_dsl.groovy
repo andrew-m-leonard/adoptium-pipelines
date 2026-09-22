@@ -51,6 +51,42 @@ limitations under the License.
 
 import groovy.json.JsonSlurper
 
+// Map shorthand permission names (e.g. "Job/Read") to fully-qualified DSL names.
+// The Job DSL permission() call requires FQN form.
+@groovy.transform.Field
+static final Map<String, String> PERMISSION_SHORTHAND = [
+    'Credentials/Create'      : 'com.cloudbees.plugins.credentials.CredentialsProvider.Create',
+    'Credentials/Delete'      : 'com.cloudbees.plugins.credentials.CredentialsProvider.Delete',
+    'Credentials/ManageDomains': 'com.cloudbees.plugins.credentials.CredentialsProvider.ManageDomains',
+    'Credentials/Update'      : 'com.cloudbees.plugins.credentials.CredentialsProvider.Update',
+    'Credentials/View'        : 'com.cloudbees.plugins.credentials.CredentialsProvider.View',
+    'Job/Build'               : 'hudson.model.Item.Build',
+    'Job/Cancel'              : 'hudson.model.Item.Cancel',
+    'Job/Configure'           : 'hudson.model.Item.Configure',
+    'Job/Create'              : 'hudson.model.Item.Create',
+    'Job/Delete'              : 'hudson.model.Item.Delete',
+    'Job/Discover'            : 'hudson.model.Item.Discover',
+    'Job/ExtendedRead'        : 'hudson.model.Item.ExtendedRead',
+    'Job/Move'                : 'hudson.model.Item.Move',
+    'Job/Read'                : 'hudson.model.Item.Read',
+    'Job/ViewStatus'          : 'hudson.model.Item.ViewStatus',
+    'Job/Workspace'           : 'hudson.model.Item.Workspace',
+    'Run/Delete'              : 'hudson.model.Run.Delete',
+    'Run/Replay'              : 'hudson.model.Run.Replay',
+    'Run/Update'              : 'hudson.model.Run.Update',
+    'View/Configure'          : 'hudson.model.View.Configure',
+    'View/Create'             : 'hudson.model.View.Create',
+    'View/Delete'             : 'hudson.model.View.Delete',
+    'View/Read'               : 'hudson.model.View.Read',
+    'SCM/Tag'                 : 'hudson.scm.SCM.Tag',
+].asImmutable()
+
+/** Resolve a permission string to its FQN, passing through if already qualified. */
+static String resolvePermission(String perm) {
+    if (perm.contains('.')) { return perm }  // already FQN
+    return PERMISSION_SHORTHAND.getOrDefault(perm, perm)
+}
+
 // ============================================================================
 // STEP 1: Validate binding variables
 // ============================================================================
@@ -289,7 +325,7 @@ if (deployments) {
                             authorization {
                                 dep.authorization.permissions?.each { Map perm ->
                                     if (perm.permission && perm.grantee) {
-                                        permission(perm.permission, perm.grantee)
+                                        permission(resolvePermission(perm.permission as String), perm.grantee)
                                     }
                                 }
                             }
