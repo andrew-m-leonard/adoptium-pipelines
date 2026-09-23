@@ -41,11 +41,10 @@ limitations under the License.
  *   detect-ga-tag:
  *     If detected=true: query Jenkins API for an existing completed or in-progress
  *     build with matching SCM_REF on the launch job.
- *       IN_PROGRESS or ALREADY_BUILT → skip (any completed result: SUCCESS, UNSTABLE,
- *                                            FAILURE, ABORTED — do not re-trigger)
+ *       IN_PROGRESS or ALREADY_BUILT → skip (any result incl. FAILURE/ABORTED)
  *       NOT_FOUND                    → trigger
- *     jenkinsApiCredentialsId MUST be configured — the job fails if it is absent,
- *     since triggering without a dedup check risks duplicate GA releases.
+ *       API error / misconfiguration → pipeline fails (never triggers blind)
+ *     jenkinsApiCredentialsId MUST be configured — the job fails if it is absent.
  *
  *   weekly-head:
  *     No dedup — always trigger. Idempotent by design.
@@ -186,12 +185,12 @@ boolean shouldSuppressTesting(Map versionConfig, Map effectiveParams) {
  * Query Jenkins build history for the given launch job to check whether a
  * build with the given SCM_REF parameter already exists or is running.
  *
- * Returns one of: 'IN_PROGRESS', 'ALREADY_BUILT', 'NOT_FOUND', 'API_ERROR'
- *   IN_PROGRESS  — a build for this SCM_REF is currently running
+ * Returns one of: 'IN_PROGRESS', 'ALREADY_BUILT', 'NOT_FOUND'
+ *   IN_PROGRESS   — a build for this SCM_REF is currently running
  *   ALREADY_BUILT — a completed build exists (any result: SUCCESS, UNSTABLE,
  *                   FAILURE, ABORTED, etc.) — do not re-trigger
- *   NOT_FOUND    — no build for this SCM_REF in history — safe to trigger
- *   API_ERROR    — Jenkins API unreachable — fail open (trigger anyway)
+ *   NOT_FOUND     — no build for this SCM_REF in history — safe to trigger
+ * Throws a pipeline error on any API failure — never fails open.
  *
  * Requires JENKINS_API_USER and JENKINS_API_TOKEN in the environment
  * (injected via withCredentials by the caller).
@@ -204,17 +203,17 @@ String checkExistingBuildForScmRef(String launchJobPath, String scmRef) {
     String response = ''
     try {
         response = sh(
-            script: """curl -sf --user "\${JENKINS_API_USER}:\${JENKINS_API_TOKEN}" '${apiUrl}'""",
+            script: """curl -f --user "\${JENKINS_API_USER}:\${JENKINS_API_TOKEN}" '${apiUrl}'""",
             returnStdout: true
         ).trim()
     } catch (Exception e) {
-        echo "⚠️  Jenkins API request failed: ${e.message} — fail open (will trigger)"
-        return 'API_ERROR'
+        error "Jenkins API request failed for ${apiUrl}: ${e.message} — " +
+            "cannot safely determine dedup status, refusing to trigger."
     }
 
     if (!response) {
-        echo "⚠️  Empty Jenkins API response — fail open (will trigger)"
-        return 'API_ERROR'
+        error "Jenkins API returned an empty response for ${apiUrl} — " +
+            "cannot safely determine dedup status, refusing to trigger."
     }
 
     List builds = new JsonSlurper().parseText(response).builds ?: []
@@ -437,9 +436,9 @@ pipeline {
                                     if (buildStatus == 'IN_PROGRESS') {
                                         echo "↷ ${version}: build already in progress for ${scmRef} — skipping"
                                     } else if (buildStatus == 'ALREADY_BUILT') {
-                                        echo "↷ ${version}: already built (awaiting publish) for ${scmRef} — skipping"
+                                        echo "↷ ${version}: already built for ${scmRef} — skipping"
                                     } else {
-                                        // NOT_FOUND or API_ERROR (fail open) — trigger
+                                        // NOT_FOUND — trigger
                                         triggerLaunchJob(launchJobBase, version, deploymentDefaults,
                                             versionConfig, result, 'RELEASE')
                                     }
