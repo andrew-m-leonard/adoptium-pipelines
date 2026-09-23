@@ -198,7 +198,7 @@ boolean shouldSuppressTesting(Map versionConfig, Map effectiveParams) {
 String checkExistingBuildForScmRef(String launchJobPath, String scmRef) {
     String jobUrlSegment = launchJobPath.split('/').collect { "job/${it}" }.join('/')
     String apiUrl = "${env.JENKINS_URL?.replaceAll('/+$', '')}/${jobUrlSegment}" +
-        '/api/json?tree=builds%5Bnumber%2Cbuilding%2Cresult%2Cactions%5Bparameters%5Bname%2Cvalue%5D%5D%5D%5D'
+        '/api/json?tree=builds[number,building,result,actions[parameters[name,value]]]'
 
     String response = ''
     try {
