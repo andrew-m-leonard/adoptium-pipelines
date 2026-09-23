@@ -322,18 +322,22 @@ if (deployments) {
                             description(dep.description)
                         }
                         if (dep.authorization) {
-                            authorization {
+                            // Use a single configure block to set both permissions and
+                            // the inheritanceStrategy.  Mixing authorization{} DSL with a
+                            // configure{} block in the same folder() closure causes the
+                            // two blocks to produce separate AuthorizationMatrixProperty
+                            // nodes, so the inheritanceStrategy ends up on an empty node
+                            // and "Enable project-based security" is never applied.
+                            configure { Node folderNode ->
+                                def props = folderNode / 'properties'
+                                def authMatrix = props / 'com.cloudbees.hudson.plugins.folder.properties.AuthorizationMatrixProperty'
+                                if (dep.authorization.inheritParent == false) {
+                                    authMatrix.appendNode('inheritanceStrategy', [class: 'org.jenkinsci.plugins.matrixauth.inheritance.NonInheritingStrategy'])
+                                }
                                 dep.authorization.permissions?.each { Map perm ->
                                     if (perm.permission && perm.grantee) {
-                                        permission(resolvePermission(perm.permission as String), perm.grantee)
+                                        authMatrix.appendNode('permission', "${resolvePermission(perm.permission as String)}:${perm.grantee}")
                                     }
-                                }
-                            }
-                            if (dep.authorization.inheritParent == false) {
-                                configure { Node folderNode ->
-                                    def props = folderNode / 'properties'
-                                    def authMatrix = props / 'com.cloudbees.hudson.plugins.folder.properties.AuthorizationMatrixProperty'
-                                    authMatrix.appendNode('inheritanceStrategy', [class: 'org.jenkinsci.plugins.matrixauth.inheritance.NonInheritingStrategy'])
                                 }
                             }
                         }
