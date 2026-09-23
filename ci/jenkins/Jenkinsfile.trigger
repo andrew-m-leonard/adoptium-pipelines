@@ -223,12 +223,13 @@ String checkExistingBuildForScmRef(String launchJobPath, String scmRef) {
             (action.parameters ?: []).each { Map p -> buildParams[p.name] = p.value }
         }
         if (buildParams['SCM_REF'] == scmRef) {
+            String buildUrl = "${env.JENKINS_URL?.replaceAll('/+$', '')}/${jobUrlSegment}/${build.number}/"
             if (build.building == true) {
-                echo "→ Found IN_PROGRESS build #${build.number} for SCM_REF=${scmRef}"
+                echo "→ Found IN_PROGRESS build #${build.number} for SCM_REF=${scmRef}: ${buildUrl}"
                 return 'IN_PROGRESS'
             }
             if (build.building != true && build.result != null) {
-                echo "→ Found ALREADY_BUILT build #${build.number} (${build.result}) for SCM_REF=${scmRef}"
+                echo "→ Found ALREADY_BUILT build #${build.number} (${build.result}) for SCM_REF=${scmRef}: ${buildUrl}"
                 return 'ALREADY_BUILT'
             }
         }
