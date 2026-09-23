@@ -203,7 +203,7 @@ String checkExistingBuildForScmRef(String launchJobPath, String scmRef) {
     String response = ''
     try {
         response = sh(
-            script: """curl -f --user "\${JENKINS_API_USER}:\${JENKINS_API_TOKEN}" '${apiUrl}'""",
+            script: """curl -gf --user "\${JENKINS_API_USER}:\${JENKINS_API_TOKEN}" '${apiUrl}'""",
             returnStdout: true
         ).trim()
     } catch (Exception e) {
