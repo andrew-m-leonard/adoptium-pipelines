@@ -163,18 +163,31 @@ void loadStageParamNames() {
  */
 boolean stageConditionMet(String stageId) {
     String condJson = env.COLLATED_STAGE_CONDITIONS
-    if (!condJson) { return true }
-    List conditions = new JsonSlurper().parseText(condJson)[stageId]
-    if (!conditions) { return true }
-    return conditions.every { Map cond ->
-        // Check job params first (explicit user override), then env
-        String actual = params[cond.param]?.toString() ?: env[cond.param] ?: ''
-        String expected = cond.value
-        if (expected.startsWith('regex:')) {
-            return actual =~ expected.substring('regex:'.length())
-        }
-        return actual.equalsIgnoreCase(expected)
+    if (!condJson) {
+        echo "[stageConditionMet] ${stageId}: no COLLATED_STAGE_CONDITIONS — running unconditionally"
+        return true
     }
+    List conditions = new JsonSlurper().parseText(condJson)[stageId]
+    if (!conditions) {
+        echo "[stageConditionMet] ${stageId}: no conditions defined — running unconditionally"
+        return true
+    }
+    boolean result = conditions.every { Map cond ->
+        // Check job params first (explicit user override), then env
+        String actual   = params[cond.param]?.toString() ?: env[cond.param] ?: ''
+        String expected = cond.value?.toString() ?: ''
+        boolean met
+        if (expected.startsWith('regex:')) {
+            met = actual =~ expected.substring('regex:'.length())
+            echo "[stageConditionMet] ${stageId}: ${cond.param}='${actual}' =~ /${expected.substring('regex:'.length())}/ → ${met}"
+        } else {
+            met = actual.equalsIgnoreCase(expected)
+            echo "[stageConditionMet] ${stageId}: ${cond.param}='${actual}' == '${expected}' (case-insensitive) → ${met}"
+        }
+        return met
+    }
+    echo "[stageConditionMet] ${stageId}: overall → ${result ? 'WILL RUN' : 'SKIPPED'}"
+    return result
 }
 
 /**
