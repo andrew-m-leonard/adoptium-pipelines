@@ -149,6 +149,7 @@ void runInDockerContainer(String image, String extraArgs, Closure body) {
         echo "Starting Docker container: ${image}"
         containerId = sh(
             script: """docker run -d --rm \\
+                         --init \\
                          --ulimit nofile=1048576:1048576 \\
                          --pids-limit -1 \\
                          ${extraArgs} \\
@@ -211,6 +212,7 @@ void runInPodmanContainer(String image, String extraArgs, Closure body) {
         echo "Starting Podman container: ${image}"
         containerId = sh(
             script: """podman run -d --rm \\
+                         --init \\
                          --userns keep-id \\
                          --ulimit nofile=1048576:1048576 \\
                          --pids-limit -1 \\
