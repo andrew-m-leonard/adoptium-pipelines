@@ -1,11 +1,11 @@
 {
   "stageId": "14-aqa-tests",
   "stageDisabled": false,
-  "stageTimeoutMinutes": 0,
+  "stageTimeoutMinutes": 30,
   "stageCondition": [
     { "param": "RUN_TESTS", "value": true }
   ],
-  "description": "Parameters for the AQA test stage. Vendor overrides may suppress, replace, or extend these via a vendor-scripts/14-aqa-tests.params.json in the config repo.",
+  "description": "Parameters for the AQA test stage. Triggers AQA_Test_Pipeline asynchronously with the archived JDK URL. Vendor overrides may suppress, replace, or extend these via a vendor-scripts/14-aqa-tests.params.json in the config repo.",
   "parameterGroups": [
     {
       "name": "Stage Selections",

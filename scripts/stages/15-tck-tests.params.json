@@ -3,6 +3,7 @@
   "stageDisabled": false,
   "stageTimeoutMinutes": 0,
   "stageCondition": [
+    { "param": "RUN_TESTS",  "value": true },
     { "param": "ENABLE_TCK", "value": true }
   ],
   "description": "Parameters consumed by the TCK test stage.",
@@ -15,7 +16,7 @@
           "name": "ENABLE_TCK",
           "type": "boolean",
           "default": false,
-          "description": "Run TCK tests. Only applies to Temurin variant builds on release or weekly release types. Disabled by default — enable for official certification runs."
+          "description": "Run TCK tests. Disabled by default — enable when TCK certification is required."
         }
       ]
     }
