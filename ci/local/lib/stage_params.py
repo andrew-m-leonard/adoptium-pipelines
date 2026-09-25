@@ -341,7 +341,7 @@ def build_stage_params_help(
         if not params:
             continue
         name = group["name"]
-        stage_ids = group.get("stageIds") or [group.get("stageId", "?")]
+        stage_ids = group.get("stageIds") or []
         if name not in merged:
             merged[name] = {"stage_ids": list(stage_ids), "params": list(params)}
             seen_param_names[name] = {p["name"] for p in params}

@@ -263,4 +263,4 @@ if NN_MY_STAGE in self.stages_to_run and self._stage_condition_met(NN_MY_STAGE):
 - [`docs/STAGE_DEFINITION_REFERENCE.md`](./STAGE_DEFINITION_REFERENCE.md) — full schema reference, ownership rules, disable/enable guides
 - [`docs/CI_AGNOSTIC_ARCHITECTURE.md`](./CI_AGNOSTIC_ARCHITECTURE.md) — interface contract, per-stage summary, artifact flow
 - [`ci/jenkins/lib/StageScriptRunner.groovy`](../ci/jenkins/lib/StageScriptRunner.groovy) — vendor override resolution
-- [`scripts/lib/collect-stage-params.py`](../scripts/lib/collect-stage-params.py) — collation logic, `PRIORITY_GROUPS`, `stageCondition` validation
+- [`scripts/lib/collect-stage-params.py`](../scripts/lib/collect-stage-params.py) — collation logic, `stages`/`groups` output schema, `stageCondition` validation

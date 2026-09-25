@@ -63,15 +63,26 @@ Stage-level metadata fields (top-level in each .params.json):
 
 Output JSON (written to --output):
   {
+    "stages": [
+      {
+        "stageId":             "03-internal-code-sign",
+        "stageDisabled":       false,
+        "stageCondition":      [{"param": "SIGN_ARTIFACTS", "value": true}],
+        "stageTimeoutMinutes": 0
+      },
+      {
+        "stageId":             "06-post-build-code-sign",
+        "stageDisabled":       false,
+        "stageCondition":      [{"param": "SIGN_ARTIFACTS", "value": true}],
+        "stageTimeoutMinutes": 0
+      },
+      ...
+    ],
     "groups": [
       {
-        "name":           "Stage Selections",
-        "description":    "...",
-        "stageId":        "03-internal-code-sign",
-        "stageIds":       ["03-internal-code-sign", "07-installer", "14-aqa-tests", ...],
-        "stageDisabled":  false,
-        "stageCondition": [],
-        "stageTimeoutMinutes": 0,
+        "name":        "Stage Selections",
+        "description": "...",
+        "stageIds":    ["03-internal-code-sign", "06-post-build-code-sign", ...],
         "parameters": [
           { "name": "RUN_TESTS", "type": "boolean", "default": true, "description": "..." },
           ...
@@ -82,16 +93,14 @@ Output JSON (written to --output):
     "paramNames": ["RUN_TESTS", "AQA_REF", ...]
   }
 
-  Note: Priority groups (e.g. "Stage Selections") are merged from all contributing
-  stage stems and carry a "stageIds" list with every contributing stage ID.
-  Non-priority groups carry only "stageId" (the single owning stage).
-  Groovy consumers should prefer "stageIds" and fall back to ["stageId"].
+  "stages" — one entry per non-disabled stage stem, in declaration order.
+  Carries all per-stage metadata (stageCondition, stageDisabled,
+  stageTimeoutMinutes).  Gate-only stages (no parameterGroups) appear here
+  but produce no entry in "groups".
 
-Priority group ordering:
-  Groups whose names appear in PRIORITY_GROUPS are moved to the front of the
-  collated output (in the order listed), with all other groups following in
-  their natural discovery order.  This ensures "Stage Selections" always
-  appears first in the Jenkins Build Parameters UI.
+  "groups" — one entry per distinct group name, carrying the merged parameters
+  from all contributing stage stems.  Every entry carries a "stageIds" list.
+  Groups have no per-stage metadata fields.  "Stage Selections" is always first.
 
 The output is consumed by CI-specific tooling (Jenkins Job DSL, local runner,
 etc.) to construct job/pipeline parameters appropriate for that CI system.
@@ -122,16 +131,11 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple  # Tuple used in all_param_names type
 
 # ---------------------------------------------------------------------------
-# Priority group ordering
+# Constants
 # ---------------------------------------------------------------------------
-
-# Groups whose names appear here are moved to the front of the collated output,
-# in the order listed.  All other groups follow in natural discovery order.
-# Add entries here only when a group must always appear first in the Jenkins UI.
-PRIORITY_GROUPS: List[str] = ["Stage Selections"]
 
 # Fixed job-level / pipeline built-in parameters that are always present in the
 # pipeline environment and Jenkins job definitions (not emitted by stage sidecars),
@@ -274,8 +278,8 @@ class StageEntry:
     Holds the fully-merged definition for one stage stem.
 
     Stage-level metadata (stageDisabled, stageCondition, stageTimeoutMinutes)
-    is stored once here and stamped onto every group at flatten time, so it
-    can never be accidentally dropped by parameter deduplication.
+    is stored on the entry.  At flatten time the metadata goes into the
+    stages list; groups carry only parameters.
     """
 
     __slots__ = ("stem", "disabled", "condition", "timeout", "groups")
@@ -366,113 +370,14 @@ class StageEntry:
                     "parameters": vparams,
                 }
 
-    def to_output_groups(self) -> List[dict]:
-        """
-        Return a list of output group dicts with stage-level metadata stamped on.
-
-        A stage with no parameterGroups (gate-only) returns a single group with
-        an empty parameters list so that stageCondition is preserved in the output.
-        """
-        if not self.groups:
-            # Gate-only stem: emit a single metadata-only group so stageCondition
-            # and stageTimeoutMinutes reach the collated output.
-            return [
-                {
-                    "name": f"{self.stem} (gate)",
-                    "description": "",
-                    "stageId": self.stem,
-                    "stageDisabled": self.disabled,
-                    "stageCondition": list(self.condition),
-                    "stageTimeoutMinutes": self.timeout,
-                    "parameters": [],
-                }
-            ]
-        return [
-            {
-                "name": gname,
-                "description": grp["description"],
-                "stageId": self.stem,
-                "stageDisabled": self.disabled,
-                "stageCondition": list(self.condition),
-                "stageTimeoutMinutes": self.timeout,
-                "parameters": list(grp["parameters"]),
-            }
-            for gname, grp in self.groups.items()
-        ]
-
-
-# ---------------------------------------------------------------------------
-# Priority group reordering
-# ---------------------------------------------------------------------------
-
-
-def _reorder_by_priority(groups: List[dict]) -> List[dict]:
-    """
-    Move groups whose names appear in PRIORITY_GROUPS to the front of the list,
-    merging all groups that share a priority name into a single entry.
-
-    When multiple stage params.json files declare the same group name (e.g. all
-    stage-gate booleans live in "Stage Selections"), the collation loop emits one
-    group per stage stem.  This function merges them into one group so that all
-    Stage Selections parameters appear under a single UI separator, then places
-    that merged group at the front.
-
-    Non-priority groups follow in their original relative order.
-
-    Groups in PRIORITY_GROUPS that are absent from the collated output are
-    silently skipped (no error — a disabled stage may have removed them).
-
-    The internal '_extra_stage_ids' set (populated by the collation loop for
-    stems that contributed only duplicate params) is folded into 'stageIds' here
-    and then stripped from the output.
-    """
-    priority_set = set(PRIORITY_GROUPS)
-    # priority_map: group name → merged group dict
-    priority_map: Dict[str, dict] = {}
-    remainder: List[dict] = []
-
-    for grp in groups:
-        name = grp["name"]
-        # Collect all stems that contributed to this group: the primary stageId
-        # plus any stems recorded in the internal _extra_stage_ids accumulator.
-        extra_ids: set = grp.pop("_extra_stage_ids", set()) or set()
-        all_ids: List[str] = []
-        primary = grp.get("stageId", "")
-        if primary:
-            all_ids.append(primary)
-        for eid in sorted(extra_ids):
-            if eid not in all_ids:
-                all_ids.append(eid)
-
-        if name in priority_set:
-            if name not in priority_map:
-                priority_map[name] = {
-                    "name": name,
-                    "description": grp.get("description", ""),
-                    "stageId": primary,
-                    "stageIds": list(all_ids),
-                    "stageDisabled": grp.get("stageDisabled", False),
-                    "stageCondition": list(grp.get("stageCondition") or []),
-                    "stageTimeoutMinutes": grp.get("stageTimeoutMinutes", 0),
-                    "parameters": list(grp.get("parameters") or []),
-                }
-            else:
-                # Subsequent occurrence — accumulate stageIds and merge parameters
-                for sid in all_ids:
-                    if sid and sid not in priority_map[name]["stageIds"]:
-                        priority_map[name]["stageIds"].append(sid)
-                existing_names = {p["name"] for p in priority_map[name]["parameters"]}
-                for p in grp.get("parameters") or []:
-                    if p["name"] not in existing_names:
-                        priority_map[name]["parameters"].append(p)
-                        existing_names.add(p["name"])
-        else:
-            if all_ids and len(all_ids) > 1:
-                grp["stageIds"] = all_ids
-            remainder.append(grp)
-
-    front = [priority_map[name] for name in PRIORITY_GROUPS if name in priority_map]
-    return front + remainder
+    def to_stage_entry(self) -> dict:
+        """Return the stages-list entry for this stem."""
+        return {
+            "stageId": self.stem,
+            "stageDisabled": self.disabled,
+            "stageCondition": list(self.condition),
+            "stageTimeoutMinutes": self.timeout,
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -480,23 +385,18 @@ def _reorder_by_priority(groups: List[dict]) -> List[dict]:
 # ---------------------------------------------------------------------------
 
 
-def _validate_stage_conditions(groups: List[dict], param_names: Set[str]) -> None:
+def _validate_stage_conditions(stages: List[dict], param_names: Set[str]) -> None:
     """
     Verify that every param name referenced in any stageCondition exists in
     the final collated paramNames set.  Raises ValueError listing all dangling
     references so they can be fixed in one pass.
     """
     errors: List[str] = []
-    seen: Set[Tuple[str, str]] = set()  # (stageId, param) — avoid duplicate messages
 
-    for grp in groups:
-        stage_id = grp.get("stageId", "?")
-        for cond in grp.get("stageCondition") or []:
+    for stage in stages:
+        stage_id = stage.get("stageId", "?")
+        for cond in stage.get("stageCondition") or []:
             param = cond.get("param", "")
-            key = (stage_id, param)
-            if key in seen:
-                continue
-            seen.add(key)
             if param not in param_names:
                 errors.append(
                     f"  stageCondition in '{stage_id}' references unknown param '{param}'"
@@ -529,18 +429,14 @@ def collect(
                vendor file onto the matching StageEntry (creating one if the
                stem is vendor-only).
 
-    Stage-level metadata (stageDisabled, stageCondition, stageTimeoutMinutes)
-    lives on the StageEntry and is stamped onto every group at flatten time,
-    so it is never dropped by cross-stage parameter deduplication.
-
     When orchestrated_stages is provided only stems whose ID appears in that
     set are processed — all others are silently skipped.
 
     Returns:
         {
-          "groups":     [ { name, description, stageId, stageDisabled,
-                            stageCondition, stageTimeoutMinutes,
-                            parameters: [...] }, ... ],
+          "stages":     [ { stageId, stageDisabled, stageCondition,
+                            stageTimeoutMinutes }, ... ],
+          "groups":     [ { name, description, stageIds, parameters: [...] }, ... ],
           "paramNames": [ "PARAM_A", "PARAM_B", ... ]
         }
     """
@@ -602,49 +498,76 @@ def collect(
             entries[stem] = StageEntry(stem)
         entries[stem].apply(vendor_data, f"{stem}.params.json (vendor)")
 
-    # --- Flatten: skip disabled stems, dedup cross-stage params ---
-    # Maps param name → (source_label, group_name, index into output_groups, index in parameters)
-    all_param_names: Dict[str, Tuple[str, str, int, int]] = {}
-    output_groups: List[dict] = []
+    # --- Flatten: build stages list and merged groups map ---
+    #
+    # all_param_names: param name → (source_label, group_name, param_idx_in_group)
+    #   where group_name is the key into groups_map.
+    all_param_names: Dict[str, Tuple[str, str, int]] = {}
+    # stages_list: one entry per non-disabled stem, in declaration order
+    stages_list: List[dict] = []
+    # groups_map: group_name → { name, description, stageIds, parameters }
+    # Insertion order is preserved; "Stage Selections" is inserted first
+    # whenever it is first encountered, keeping it at the front.
+    groups_map: Dict[str, dict] = {}
 
     for stem, entry in entries.items():
         if entry.disabled:
             print(f"  [{stem}] stageDisabled=true — skipping (no parameters emitted)")
             continue
 
-        for grp in entry.to_output_groups():
-            clean_params: List[dict] = []
-            for p in grp["parameters"]:
-                source_label = f"{stem}/{grp['name']}/{p['name']}"
+        # Always record the stage entry (metadata only).
+        stages_list.append(entry.to_stage_entry())
+
+        # Merge each group from this stem into groups_map.
+        for gname, grp in entry.groups.items():
+            params = list(grp["parameters"])
+            if gname not in groups_map:
+                groups_map[gname] = {
+                    "name": gname,
+                    "description": grp["description"],
+                    "stageIds": [stem],
+                    "parameters": [],
+                }
+            else:
+                if stem not in groups_map[gname]["stageIds"]:
+                    groups_map[gname]["stageIds"].append(stem)
+
+            target = groups_map[gname]
+            for p in params:
+                source_label = f"{stem}/{gname}/{p['name']}"
                 if p["name"] in all_param_names:
-                    prev_label, prev_group, grp_idx, param_idx = all_param_names[p["name"]]
-                    if grp["name"] != prev_group:
+                    prev_label, prev_group, param_idx = all_param_names[p["name"]]
+                    if gname != prev_group:
                         raise ValueError(
                             f"Parameter '{p['name']}' is defined in two different groups: "
                             f"'{prev_group}' (at '{prev_label}') and "
-                            f"'{grp['name']}' (at '{source_label}'). "
+                            f"'{gname}' (at '{source_label}'). "
                             f"Duplicate parameters across stages must share the same Group name."
                         )
-                    # Keep the first description seen
-                    existing_param = output_groups[grp_idx]["parameters"][param_idx]
+                    # Keep the first description seen; fill in if first was empty.
+                    existing_param = groups_map[prev_group]["parameters"][param_idx]
                     if not existing_param.get("description"):
                         existing_param["description"] = p.get("description", "")
-                    # Record this stem as a contributor to the existing group
-                    output_groups[grp_idx].setdefault("_extra_stage_ids", set()).add(stem)
-                    continue
-                all_param_names[p["name"]] = (
-                    source_label,
-                    grp["name"],
-                    len(output_groups),
-                    len(clean_params),
-                )
-                clean_params.append(p)
+                    # stem is already recorded via stageIds above
+                else:
+                    all_param_names[p["name"]] = (
+                        source_label,
+                        gname,
+                        len(target["parameters"]),
+                    )
+                    target["parameters"].append(p)
 
-            # Always emit the group — even when clean_params is empty — so that
-            # stageCondition and stageTimeoutMinutes are preserved in the output
-            # for stages whose parameters are all shared with earlier stages.
-            grp["parameters"] = clean_params
-            output_groups.append(grp)
+    # Ensure "Stage Selections" is first in the groups output if present.
+    # Because we use an insertion-ordered dict and stages are processed in
+    # sorted (numeric-prefix) order, the first stage that declares
+    # "Stage Selections" will have inserted it first.  No reordering needed
+    # unless a non-Stage-Selections group was somehow inserted before it —
+    # which cannot happen with sorted stem processing.  Guard defensively:
+    if "Stage Selections" in groups_map and next(iter(groups_map)) != "Stage Selections":
+        sel = groups_map.pop("Stage Selections")
+        groups_map = {"Stage Selections": sel, **groups_map}
+
+    output_groups: List[dict] = list(groups_map.values())
 
     # --- Merge vendor_stage_params.json (cross-stage extras) ---
     cross_stage = load_vendor_cross_stage()
@@ -654,17 +577,16 @@ def collect(
             extra_params = stage_entry.get("parameters") or []
             source_label = f"vendor_stage_params.json/{stage_id}"
 
-            # Remove ignored params from already-collated groups for this stage
+            # Remove ignored params from already-collated groups
             for name in ignore:
                 found = False
                 for grp in output_groups:
-                    if grp["stageId"] == stage_id:
-                        before = len(grp["parameters"])
-                        grp["parameters"] = [
-                            p for p in grp["parameters"] if p["name"] != name
-                        ]
-                        if len(grp["parameters"]) < before:
-                            found = True
+                    before = len(grp["parameters"])
+                    grp["parameters"] = [p for p in grp["parameters"] if p["name"] != name]
+                    if len(grp["parameters"]) < before:
+                        found = True
+                        # Remove from all_param_names so it's no longer tracked
+                        all_param_names.pop(name, None)
                 if not found:
                     print(
                         f"WARNING [{source_label}] 'ignoreDefaultParams' entry '{name}' "
@@ -686,29 +608,21 @@ def collect(
             for p in extra_params:
                 _validate_param(p, source_label)
 
-            # Fold into an existing 'Vendor Options' group for this stage, or create one
-            target_group = next(
-                (
-                    g
-                    for g in output_groups
-                    if g["stageId"] == stage_id and g["name"] == "Vendor Options"
-                ),
-                None,
-            )
-            if target_group is None:
-                target_group = {
+            # Fold into an existing 'Vendor Options' group, or create one
+            if "Vendor Options" not in groups_map:
+                groups_map["Vendor Options"] = {
                     "name": "Vendor Options",
                     "description": (
                         f"Additional parameters supplied via vendor_stage_params.json "
                         f"for stage {stage_id}."
                     ),
-                    "stageId": stage_id,
-                    "stageDisabled": False,
-                    "stageCondition": [],
-                    "stageTimeoutMinutes": stage_entry.get("stageTimeoutMinutes", 0),
+                    "stageIds": [stage_id],
                     "parameters": [],
                 }
-                output_groups.append(target_group)
+                output_groups = list(groups_map.values())
+            target_group = groups_map["Vendor Options"]
+            if stage_id not in target_group["stageIds"]:
+                target_group["stageIds"].append(stage_id)
 
             existing_map = _params_list_to_map(target_group["parameters"])
             for p in extra_params:
@@ -724,13 +638,9 @@ def collect(
                     f"{source_label}/{p['name']}",
                     "Vendor Options",
                     -1,
-                    -1,
                 )
                 existing_map[p["name"]] = p
             target_group["parameters"] = list(existing_map.values())
-
-    # --- Apply priority group ordering ---
-    output_groups = _reorder_by_priority(output_groups)
 
     # --- Validate stageCondition cross-references ---
     all_collated_param_names: Set[str] = set(BUILTIN_PIPELINE_PARAMS)
@@ -738,9 +648,9 @@ def collect(
         for p in grp["parameters"]:
             all_collated_param_names.add(p["name"])
 
-    _validate_stage_conditions(output_groups, all_collated_param_names)
+    _validate_stage_conditions(stages_list, all_collated_param_names)
 
-    # --- Build flat ordered param name list (skip empty gate groups) ---
+    # --- Build flat ordered param name list ---
     param_names_ordered: List[str] = []
     seen_names: Set[str] = set()
     for grp in output_groups:
@@ -750,6 +660,7 @@ def collect(
                 seen_names.add(p["name"])
 
     return {
+        "stages": stages_list,
         "groups": output_groups,
         "paramNames": param_names_ordered,
     }
@@ -854,9 +765,10 @@ Examples:
 
     total_params = len(result["paramNames"])
     total_groups = len(result["groups"])
+    total_stages = len(result["stages"])
     print(
         f"✓ Collated {total_params} parameter(s) across "
-        f"{total_groups} group(s) → {output_path}"
+        f"{total_groups} group(s) in {total_stages} stage(s) → {output_path}"
     )
     return 0
 

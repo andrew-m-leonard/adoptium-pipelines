@@ -113,6 +113,11 @@ def _collect(stage_dir: Path, vendor_dir: Path | None = None) -> dict:
     )
 
 
+def _stages_for(result: dict, stage_id: str) -> list:
+    """Return stages list entries whose stageId matches stage_id."""
+    return [s for s in result["stages"] if s["stageId"] == stage_id]
+
+
 # ---------------------------------------------------------------------------
 # Existing cross-stage duplicate param tests
 # ---------------------------------------------------------------------------
@@ -352,7 +357,7 @@ class TestStageDisabled(unittest.TestCase):
         self.assertNotIn(
             "RUN_TESTS", names, "disabled stage param should not be emitted"
         )
-        stage_ids = [g["stageId"] for g in result["groups"]]
+        stage_ids = [s["stageId"] for s in result["stages"]]
         self.assertNotIn("14-aqa-tests", stage_ids)
 
     def test_enabled_stem_included(self):
@@ -532,11 +537,9 @@ class TestStageCondition(unittest.TestCase):
             )
             result = _collect(d)
 
-        post_sign_groups = [
-            g for g in result["groups"] if g["stageId"] == "06-post-sign"
-        ]
-        self.assertTrue(len(post_sign_groups) > 0)
-        cond = post_sign_groups[0]["stageCondition"]
+        post_sign_stages = _stages_for(result, "06-post-sign")
+        self.assertTrue(len(post_sign_stages) > 0)
+        cond = post_sign_stages[0]["stageCondition"]
         self.assertEqual(len(cond), 1)
         self.assertEqual(cond[0]["param"], "SIGN_ARTIFACTS")
         self.assertEqual(cond[0]["value"], True)
@@ -615,9 +618,9 @@ class TestStageCondition(unittest.TestCase):
         # appear in the output group so the runtime gate is honoured.
         self.assertIn("SIGN_ARTIFACTS", result["paramNames"])
         self.assertIn("ENABLE_INSTALLERS", result["paramNames"])
-        gate_groups = [g for g in result["groups"] if g.get("stageId") == "08-sign-installer"]
-        self.assertEqual(len(gate_groups), 1)
-        cond_params = {c["param"] for c in gate_groups[0]["stageCondition"]}
+        gate_stages = _stages_for(result, "08-sign-installer")
+        self.assertEqual(len(gate_stages), 1)
+        cond_params = {c["param"] for c in gate_stages[0]["stageCondition"]}
         self.assertIn("ENABLE_INSTALLERS", cond_params)
         self.assertIn("SIGN_ARTIFACTS", cond_params)
 
@@ -717,17 +720,10 @@ class TestStageCondition(unittest.TestCase):
 
             result = _collect(d, vendor_dir=vendor)
 
-        # stageCondition must be present in the output for 20-reproducible-compare
-        repro_groups = [
-            g for g in result["groups"] if g.get("stageId") == "20-reproducible-compare"
-        ]
-        self.assertTrue(len(repro_groups) > 0, "20-reproducible-compare must have at least one group")
-        # Collect all conditions across all groups for this stage
-        all_conds = {
-            c["param"]
-            for g in repro_groups
-            for c in g.get("stageCondition") or []
-        }
+        # stageCondition must be present in the stages output for 20-reproducible-compare
+        repro_stages = _stages_for(result, "20-reproducible-compare")
+        self.assertTrue(len(repro_stages) > 0, "20-reproducible-compare must have a stages entry")
+        all_conds = {c["param"] for c in repro_stages[0].get("stageCondition") or []}
         self.assertIn(
             "RUN_REPRODUCIBLE_COMPARE",
             all_conds,
@@ -758,8 +754,8 @@ class TestStageTimeoutMinutes(unittest.TestCase):
             )
             result = _collect(d)
 
-        self.assertEqual(len(result["groups"]), 1)
-        self.assertEqual(result["groups"][0]["stageTimeoutMinutes"], 120)
+        self.assertEqual(len(result["stages"]), 1)
+        self.assertEqual(result["stages"][0]["stageTimeoutMinutes"], 120)
 
     def test_stage_timeout_invalid_type_raises(self):
         """Negative or non-integer stageTimeoutMinutes raises ValueError."""
@@ -1057,6 +1053,81 @@ class TestStageSelectionsGroup(unittest.TestCase):
             " / ",
             all_params["RUN_TESTS"]["description"],
             "RUN_TESTS description should not be duplicated by the collator",
+        )
+
+
+    def test_stage_condition_preserved_when_all_stage_selections_params_are_duplicates(self):
+        """
+        Regression test for: stageCondition silently dropped when a stage's only
+        parameter is SIGN_ARTIFACTS (or any boolean declared in "Stage Selections"),
+        and that parameter is already owned by an earlier stage.
+
+        Root cause: _reorder_by_priority merges all "Stage Selections" groups into
+        one entry and discards the stageCondition from every subsequent occurrence,
+        so loadStageConditions() / load_stage_metadata() never sees a condition for
+        those later stages and stageConditionMet() logs
+        "no conditions defined — running unconditionally".
+
+        Concrete example: 03-internal-code-sign owns SIGN_ARTIFACTS.
+        06-post-build-code-sign also declares SIGN_ARTIFACTS in "Stage Selections"
+        (so the param appears in the Jenkins UI) plus stageCondition=[SIGN_ARTIFACTS==true].
+        After deduplication clean_params is empty for 06-post-build-code-sign, the
+        "Stage Selections" group is merged into the priority entry owned by
+        03-internal-code-sign, and the condition is lost.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+
+            # First stage: owns SIGN_ARTIFACTS in Stage Selections, no condition.
+            _write_params_json(
+                d,
+                "03-internal-code-sign",
+                [
+                    _make_group(
+                        "Stage Selections",
+                        [_make_bool_param("SIGN_ARTIFACTS", False, "Enable signing.")],
+                    )
+                ],
+                stage_condition=[{"param": "SIGN_ARTIFACTS", "value": True}],
+            )
+
+            # Second stage: re-declares SIGN_ARTIFACTS in Stage Selections (so the
+            # param appears in the UI under that group) AND sets a stageCondition.
+            # After collation SIGN_ARTIFACTS is a duplicate → clean_params=[].
+            # The "Stage Selections" group is merged into the priority entry above.
+            # The stageCondition MUST still be preserved for this stage.
+            _write_params_json(
+                d,
+                "06-post-build-code-sign",
+                [
+                    _make_group(
+                        "Stage Selections",
+                        [_make_bool_param("SIGN_ARTIFACTS", False, "Enable signing.")],
+                    )
+                ],
+                stage_condition=[{"param": "SIGN_ARTIFACTS", "value": True}],
+            )
+
+            result = _collect(d)
+
+        # The merged Stage Selections group must still exist (params are correct).
+        sel_groups = [g for g in result["groups"] if g["name"] == "Stage Selections"]
+        self.assertEqual(len(sel_groups), 1, "Stage Selections should be merged into one group")
+        param_names = [p["name"] for p in sel_groups[0]["parameters"]]
+        self.assertIn("SIGN_ARTIFACTS", param_names)
+
+        # stageCondition for 06-post-build-code-sign must survive the merge.
+        post_sign_stages = _stages_for(result, "06-post-build-code-sign")
+        self.assertTrue(
+            len(post_sign_stages) > 0,
+            "06-post-build-code-sign must have an entry in stages",
+        )
+        all_conds = {c["param"] for c in (post_sign_stages[0].get("stageCondition") or [])}
+        self.assertIn(
+            "SIGN_ARTIFACTS",
+            all_conds,
+            "stageCondition must be preserved in stages even when the stage's "
+            "only param is a duplicate that was merged into a priority group",
         )
 
 

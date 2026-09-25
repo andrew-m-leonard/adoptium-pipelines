@@ -144,15 +144,17 @@ Each parameter:
 
 ## Parameter Ownership
 
-Each parameter name must be declared in **exactly one** stage's `params.json`. The collator enforces this and errors on duplicates across different group names.
+Each parameter name may be declared in one or more stage `params.json` files, subject to one rule: **all declarations must use the same group name**. The collator errors if a parameter appears under different group names in different stages.
 
-Other stages that need to gate on a parameter reference it via their `stageCondition` only — they do not re-declare it.
+The parameter is emitted once in the collated output (`groups[*].parameters`). The stage-level metadata (`stageCondition`, `stageDisabled`, `stageTimeoutMinutes`) is stored separately in `stages[*]`, one entry per non-disabled stage stem.
+
+Other stages that need to gate on the same parameter may re-declare it under the same group name (e.g. all signing stages re-declare `SIGN_ARTIFACTS` in `"Stage Selections"`) — this is the standard pattern for shared gate booleans.  Only the first description encountered (lowest stage number, default before vendor) is used; subsequent descriptions are silently ignored.
 
 ### Shared parameters across stages
 
-Some parameters (e.g. `BUILD_REF`, `AQA_REF`) are logically meaningful to more than one stage and may be re-declared in multiple `params.json` files — both default and vendor. The collator permits this **only when all declarations use the same group name**. The parameter is emitted once in the collated output.
+Some parameters (e.g. `BUILD_REF`, `AQA_REF`, `SIGN_ARTIFACTS`) are logically meaningful to more than one stage and may be re-declared in multiple `params.json` files — both default and vendor. The collator permits this **only when all declarations use the same group name**. The parameter is emitted once in the collated output.
 
-**Description precedence:** the description from the **first declaration encountered** (lowest stage number, default file before vendor file) is used. Descriptions from subsequent declarations are silently ignored. This keeps the displayed parameter description concise and avoids verbose concatenation.
+**Description precedence:** the description from the **first declaration encountered** (lowest stage number, default file before vendor file) is used. Descriptions from subsequent declarations are silently ignored.
 
 > When adding a shared parameter, write its canonical description in the lowest-numbered stage that declares it, since that will be the one shown to users.
 
@@ -347,6 +349,6 @@ The stage will now appear in the Jenkins UI with its default parameters, and wil
 
 - [`docs/UNIVERSAL_STAGE_PATTERN.md`](./UNIVERSAL_STAGE_PATTERN.md) — shell script template and four-artefact checklist
 - [`docs/CI_AGNOSTIC_ARCHITECTURE.md`](./CI_AGNOSTIC_ARCHITECTURE.md) — three-layer architecture, per-stage summary, artifact flow
-- [`scripts/lib/collect-stage-params.py`](../scripts/lib/collect-stage-params.py) — collation logic, `PRIORITY_GROUPS`, `stageCondition` validation
+- [`scripts/lib/collect-stage-params.py`](../scripts/lib/collect-stage-params.py) — collation logic, `stages`/`groups` output schema, `stageCondition` validation
 - [`ci/jenkins/Jenkinsfile.declarative`](../ci/jenkins/Jenkinsfile.declarative) — `loadStageConditions()`, `stageConditionMet()`, stage `when{}` blocks
 - [`ci/local/run-pipeline.py`](../ci/local/run-pipeline.py) — `_stage_condition_met()`, `_load_stage_metadata()`

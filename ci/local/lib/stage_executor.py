@@ -86,20 +86,14 @@ class StageExecutor:
 
     def load_stage_metadata(self, collated: dict) -> None:
         """Extract stageDisabled and stageCondition maps from the collated output."""
-        for grp in collated.get("groups", []):
-            stage_id = grp.get("stageId", "")
+        for stage in collated.get("stages", []):
+            stage_id = stage.get("stageId", "")
             if not stage_id:
                 continue
-            # stageDisabled — first group seen per stageId wins
-            if stage_id not in self._stage_disabled:
-                self._stage_disabled[stage_id] = bool(grp.get("stageDisabled", False))
-            # stageCondition — merge across groups sharing the same stageId
-            conds = grp.get("stageCondition", [])
+            self._stage_disabled[stage_id] = bool(stage.get("stageDisabled", False))
+            conds = stage.get("stageCondition") or []
             if conds:
-                existing = self._stage_conditions.get(stage_id, [])
-                seen_params = {c["param"] for c in existing}
-                merged = existing + [c for c in conds if c["param"] not in seen_params]
-                self._stage_conditions[stage_id] = merged
+                self._stage_conditions[stage_id] = conds
 
     def condition_met(self, stage_id: str) -> bool:
         """

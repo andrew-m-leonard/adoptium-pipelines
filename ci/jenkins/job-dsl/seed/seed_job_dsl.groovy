@@ -260,28 +260,24 @@ def inDeploymentFolder = { Map dep, String name ->
 
 // COLLATED_PARAMS_JSON was produced by collect-stage-params.py (via SeedHelper)
 // with priority group ordering and stageDisabled filtering already applied.
-// The cross-stem group merge (same group name across stages → single entry with
-// a stageIds list) is re-applied here to obtain the stageIds list structure
-// that configure{} needs for separator labels.
+// Every group already carries a stageIds list; disabled stages are already
+// excluded from groups entirely, so no further filtering is needed here.
 def rawGroups = slurper.parseText(collatedParamsJson).groups ?: []
 
 def mergedGroupMap = [:] as LinkedHashMap
 rawGroups.each { grp ->
     def gname = grp.name
-    // stageIds list is already present on merged priority groups (e.g. "Stage Selections");
-    // non-priority groups carry a scalar stageId — normalise to a list in both cases.
-    def incomingIds = grp.stageIds instanceof List ? grp.stageIds : [grp.stageId]
+    // stageIds is always a list in the new schema.
+    def incomingIds = grp.stageIds ?: []
     if (mergedGroupMap.containsKey(gname)) {
         incomingIds.each { id -> if (id && !mergedGroupMap[gname].stageIds.contains(id)) { mergedGroupMap[gname].stageIds << id } }
         mergedGroupMap[gname].parameters.addAll(grp.parameters ?: [])
     } else {
         mergedGroupMap[gname] = [
-            name:           gname,
-            description:    grp.description ?: '',
-            stageIds:       new ArrayList(incomingIds),
-            stageDisabled:  grp.stageDisabled ?: false,
-            stageCondition: grp.stageCondition ?: [],
-            parameters:     new ArrayList(grp.parameters ?: [])
+            name:        gname,
+            description: grp.description ?: '',
+            stageIds:    new ArrayList(incomingIds),
+            parameters:  new ArrayList(grp.parameters ?: [])
         ]
     }
 }
@@ -413,7 +409,6 @@ def createLaunchJobParams = { Map dep, String version, List platforms, Map defau
 
         // Collated stage parameters
         collatedParamGroups.each { group ->
-            if (group.stageDisabled == true) { return }
             def stageLabel  = group.stageIds.join('_').replaceAll(/\W+/, '_')
             def stageHeader = group.stageIds.size() == 1
                 ? "stage: ${group.stageIds[DUPLICATE_ZERO]}"

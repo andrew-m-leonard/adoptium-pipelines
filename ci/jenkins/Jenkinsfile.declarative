@@ -83,6 +83,7 @@ import groovy.transform.Field
  * and store a compact stageId → stageCondition[] map as env.COLLATED_STAGE_CONDITIONS
  * and stageId → timeoutMinutes map as env.COLLATED_STAGE_TIMEOUTS.
  *
+ * Reads from collated.stages[] (one entry per non-disabled stage stem).
  * Called once inside the Initialize stage steps so the inline script block stays
  * small.  stageConditionMet() reads the stored JSON on every when{} evaluation.
  */
@@ -105,30 +106,20 @@ void loadStageConditions() {
     Map collated = new JsonSlurper()
         .parseText(readFile('collated-stage-params.json'))
     Map condMap = [:]
-    (collated.groups ?: []).each { Map grp ->
-        List conds = grp.stageCondition ?: []
+    (collated.stages ?: []).each { Map stage ->
+        List conds = stage.stageCondition ?: []
         if (conds) {
-            // Multiple groups may share a stageId — merge, dedup by param name.
-            // .unique{closure} is not CPS-safe — Jenkins intercepts the closure call
-            // instead of the ArrayList method, corrupting the result. Use an explicit
-            // loop with a Set to track seen param names instead.
-            List existing = condMap[grp.stageId] ?: []
-            Set seen = existing.collect { it.param } as Set
-            List merged = new ArrayList(existing)
-            for (Map c : conds) {
-                if (seen.add(c.param)) { merged.add(c) }
-            }
-            condMap[grp.stageId] = merged
+            condMap[stage.stageId] = conds
         }
     }
     env.COLLATED_STAGE_CONDITIONS = JsonOutput.toJson(condMap)
     echo "✓ Loaded stage conditions for ${condMap.size()} stage(s)"
 
     Map timeoutMap = [:]
-    (collated.groups ?: []).each { Map grp ->
-        int timeoutMins = grp.stageTimeoutMinutes ? grp.stageTimeoutMinutes.toInteger() : 0
+    (collated.stages ?: []).each { Map stage ->
+        int timeoutMins = stage.stageTimeoutMinutes ? stage.stageTimeoutMinutes.toInteger() : 0
         if (timeoutMins > 0) {
-            timeoutMap[grp.stageId] = timeoutMins
+            timeoutMap[stage.stageId] = timeoutMins
         }
     }
     env.COLLATED_STAGE_TIMEOUTS = JsonOutput.toJson(timeoutMap)
