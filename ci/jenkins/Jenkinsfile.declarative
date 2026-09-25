@@ -108,9 +108,17 @@ void loadStageConditions() {
     (collated.groups ?: []).each { Map grp ->
         List conds = grp.stageCondition ?: []
         if (conds) {
-            // Multiple groups may share a stageId — merge, dedup by param name
+            // Multiple groups may share a stageId — merge, dedup by param name.
+            // .unique{closure} is not CPS-safe — Jenkins intercepts the closure call
+            // instead of the ArrayList method, corrupting the result. Use an explicit
+            // loop with a Set to track seen param names instead.
             List existing = condMap[grp.stageId] ?: []
-            condMap[grp.stageId] = (existing + conds).unique { Map c -> c.param }
+            Set seen = existing.collect { it.param } as Set
+            List merged = new ArrayList(existing)
+            for (Map c : conds) {
+                if (seen.add(c.param)) { merged.add(c) }
+            }
+            condMap[grp.stageId] = merged
         }
     }
     env.COLLATED_STAGE_CONDITIONS = JsonOutput.toJson(condMap)
