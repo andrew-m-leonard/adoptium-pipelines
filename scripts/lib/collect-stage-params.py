@@ -27,6 +27,8 @@ Merge strategy per stage stem:
        b. For each vendor param: replace default with same name, or add if new
        c. Merge vendor parameterGroups: groups with the same name are merged;
           new vendor groups are appended
+       d. Vendor top-level metadata (stageDisabled, stageCondition,
+          stageTimeoutMinutes) takes precedence over the defaults when present
   3. Also load optional vendor_stage_params.json (cross-stage extras,
      for params not tied to a specific script override)
   4. Cross-stage duplicate param names: both definitions MUST share the same
@@ -213,7 +215,7 @@ def _validate_params_file(data: dict, source: str) -> None:
         if isinstance(value, str) and value.startswith("regex:"):
             import re as _re
 
-            pattern = value[len("regex:") :]
+            pattern = value[len("regex:"):]
             try:
                 _re.compile(pattern)
             except _re.error as exc:
@@ -258,178 +260,145 @@ def _load_json_url(url: str) -> Optional[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Per-stage merge logic
+# Per-stage data model
 # ---------------------------------------------------------------------------
 
 
 def _params_list_to_map(params: list) -> dict:
-    """Convert a list of param dicts to a dict keyed by name, preserving order."""
+    """Convert a list of param dicts to an ordered dict keyed by name."""
     return {p["name"]: p for p in params}
 
 
-def _resolve_stage_disabled(
-    default_data: Optional[dict], vendor_data: Optional[dict]
-) -> bool:
+class StageEntry:
     """
-    Resolve the effective stageDisabled value after vendor overlay.
+    Holds the fully-merged definition for one stage stem.
 
-    Vendor data takes precedence if it explicitly sets stageDisabled.
-    Falls back to default_data, then False.
+    Stage-level metadata (stageDisabled, stageCondition, stageTimeoutMinutes)
+    is stored once here and stamped onto every group at flatten time, so it
+    can never be accidentally dropped by parameter deduplication.
     """
-    if vendor_data is not None and "stageDisabled" in vendor_data:
-        return bool(vendor_data["stageDisabled"])
-    if default_data is not None and "stageDisabled" in default_data:
-        return bool(default_data["stageDisabled"])
-    return False
 
+    __slots__ = ("stem", "disabled", "condition", "timeout", "groups")
 
-def _resolve_stage_condition(
-    default_data: Optional[dict], vendor_data: Optional[dict]
-) -> list:
-    """
-    Resolve the effective stageCondition list after vendor overlay.
+    def __init__(self, stem: str) -> None:
+        self.stem: str = stem
+        self.disabled: bool = False
+        self.condition: List[dict] = []
+        self.timeout: int = 0
+        # groups: ordered dict of group_name → {name, description, parameters: []}
+        self.groups: Dict[str, dict] = {}
 
-    Vendor data takes precedence if it explicitly sets stageCondition.
-    Falls back to default_data, then [].
-    """
-    if vendor_data is not None and "stageCondition" in vendor_data:
-        return list(vendor_data["stageCondition"] or [])
-    if default_data is not None and "stageCondition" in default_data:
-        return list(default_data["stageCondition"] or [])
-    return []
+    def apply(self, data: dict, source: str) -> None:
+        """
+        Apply one .params.json document (default or vendor) onto this entry.
 
+        Metadata fields use last-write-wins so that a vendor file calling this
+        second will override the defaults.  parameterGroups are merged: groups
+        with the same name have their parameters overlaid; new groups are appended.
+        """
+        _validate_params_file(data, source)
 
-def _resolve_stage_timeout(
-    default_data: Optional[dict], vendor_data: Optional[dict]
-) -> int:
-    """
-    Resolve the effective stageTimeoutMinutes value after vendor overlay.
+        if "stageDisabled" in data:
+            self.disabled = bool(data["stageDisabled"])
+        if "stageCondition" in data:
+            self.condition = list(data["stageCondition"] or [])
+        if "stageTimeoutMinutes" in data:
+            self.timeout = int(data.get("stageTimeoutMinutes") or 0)
 
-    Vendor data takes precedence if it explicitly sets stageTimeoutMinutes.
-    Falls back to default_data, then 0.
-    """
-    if vendor_data is not None and "stageTimeoutMinutes" in vendor_data:
-        return int(vendor_data["stageTimeoutMinutes"] or 0)
-    if default_data is not None and "stageTimeoutMinutes" in default_data:
-        return int(default_data["stageTimeoutMinutes"] or 0)
-    return 0
+        ignore_set: Set[str] = set(data.get("ignoreDefaultParams") or [])
 
-
-def _merge_stage(
-    default_data: Optional[dict], vendor_data: Optional[dict], stage_stem: str
-) -> list:
-    """
-    Merge default and vendor parameterGroups for one stage stem.
-
-    Returns a list of group dicts, each containing:
-      name, description, stageId, stageDisabled, stageCondition, stageTimeoutMinutes, parameters
-    """
-    source_default = f"{stage_stem}.params.json (default)"
-    source_vendor = f"{stage_stem}.params.json (vendor)"
-
-    if default_data:
-        _validate_params_file(default_data, source_default)
-    if vendor_data:
-        _validate_params_file(vendor_data, source_vendor)
-
-    stage_disabled = _resolve_stage_disabled(default_data, vendor_data)
-    stage_condition = _resolve_stage_condition(default_data, vendor_data)
-    stage_timeout = _resolve_stage_timeout(default_data, vendor_data)
-
-    # Build the default group map: group_name → group dict
-    # and a reverse index: param_name → group_name
-    default_groups: Dict[str, dict] = {}
-    default_param_to_group: Dict[str, str] = {}
-
-    if default_data:
-        for grp in default_data.get("parameterGroups") or []:
-            gname = grp["name"]
-            default_groups[gname] = {
-                "name": gname,
-                "description": grp.get("description", ""),
-                "stageId": stage_stem,
-                "stageDisabled": stage_disabled,
-                "stageCondition": stage_condition,
-                "stageTimeoutMinutes": stage_timeout,
-                "parameters": list(grp.get("parameters") or []),
-            }
-            for p in grp.get("parameters") or []:
-                default_param_to_group[p["name"]] = gname
-
-    if not vendor_data:
-        return list(default_groups.values())
-
-    # --- Apply ignoreDefaultParams ---
-    ignore_list = vendor_data.get("ignoreDefaultParams") or []
-
-    # A name in both ignoreDefaultParams and vendor parameters is contradictory — hard error
-    vendor_param_names = {
-        p["name"]
-        for grp in (vendor_data.get("parameterGroups") or [])
-        for p in (grp.get("parameters") or [])
-    }
-    contradictions = [n for n in ignore_list if n in vendor_param_names]
-    if contradictions:
-        raise ValueError(
-            f"[{source_vendor}] These names appear in both 'ignoreDefaultParams' "
-            f"and 'parameters' — contradictory intent: {contradictions}"
-        )
-
-    # A name in ignoreDefaultParams that doesn't exist in defaults is a warning, not an error
-    for name in ignore_list:
-        if name not in default_param_to_group:
-            print(
-                f"WARNING [{source_vendor}] 'ignoreDefaultParams' entry '{name}' "
-                f"does not exist in the default params file — ignoring.",
-                file=sys.stderr,
+        # Validate ignoreDefaultParams: a name in both ignore and vendor params is contradictory
+        vendor_param_names = {
+            p["name"]
+            for grp in (data.get("parameterGroups") or [])
+            for p in (grp.get("parameters") or [])
+        }
+        contradictions = [n for n in ignore_set if n in vendor_param_names]
+        if contradictions:
+            raise ValueError(
+                f"[{source}] These names appear in both 'ignoreDefaultParams' "
+                f"and 'parameters' — contradictory intent: {contradictions}"
             )
 
-    # Remove ignored params from their default groups; drop the group if now empty
-    for name in ignore_list:
-        gname = default_param_to_group.get(name)
-        if gname and gname in default_groups:
-            default_groups[gname]["parameters"] = [
-                p for p in default_groups[gname]["parameters"] if p["name"] != name
+        # Warn about ignore entries that don't exist in the current groups
+        existing_params = {
+            p["name"]
+            for grp in self.groups.values()
+            for p in grp["parameters"]
+        }
+        for name in ignore_set:
+            if name not in existing_params:
+                print(
+                    f"WARNING [{source}] 'ignoreDefaultParams' entry '{name}' "
+                    f"does not exist in the default params file — ignoring.",
+                    file=sys.stderr,
+                )
+
+        # Remove ignored params from existing groups; drop the group if it becomes empty
+        for name in ignore_set:
+            for gname, grp in list(self.groups.items()):
+                grp["parameters"] = [p for p in grp["parameters"] if p["name"] != name]
+                if not grp["parameters"]:
+                    del self.groups[gname]
+                break  # each param name lives in at most one group
+
+        # Merge parameterGroups from this document
+        for vgrp in data.get("parameterGroups") or []:
+            gname = vgrp["name"]
+            vparams = list(vgrp.get("parameters") or [])
+            if gname in self.groups:
+                existing = self.groups[gname]
+                existing_map = _params_list_to_map(existing["parameters"])
+                existing_names = set(existing_map)
+                for vp in vparams:
+                    existing_map[vp["name"]] = vp
+                new_additions = [vp for vp in vparams if vp["name"] not in existing_names]
+                existing["parameters"] = (
+                    [existing_map[p["name"]] for p in existing["parameters"]]
+                    + new_additions
+                )
+                if vgrp.get("description"):
+                    existing["description"] = vgrp["description"]
+            else:
+                self.groups[gname] = {
+                    "name": gname,
+                    "description": vgrp.get("description", ""),
+                    "parameters": vparams,
+                }
+
+    def to_output_groups(self) -> List[dict]:
+        """
+        Return a list of output group dicts with stage-level metadata stamped on.
+
+        A stage with no parameterGroups (gate-only) returns a single group with
+        an empty parameters list so that stageCondition is preserved in the output.
+        """
+        if not self.groups:
+            # Gate-only stem: emit a single metadata-only group so stageCondition
+            # and stageTimeoutMinutes reach the collated output.
+            return [
+                {
+                    "name": f"{self.stem} (gate)",
+                    "description": "",
+                    "stageId": self.stem,
+                    "stageDisabled": self.disabled,
+                    "stageCondition": list(self.condition),
+                    "stageTimeoutMinutes": self.timeout,
+                    "parameters": [],
+                }
             ]
-            if not default_groups[gname]["parameters"]:
-                del default_groups[gname]
-
-    # --- Merge vendor parameterGroups ---
-    for vgrp in vendor_data.get("parameterGroups") or []:
-        vgname = vgrp["name"]
-        vparams = vgrp.get("parameters") or []
-
-        if vgname in default_groups:
-            # Vendor params replace defaults with the same name; new names are appended
-            existing_map = _params_list_to_map(default_groups[vgname]["parameters"])
-            existing_names = set(existing_map)
-            for vp in vparams:
-                existing_map[vp["name"]] = vp
-            new_additions = [vp for vp in vparams if vp["name"] not in existing_names]
-            default_groups[vgname]["parameters"] = [
-                existing_map[p["name"]] for p in default_groups[vgname]["parameters"]
-            ] + new_additions
-            # Vendor may also update the group description
-            if vgrp.get("description"):
-                default_groups[vgname]["description"] = vgrp["description"]
-        else:
-            # Brand-new vendor group — append it
-            default_groups[vgname] = {
-                "name": vgname,
-                "description": vgrp.get("description", ""),
-                "stageId": stage_stem,
-                "stageDisabled": stage_disabled,
-                "stageCondition": stage_condition,
-                "parameters": list(vparams),
+        return [
+            {
+                "name": gname,
+                "description": grp["description"],
+                "stageId": self.stem,
+                "stageDisabled": self.disabled,
+                "stageCondition": list(self.condition),
+                "stageTimeoutMinutes": self.timeout,
+                "parameters": list(grp["parameters"]),
             }
-
-    # Propagate updated stage_disabled / stage_condition to all groups
-    # (vendor override may have changed them)
-    for grp in default_groups.values():
-        grp["stageDisabled"] = stage_disabled
-        grp["stageCondition"] = stage_condition
-
-    return list(default_groups.values())
+            for gname, grp in self.groups.items()
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -466,8 +435,8 @@ def _reorder_by_priority(groups: List[dict]) -> List[dict]:
         name = grp["name"]
         # Collect all stems that contributed to this group: the primary stageId
         # plus any stems recorded in the internal _extra_stage_ids accumulator.
-        extra_ids: set[str] = grp.pop("_extra_stage_ids", set()) or set()
-        all_ids: list[str] = []
+        extra_ids: set = grp.pop("_extra_stage_ids", set()) or set()
+        all_ids: List[str] = []
         primary = grp.get("stageId", "")
         if primary:
             all_ids.append(primary)
@@ -477,10 +446,6 @@ def _reorder_by_priority(groups: List[dict]) -> List[dict]:
 
         if name in priority_set:
             if name not in priority_map:
-                # First occurrence — seed the merged group.
-                # Keep 'stageId' (the first stem) for backward compatibility with any
-                # consumer that reads the singular field; also emit 'stageIds' (a list
-                # of all contributing stems) so Groovy can build the full label.
                 priority_map[name] = {
                     "name": name,
                     "description": grp.get("description", ""),
@@ -502,8 +467,6 @@ def _reorder_by_priority(groups: List[dict]) -> List[dict]:
                         priority_map[name]["parameters"].append(p)
                         existing_names.add(p["name"])
         else:
-            # Non-priority group: strip the internal field, expose extra stageIds
-            # as a plain list if any were recorded (for completeness).
             if all_ids and len(all_ids) > 1:
                 grp["stageIds"] = all_ids
             remainder.append(grp)
@@ -528,8 +491,7 @@ def _validate_stage_conditions(groups: List[dict], param_names: Set[str]) -> Non
 
     for grp in groups:
         stage_id = grp.get("stageId", "?")
-        conditions = grp.get("stageCondition") or []
-        for cond in conditions:
+        for cond in grp.get("stageCondition") or []:
             param = cond.get("param", "")
             key = (stage_id, param)
             if key in seen:
@@ -561,26 +523,29 @@ def collect(
     """
     Collate stage *.params.json files into a single structured output dict.
 
+    Two-pass design:
+      Pass 1 — walk default_stages_dir and build a StageEntry per stem.
+      Pass 2 — walk vendor_scripts_dir (or fetch remotely) and overlay each
+               vendor file onto the matching StageEntry (creating one if the
+               stem is vendor-only).
+
+    Stage-level metadata (stageDisabled, stageCondition, stageTimeoutMinutes)
+    lives on the StageEntry and is stamped onto every group at flatten time,
+    so it is never dropped by cross-stage parameter deduplication.
+
     When orchestrated_stages is provided only stems whose ID appears in that
-    set are processed — all others are silently skipped.  This lets each CI
-    orchestrator (local runner, Jenkins launch job, seed job) restrict the
-    collated output to exactly the stages it actually runs, preventing
-    parameters from CI-only stages (e.g. code-signing) from leaking into
-    contexts where those stages are not executed.
+    set are processed — all others are silently skipped.
 
     Returns:
         {
           "groups":     [ { name, description, stageId, stageDisabled,
-                            stageCondition, parameters: [...] }, ... ],
+                            stageCondition, stageTimeoutMinutes,
+                            parameters: [...] }, ... ],
           "paramNames": [ "PARAM_A", "PARAM_B", ... ]
         }
-
-    Groups are reordered so that any group named in PRIORITY_GROUPS appears
-    first (in PRIORITY_GROUPS order), followed by all remaining groups in
-    natural discovery order.
     """
 
-    def load_vendor_stem(stem: str) -> dict | None:
+    def load_vendor_stem(stem: str) -> Optional[dict]:
         filename = f"{stem}.params.json"
         if vendor_raw_base_url:
             url = f"{vendor_raw_base_url.rstrip('/')}/vendor-scripts/{filename}"
@@ -589,7 +554,7 @@ def collect(
             return _load_json_local(vendor_scripts_dir / filename)
         return None
 
-    def load_vendor_cross_stage() -> dict | None:
+    def load_vendor_cross_stage() -> Optional[dict]:
         """Load optional vendor_stage_params.json from the config repo root."""
         filename = "vendor_stage_params.json"
         if vendor_raw_base_url:
@@ -601,72 +566,58 @@ def collect(
             return _load_json_local(vendor_scripts_dir.parent / filename)
         return None
 
-    # Collect stage stems from default params files, preserving sort order.
-    # When orchestrated_stages is set, skip any stem not in that allowlist.
-    stems_seen: List[str] = []
-    stems_set: Set[str] = set()
+    def in_scope(stem: str) -> bool:
+        return not orchestrated_stages or stem in orchestrated_stages
+
+    # --- Pass 1: load default stage files ---
+    # Preserve sorted (numeric-prefix) order; use an ordered dict to maintain it.
+    entries: Dict[str, StageEntry] = {}
 
     for path in sorted(default_stages_dir.glob("*.params.json")):
         stem = path.name.replace(".params.json", "")
-        if orchestrated_stages and stem not in orchestrated_stages:
+        if not in_scope(stem):
             continue
-        if stem not in stems_set:
-            stems_seen.append(stem)
-            stems_set.add(stem)
+        entry = StageEntry(stem)
+        entry.apply(_load_json_local(path), f"{stem}.params.json (default)")
+        entries[stem] = entry
 
-    # Also pick up vendor-only stems (vendor script stages with no default params file)
+    # --- Pass 2: overlay vendor stage files ---
+    # Collect vendor stems (may include vendor-only stems not in defaults).
+    vendor_stems: List[str] = []
     if vendor_scripts_dir:
         for path in sorted(vendor_scripts_dir.glob("*.params.json")):
             stem = path.name.replace(".params.json", "")
-            if orchestrated_stages and stem not in orchestrated_stages:
-                continue
-            if stem not in stems_set:
-                stems_seen.append(stem)
-                stems_set.add(stem)
+            if in_scope(stem):
+                vendor_stems.append(stem)
+    elif vendor_raw_base_url:
+        # When using a remote URL we don't have a directory listing; we can only
+        # attempt to fetch the stems we already know about from the defaults.
+        vendor_stems = list(entries.keys())
 
-    # Track all param names for cross-stage deduplication.
+    for stem in vendor_stems:
+        vendor_data = load_vendor_stem(stem)
+        if vendor_data is None:
+            continue
+        if stem not in entries:
+            entries[stem] = StageEntry(stem)
+        entries[stem].apply(vendor_data, f"{stem}.params.json (vendor)")
+
+    # --- Flatten: skip disabled stems, dedup cross-stage params ---
     # Maps param name → (source_label, group_name, index into output_groups, index in parameters)
     all_param_names: Dict[str, Tuple[str, str, int, int]] = {}
     output_groups: List[dict] = []
-    # Track stageConditions for ALL non-disabled stems (including gate-only files
-    # that have no parameterGroups) so the cross-reference validator covers them too.
-    all_stage_conditions: Dict[str, List[dict]] = {}
 
-    for stem in stems_seen:
-        default_data = _load_json_local(default_stages_dir / f"{stem}.params.json")
-        vendor_data = load_vendor_stem(stem)
-
-        if default_data is None and vendor_data is None:
-            continue
-
-        # Resolve stageDisabled before doing any further work on this stem
-        stage_disabled = _resolve_stage_disabled(default_data, vendor_data)
-        if stage_disabled:
+    for stem, entry in entries.items():
+        if entry.disabled:
             print(f"  [{stem}] stageDisabled=true — skipping (no parameters emitted)")
             continue
 
-        # Track stageCondition for gate-only stems (no parameterGroups) so the
-        # cross-reference validator can still check their param references.
-        stage_condition = _resolve_stage_condition(default_data, vendor_data)
-        if stage_condition:
-            all_stage_conditions.setdefault(stem, [])
-            seen = {c["param"] for c in all_stage_conditions[stem] if c is not None}
-            for c in stage_condition:
-                if c is not None and c.get("param") and c["param"] not in seen:
-                    all_stage_conditions[stem].append(c)
-                    seen.add(c["param"])
-
-        merged_groups = _merge_stage(default_data, vendor_data, stem)
-
-        for grp in merged_groups:
+        for grp in entry.to_output_groups():
             clean_params: List[dict] = []
             for p in grp["parameters"]:
                 source_label = f"{stem}/{grp['name']}/{p['name']}"
                 if p["name"] in all_param_names:
-                    prev_label, prev_group, grp_idx, param_idx = all_param_names[
-                        p["name"]
-                    ]
-                    # Both definitions must belong to the same Group name
+                    prev_label, prev_group, grp_idx, param_idx = all_param_names[p["name"]]
                     if grp["name"] != prev_group:
                         raise ValueError(
                             f"Parameter '{p['name']}' is defined in two different groups: "
@@ -674,16 +625,12 @@ def collect(
                             f"'{grp['name']}' (at '{source_label}'). "
                             f"Duplicate parameters across stages must share the same Group name."
                         )
-                    # Keep the first description seen — subsequent definitions
-                    # from other stages are ignored for brevity.
+                    # Keep the first description seen
                     existing_param = output_groups[grp_idx]["parameters"][param_idx]
                     if not existing_param.get("description"):
                         existing_param["description"] = p.get("description", "")
-                    # Record this stem as a contributor to the existing group even
-                    # though it emitted no new params (needed for stageIds tracking).
-                    existing_grp = output_groups[grp_idx]
-                    existing_grp.setdefault("_extra_stage_ids", set()).add(stem)
-                    # Skip — do not re-emit this param
+                    # Record this stem as a contributor to the existing group
+                    output_groups[grp_idx].setdefault("_extra_stage_ids", set()).add(stem)
                     continue
                 all_param_names[p["name"]] = (
                     source_label,
@@ -693,18 +640,11 @@ def collect(
                 )
                 clean_params.append(p)
 
-            if clean_params:
-                output_groups.append(
-                    {
-                        "name": grp["name"],
-                        "description": grp["description"],
-                        "stageId": grp["stageId"],
-                        "stageDisabled": grp["stageDisabled"],
-                        "stageCondition": grp["stageCondition"],
-                        "stageTimeoutMinutes": grp.get("stageTimeoutMinutes", 0),
-                        "parameters": clean_params,
-                    }
-                )
+            # Always emit the group — even when clean_params is empty — so that
+            # stageCondition and stageTimeoutMinutes are preserved in the output
+            # for stages whose parameters are all shared with earlier stages.
+            grp["parameters"] = clean_params
+            output_groups.append(grp)
 
     # --- Merge vendor_stage_params.json (cross-stage extras) ---
     cross_stage = load_vendor_cross_stage()
@@ -793,35 +733,14 @@ def collect(
     output_groups = _reorder_by_priority(output_groups)
 
     # --- Validate stageCondition cross-references ---
-    # Build the full param name set from the reordered output groups
     all_collated_param_names: Set[str] = set(BUILTIN_PIPELINE_PARAMS)
     for grp in output_groups:
         for p in grp["parameters"]:
             all_collated_param_names.add(p["name"])
 
-    # Build a synthetic groups list that includes gate-only stems (no parameterGroups)
-    # so their stageCondition references are also validated.
-    # After _reorder_by_priority, priority groups carry 'stageIds' (list) instead of 'stageId';
-    # check both when deciding whether a stem already has a real group in the output.
-    def _stem_in_output(stage_id: str) -> bool:
-        for grp in output_groups:
-            if "stageIds" in grp:
-                if stage_id in grp["stageIds"]:
-                    return True
-            elif grp.get("stageId") == stage_id:
-                return True
-        return False
+    _validate_stage_conditions(output_groups, all_collated_param_names)
 
-    gate_only_groups = [
-        {"stageId": stage_id, "stageCondition": conds, "parameters": []}
-        for stage_id, conds in all_stage_conditions.items()
-        if not _stem_in_output(stage_id)
-    ]
-    _validate_stage_conditions(
-        output_groups + gate_only_groups, all_collated_param_names
-    )
-
-    # Build flat ordered param name list
+    # --- Build flat ordered param name list (skip empty gate groups) ---
     param_names_ordered: List[str] = []
     seen_names: Set[str] = set()
     for grp in output_groups:

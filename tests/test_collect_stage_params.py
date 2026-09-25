@@ -611,9 +611,15 @@ class TestStageCondition(unittest.TestCase):
             )
             result = _collect(d)  # should not raise
 
-        # Gate-only file emits no params, just ensures the conditions are tracked
+        # Gate-only file emits no params of its own, but its stageCondition must
+        # appear in the output group so the runtime gate is honoured.
         self.assertIn("SIGN_ARTIFACTS", result["paramNames"])
         self.assertIn("ENABLE_INSTALLERS", result["paramNames"])
+        gate_groups = [g for g in result["groups"] if g.get("stageId") == "08-sign-installer"]
+        self.assertEqual(len(gate_groups), 1)
+        cond_params = {c["param"] for c in gate_groups[0]["stageCondition"]}
+        self.assertIn("ENABLE_INSTALLERS", cond_params)
+        self.assertIn("SIGN_ARTIFACTS", cond_params)
 
     def test_gate_only_file_bad_ref_raises(self):
         """Gate-only file with a dangling stageCondition reference → ValueError."""
@@ -641,6 +647,97 @@ class TestStageCondition(unittest.TestCase):
                 _collect(d)
 
         self.assertIn("MISSING_PARAM", str(ctx.exception))
+
+    def test_vendor_stage_condition_honoured_when_all_params_are_duplicates(self):
+        """
+        Vendor stageCondition must appear in the output even when every parameter
+        defined in that vendor file is already owned by an earlier stage.
+
+        Regression test for: vendor 20-reproducible-compare.params.json defines
+        stageCondition but also lists SCM_REF and BUILD_REF which are owned by
+        02-build.  With the old if-clean_params guard, the group was silently
+        dropped and stageConditionMet() logged "no conditions defined — running
+        unconditionally".
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            vendor = d / "vendor"
+            vendor.mkdir()
+
+            # Stage that owns the shared params
+            _write_params_json(
+                d,
+                "02-build",
+                [
+                    _make_group(
+                        "Source Control",
+                        [
+                            _make_param("SCM_REF", "Git ref."),
+                            _make_param("BUILD_REF", "Build ref."),
+                        ],
+                    )
+                ],
+            )
+
+            # Default: gate param only (no SCM_REF / BUILD_REF)
+            _write_params_json(
+                d,
+                "20-reproducible-compare",
+                [
+                    _make_group(
+                        "Stage Selections",
+                        [_make_bool_param("RUN_REPRODUCIBLE_COMPARE", False, "desc")],
+                    )
+                ],
+                stage_condition=[
+                    {"param": "RUN_REPRODUCIBLE_COMPARE", "value": True},
+                    {"param": "SCM_REF", "value": "regex:.+"},
+                ],
+            )
+
+            # Vendor override: adds stageCondition AND lists SCM_REF / BUILD_REF
+            # (both already owned by 02-build, so they will all be deduplicated).
+            _write_params_json(
+                vendor,
+                "20-reproducible-compare",
+                [
+                    _make_group(
+                        "Source Control",
+                        [
+                            _make_param("SCM_REF", "Vendor SCM_REF desc."),
+                            _make_param("BUILD_REF", "Vendor BUILD_REF desc."),
+                        ],
+                    )
+                ],
+                stage_condition=[
+                    {"param": "RUN_REPRODUCIBLE_COMPARE", "value": True},
+                    {"param": "SCM_REF", "value": "regex:.+"},
+                ],
+            )
+
+            result = _collect(d, vendor_dir=vendor)
+
+        # stageCondition must be present in the output for 20-reproducible-compare
+        repro_groups = [
+            g for g in result["groups"] if g.get("stageId") == "20-reproducible-compare"
+        ]
+        self.assertTrue(len(repro_groups) > 0, "20-reproducible-compare must have at least one group")
+        # Collect all conditions across all groups for this stage
+        all_conds = {
+            c["param"]
+            for g in repro_groups
+            for c in g.get("stageCondition") or []
+        }
+        self.assertIn(
+            "RUN_REPRODUCIBLE_COMPARE",
+            all_conds,
+            "stageCondition must survive even when all params were deduplicated",
+        )
+        self.assertIn(
+            "SCM_REF",
+            all_conds,
+            "stageCondition must survive even when all params were deduplicated",
+        )
 
 
 # ---------------------------------------------------------------------------
