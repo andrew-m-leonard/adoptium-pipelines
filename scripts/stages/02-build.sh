@@ -686,11 +686,20 @@ extract_build_metadata() {
 }
 
 # Organize build outputs into standard structure
+#
+# Build artifacts (*.tar.gz, *.zip, *.json from temurin-build/workspace/target/)
+# are written into TARGET_DIR/build_output/ so downstream stages and signing jobs
+# can reference them by a predictable subdirectory path (e.g. UPSTREAM_DIR=build_output).
+#
+# build-metadata.json and buildinfo.json stay at TARGET_DIR root because they are
+# pipeline-level metadata consumed directly by stage scripts via INPUT_ARTIFACTS_DIR,
+# not by the signing jobs.
 organize_build_outputs() {
 	log_info "Organizing build outputs"
 
 	local build_repo_dir="${WORKSPACE}/temurin-build"
 	local target_dir="${build_repo_dir}/workspace/target"
+	local build_output_dir="${TARGET_DIR}/build_output"
 
 	if [[ ! -d "${target_dir}" ]]; then
 		log_error "Target directory not found: ${target_dir}"
@@ -698,15 +707,15 @@ organize_build_outputs() {
 	fi
 
 	log_info "Found build outputs in: ${target_dir}"
+	mkdir -p "${build_output_dir}"
 
-	# Find and copy JDK artifacts
+	# Copy JDK artifacts (binaries + SBOM) into build_output/ subdirectory
 	log_info "Searching for JDK artifacts..."
 	local artifacts_found=0
 
-	# Look for tar.gz, zip, and json files (including SBOM)
 	while IFS= read -r -d '' artifact; do
 		log_info "Found artifact: $(basename "${artifact}")"
-		cp "${artifact}" "${TARGET_DIR}/"
+		cp "${artifact}" "${build_output_dir}/"
 		artifacts_found=$((artifacts_found + 1))
 	done < <(find "${target_dir}" -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.json" \) -print0)
 
@@ -716,18 +725,17 @@ organize_build_outputs() {
 		ls -la "${target_dir}" || true
 		exit 1
 	else
-		log_info "Copied ${artifacts_found} artifact(s)"
+		log_info "Copied ${artifacts_found} artifact(s) to ${build_output_dir}"
 	fi
 
-	# Copy metadata files
+	# Copy pipeline-level metadata files to TARGET_DIR root
 	if [[ -f "${WORKSPACE}/build-metadata.json" ]]; then
 		cp "${WORKSPACE}/build-metadata.json" "${TARGET_DIR}/"
 	fi
 
-	# Copy any buildinfo or release files
 	find "${target_dir}" -type f \( -name "buildinfo.json" -o -name "release" \) -exec cp {} "${TARGET_DIR}/" \; 2>/dev/null || true
 
-	log_info "Build outputs organized in: ${TARGET_DIR}"
+	log_info "Build outputs organized in: ${TARGET_DIR} (artifacts in build_output/)"
 }
 
 # Error handler

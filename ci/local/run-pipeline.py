@@ -177,28 +177,28 @@ class PipelineRunner:
             # Stage: 12-validate-sbom
             # #####################################################################
             if VALIDATE_SBOM in self.stages_to_run:
-                if not _run(VALIDATE_SBOM, "pipeline-config.json,*sbom*.json"):
+                if not _run(VALIDATE_SBOM, "pipeline-config.json,build_output/*sbom*.json"):
                     raise _PipelineAbort()
 
             # #####################################################################
             # Stage: 13-smoke-tests
             # #####################################################################
             if SMOKE_TESTS in self.stages_to_run and self.executor.condition_met(SMOKE_TESTS):
-                if not _run(SMOKE_TESTS, "pipeline-config.json,*.tar.gz,*.zip"):
+                if not _run(SMOKE_TESTS, "pipeline-config.json,build_output/*.tar.gz,build_output/*.zip"):
                     raise _PipelineAbort()
 
             # #####################################################################
             # Stage: 14-aqa-tests
             # #####################################################################
             if AQA_TESTS in self.stages_to_run and self.executor.condition_met(AQA_TESTS):
-                if not _run(AQA_TESTS, "pipeline-config.json,*.tar.gz,*.zip"):
+                if not _run(AQA_TESTS, "pipeline-config.json,build_output/*.tar.gz,build_output/*.zip"):
                     raise _PipelineAbort()
 
             # #####################################################################
             # Stage: 20-reproducible-compare
             # #####################################################################
             if REPRODUCIBLE_COMPARE in self.stages_to_run and self.executor.condition_met(REPRODUCIBLE_COMPARE):
-                _run(REPRODUCIBLE_COMPARE, "pipeline-config.json,*.tar.gz,*.zip")
+                _run(REPRODUCIBLE_COMPARE, "pipeline-config.json,build_output/*.tar.gz,build_output/*.zip")
 
         except _PipelineAbort:
             pass

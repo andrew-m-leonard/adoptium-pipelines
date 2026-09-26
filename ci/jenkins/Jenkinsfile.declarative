@@ -472,7 +472,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(SBOM_SIGN)
                     pipelineHelper.executeStageWithTracking(SBOM_SIGN) {
-                        Map config = pipelineHelper.initializeStage(SBOM_SIGN, [BUILD], 'pipeline-config.json,**/*.json')
+                        Map config = pipelineHelper.initializeStage(SBOM_SIGN, [BUILD], 'pipeline-config.json,build_output/**/*.json')
 
                         int sbomExitCode = stageRunner.run(SBOM_SIGN, config)
                         if (sbomExitCode != 0) { error("SBOM Sign failed with exit code: ${sbomExitCode}") }
@@ -498,7 +498,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(DIGITAL_ARTIFACT_SIGN)
                     pipelineHelper.executeStageWithTracking(DIGITAL_ARTIFACT_SIGN) {
-                        Map config = pipelineHelper.initializeStage(DIGITAL_ARTIFACT_SIGN, [POST_BUILD_CODE_SIGN, SBOM_SIGN], 'pipeline-config.json,signed/**/*,signed-installers/**/*,signed-sbom/**/*')
+                        Map config = pipelineHelper.initializeStage(DIGITAL_ARTIFACT_SIGN, [POST_BUILD_CODE_SIGN, SBOM_SIGN], 'pipeline-config.json,build_output/**/*,signed/**/*,signed-installers/**/*,signed-sbom/**/*')
 
                         int gpgExitCode = stageRunner.run(DIGITAL_ARTIFACT_SIGN, config)
                         if (gpgExitCode != 0) { error("Digital Artifact Sign failed with exit code: ${gpgExitCode}") }
@@ -550,7 +550,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(VALIDATE_SBOM)
                     pipelineHelper.executeStageWithTracking(VALIDATE_SBOM) {
-                        Map config = pipelineHelper.initializeStage(VALIDATE_SBOM, [BUILD], 'pipeline-config.json,*sbom*.json')
+                        Map config = pipelineHelper.initializeStage(VALIDATE_SBOM, [BUILD], 'pipeline-config.json,build_output/*sbom*.json')
 
                         int sbomValExitCode = stageRunner.run(VALIDATE_SBOM, config)
                         if (sbomValExitCode != 0) { error("Validate SBOM failed with exit code: ${sbomValExitCode}") }
@@ -576,7 +576,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(SMOKE_TESTS)
                     pipelineHelper.executeStageWithTracking(SMOKE_TESTS) {
-                        Map config = pipelineHelper.initializeStage(SMOKE_TESTS, [BUILD], 'pipeline-config.json,*.tar.gz,*.zip')
+                        Map config = pipelineHelper.initializeStage(SMOKE_TESTS, [BUILD], 'pipeline-config.json,build_output/*.tar.gz,build_output/*.zip')
 
                         int smokeTestExitCode = stageRunner.run(SMOKE_TESTS, config)
                         if (smokeTestExitCode != 0) {
@@ -604,7 +604,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(REPRODUCIBLE_COMPARE)
                     pipelineHelper.executeStageWithTracking(REPRODUCIBLE_COMPARE) {
-                        Map config = pipelineHelper.initializeStage(REPRODUCIBLE_COMPARE, [BUILD], 'pipeline-config.json,*.tar.gz,*.zip')
+                        Map config = pipelineHelper.initializeStage(REPRODUCIBLE_COMPARE, [BUILD], 'pipeline-config.json,build_output/*.tar.gz,build_output/*.zip')
 
                         int comparisonExitCode = stageRunner.run(REPRODUCIBLE_COMPARE, config)
 
@@ -691,7 +691,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(PUBLISH_ARTIFACTS)
                     pipelineHelper.executeStageWithTracking(PUBLISH_ARTIFACTS) {
-                        Map config = pipelineHelper.initializeStage(PUBLISH_ARTIFACTS, [BUILD], 'pipeline-config.json,**/*.tar.gz,**/*.zip,**/*.msi,**/*.pkg,**/metadata/**/*')
+                        Map config = pipelineHelper.initializeStage(PUBLISH_ARTIFACTS, [BUILD], 'pipeline-config.json,build_output/**/*.tar.gz,build_output/**/*.zip,build_output/**/*.msi,build_output/**/*.pkg,build_output/**/metadata/**/*')
 
                         int publishExitCode = stageRunner.run(PUBLISH_ARTIFACTS, config)
                         if (publishExitCode != 0) { error("Publish Artifacts failed with exit code: ${publishExitCode}") }
