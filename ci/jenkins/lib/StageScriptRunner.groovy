@@ -311,10 +311,11 @@ private void _archiveStageOutputs(String scriptStem, String targetDir) {
 /**
  * Resolve buildOutputArtifacts for a stage from collated-stage-params.json.
  */
+@NonCPS
 private List _resolveOutputArtifacts(String scriptStem) {
     if (env.COLLATED_STAGE_OUTPUT_ARTIFACTS) {
         try {
-            Map outputMap = new JsonSlurper().parseText(env.COLLATED_STAGE_OUTPUT_ARTIFACTS)
+            Map outputMap = new groovy.json.JsonSlurper().parseText(env.COLLATED_STAGE_OUTPUT_ARTIFACTS)
             if (outputMap.containsKey(scriptStem)) {
                 return (List) outputMap[scriptStem]
             }

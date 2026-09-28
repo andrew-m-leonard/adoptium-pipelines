@@ -188,10 +188,11 @@ Map initializeStage(String stageName, List<String> prerequisites = [], String ar
 /**
  * Resolve buildInputArtifacts for a stage from collated-stage-params.json.
  */
+@NonCPS
 private List _resolveInputArtifacts(String stageName) {
     if (env.COLLATED_STAGE_INPUT_ARTIFACTS) {
         try {
-            Map inputMap = new JsonSlurper().parseText(env.COLLATED_STAGE_INPUT_ARTIFACTS)
+            Map inputMap = new groovy.json.JsonSlurper().parseText(env.COLLATED_STAGE_INPUT_ARTIFACTS)
             if (inputMap.containsKey(stageName)) {
                 return (List) inputMap[stageName]
             }
