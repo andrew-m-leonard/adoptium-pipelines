@@ -32,6 +32,7 @@
  * Environment Variables (set by StageScriptRunner.run() via withEnv, and
  * ConfigHelper.generatePipelineConfig()):
  *   INPUT_ARTIFACTS_DIR  - Directory containing archived JDK artifacts
+ *   BUILD_ARTIFACTS_PATH - Relative subfolder path for build outputs (e.g. 'build_output')
  *   BUILD_URL            - URL of the current Jenkins build
  *   RELEASE_TYPE         - NIGHTLY | WEEKLY | RELEASE
  *   SCM_REF              - Source tag/ref used for this build
@@ -66,6 +67,8 @@ int call(Map config) {
     String javaToBuild  = (env.CONFIG_JAVA_TO_BUILD ?: '').trim().toUpperCase()
     String buildUrl     = env.BUILD_URL ?: ''
     String inputDir     = env.INPUT_ARTIFACTS_DIR ?: env.WORKSPACE
+    String buildArtifactsPath = env.BUILD_ARTIFACTS_PATH
+    String artifactsDir = fileExists("${inputDir}/${buildArtifactsPath}") ? "${inputDir}/${buildArtifactsPath}" : inputDir
 
     // ── Derive JDK version number from CONFIG_JAVA_TO_BUILD (e.g. "JDK21" → "21") ──
     String jdkVersion = javaToBuild.replaceAll(/[^0-9]/, '')
@@ -93,27 +96,27 @@ int call(Map config) {
     }
     String aqaJobName = "AQA_Test_Pipeline${releaseAppendix}"
 
-    // ── Find the JDK archive in INPUT_ARTIFACTS_DIR ───────────────────────────
+    // ── Find the JDK archive in artifactsDir ───────────────────────────
     // Extension is .zip on Windows, .tar.gz everywhere else.
     String extension = (targetOs == 'windows') ? 'zip' : 'tar.gz'
     String jdkFileName = sh(
-        script: "find '${inputDir}' -maxdepth 1 -name 'OpenJDK*-jdk_*.${extension}' -printf '%f\\n' 2>/dev/null | head -1 || true",
+        script: "find '${artifactsDir}' -maxdepth 1 -name 'OpenJDK*-jdk_*.${extension}' -printf '%f\\n' 2>/dev/null | head -1 || true",
         returnStdout: true
     ).trim()
 
     if (!jdkFileName) {
-        echo "❌ 14-aqa-tests: no JDK archive (OpenJDK*-jdk_*.${extension}) found in ${inputDir}"
+        echo "❌ 14-aqa-tests: no JDK archive (OpenJDK*-jdk_*.${extension}) found in ${artifactsDir}"
         currentBuild.result = 'FAILURE'
         return 1
     }
 
     // ── Build CUSTOMIZED_SDK_URL — JDK archive + test image (if not JDK 8 temurin) ──
-    String sdkUrl = "${buildUrl}artifact/workspace/target/${jdkFileName}"
+    String sdkUrl = "${buildUrl}artifact/${buildArtifactsPath}/${jdkFileName}"
 
     boolean isJdk8Temurin = (jdkVersion == '8' && variant == 'temurin')
     if (!isJdk8Temurin) {
         String testImageName = jdkFileName.replace('-jdk_', '-testimage_')
-        sdkUrl += " ${buildUrl}artifact/workspace/target/${testImageName}"
+        sdkUrl += " ${buildUrl}artifact/${buildArtifactsPath}/${testImageName}"
     }
 
     // Append SBOM URL when CREATE_SBOM is enabled (required by the special.system reproducible test)
@@ -123,7 +126,7 @@ int call(Map config) {
         sbomName = (targetOs == 'windows')
             ? sbomName.replace('.zip',   '.json')
             : sbomName.replace('.tar.gz', '.json')
-        sdkUrl += " ${buildUrl}artifact/workspace/target/${sbomName}"
+        sdkUrl += " ${buildUrl}artifact/${buildArtifactsPath}/${sbomName}"
     }
 
     // ── Log resolved parameters ───────────────────────────────────────────────

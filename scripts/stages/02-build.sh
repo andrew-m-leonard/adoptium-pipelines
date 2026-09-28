@@ -699,7 +699,7 @@ organize_build_outputs() {
 
 	local build_repo_dir="${WORKSPACE}/temurin-build"
 	local target_dir="${build_repo_dir}/workspace/target"
-	local build_output_dir="${TARGET_DIR}/build_output"
+	local build_output_dir="${TARGET_DIR}/${BUILD_ARTIFACTS_PATH}"
 
 	if [[ ! -d "${target_dir}" ]]; then
 		log_error "Target directory not found: ${target_dir}"
@@ -735,7 +735,7 @@ organize_build_outputs() {
 
 	find "${target_dir}" -type f \( -name "buildinfo.json" -o -name "release" \) -exec cp {} "${TARGET_DIR}/" \; 2>/dev/null || true
 
-	log_info "Build outputs organized in: ${TARGET_DIR} (artifacts in build_output/)"
+	log_info "Build outputs organized in: ${TARGET_DIR} (artifacts in ${BUILD_ARTIFACTS_PATH}/)"
 }
 
 # Error handler

@@ -24,6 +24,7 @@ When adding or modifying a stage, ensure all four artefacts are present and cons
 #   CONFIG_FILE         - Path to pipeline-config.json
 #   TARGET_DIR          - Where to write output artifacts
 #   INPUT_ARTIFACTS_DIR - Where to read input artifacts from (if needed)
+#   BUILD_ARTIFACTS_PATH- Relative subfolder path for build outputs (e.g. 'build_output')
 #   BUILD_NUMBER        - Build identifier (optional, defaults to 'local')
 #
 # Optional Environment Variables
@@ -100,6 +101,13 @@ Every stage that introduces new parameters or has runtime gate conditions needs 
   "stageDisabled": false,
   "stageTimeoutMinutes": 0,
   "stageCondition": [],
+  "buildInputArtifacts": [
+    "*.tar.gz",
+    "*.zip"
+  ],
+  "buildOutputArtifacts": [
+    "**/*"
+  ],
   "description": "Parameters consumed by the NN-stem stage.",
   "parameterGroups": [
     {

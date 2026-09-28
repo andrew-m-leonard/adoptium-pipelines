@@ -75,6 +75,7 @@ String containerEnvFlags() {
         'CONFIG_FILE',
         'TARGET_DIR',
         'INPUT_ARTIFACTS_DIR',
+        'BUILD_ARTIFACTS_PATH',
         'BUILD_NUMBER',
         'BUILD_UID',
         'GROUP_UID',
@@ -169,6 +170,11 @@ String containerEnvFlags() {
 }
 
 /**
+ * Relative sub-folder path for build artifacts (archived and restored relative to this path).
+ */
+@Field final String BUILD_ARTIFACTS_PATH = 'build_output'
+
+/**
  * Resolve the TARGET_DIR for a given stage stem.
  *
  * Always derived from the current WORKSPACE so it is valid on whichever agent
@@ -237,9 +243,10 @@ int run(String scriptStem, Map config = null) {
     // so they are derived fresh from the current WORKSPACE on every invocation
     // and never leak a stale value from a prior stage into the global env.
     //
-    // TARGET_DIR    — stage output directory, always under the current WORKSPACE.
-    // CONFIG_FILE   — pipeline config written by initializeStage() to WORKSPACE root.
-    // INPUT_ARTIFACTS_DIR — artifacts copied into WORKSPACE root by initializeStage().
+    // TARGET_DIR           — stage output directory, always under the current WORKSPACE.
+    // CONFIG_FILE          — pipeline config written by initializeStage() to WORKSPACE root.
+    // INPUT_ARTIFACTS_DIR  — artifacts copied into WORKSPACE root by initializeStage().
+    // BUILD_ARTIFACTS_PATH — relative sub-folder path containing build/stage outputs.
     //
     // withEnv() is a scoped override: the values are visible to everything called
     // within the closure (including _dispatch → sh → the stage script) but revert
@@ -252,13 +259,69 @@ int run(String scriptStem, Map config = null) {
         "TARGET_DIR=${targetDir}",
         "CONFIG_FILE=${workspace}/pipeline-config.json",
         "INPUT_ARTIFACTS_DIR=${workspace}",
+        "BUILD_ARTIFACTS_PATH=${BUILD_ARTIFACTS_PATH}",
     ]) {
         int exitCode = EXIT_SUCCESS
         _withStageCredentials(scriptStem) {
             exitCode = _dispatch(found, scriptStem, config)
         }
+
+        // Archive stage outputs from TARGET_DIR to BUILD_ARTIFACTS_PATH in the artifact store (CI-specific layer)
+        if (fileExists(targetDir)) {
+            _archiveStageOutputs(scriptStem, targetDir)
+        }
+
         return exitCode
     }
+}
+
+/**
+ * Archive output artifacts from TARGET_DIR into BUILD_ARTIFACTS_PATH.
+ */
+private void _archiveStageOutputs(String scriptStem, String targetDir) {
+    List outputPatterns = _resolveOutputArtifacts(scriptStem)
+    if (!outputPatterns) {
+        return
+    }
+
+    // Determine artifacts to archive. If output was organized into TARGET_DIR/build_output, archive from TARGET_DIR.
+    // If output was placed directly into TARGET_DIR, place/archive under BUILD_ARTIFACTS_PATH.
+    String targetBuildOutputDir = "${targetDir}/${BUILD_ARTIFACTS_PATH}"
+    if (fileExists(targetBuildOutputDir)) {
+        dir(targetDir) {
+            outputPatterns.each { String pattern ->
+                String archivePath = "${BUILD_ARTIFACTS_PATH}/${pattern}".replace('//', '/')
+                archiveArtifacts artifacts: archivePath,
+                               fingerprint: true,
+                               allowEmptyArchive: true
+            }
+        }
+    } else {
+        // Move/copy files into a build_output subfolder or archive directly with target
+        dir(targetDir) {
+            outputPatterns.each { String pattern ->
+                archiveArtifacts artifacts: pattern,
+                               fingerprint: true,
+                               allowEmptyArchive: true
+            }
+        }
+    }
+}
+
+/**
+ * Resolve buildOutputArtifacts for a stage from collated-stage-params.json.
+ */
+private List _resolveOutputArtifacts(String scriptStem) {
+    if (env.COLLATED_STAGE_OUTPUT_ARTIFACTS) {
+        try {
+            Map outputMap = new JsonSlurper().parseText(env.COLLATED_STAGE_OUTPUT_ARTIFACTS)
+            if (outputMap.containsKey(scriptStem)) {
+                return (List) outputMap[scriptStem]
+            }
+        } catch (Exception ignored) {
+        }
+    }
+    return ['**/*']
 }
 
 /**

@@ -143,10 +143,10 @@ class PipelineRunner:
         pipeline_result = StageResult.SUCCESS
         failure_exit_code = 0
 
-        def _run(stage_id, artifact_filter, extra_env=None):
+        def _run(stage_id, extra_env=None):
             """Run one stage, track the worst result; return False to stop pipeline."""
             nonlocal pipeline_result, failure_exit_code
-            exit_code = self.executor.run_stage(stage_id, artifact_filter, extra_env)
+            exit_code = self.executor.run_stage(stage_id, extra_env=extra_env)
             result = StageResult.from_exit_code(exit_code)
             if result == StageResult.UNSTABLE:
                 print(f"\n⚠️  {stage_id} completed as UNSTABLE (exit code: {exit_code})")
@@ -170,35 +170,35 @@ class PipelineRunner:
             # Stage: 02-build
             # #####################################################################
             if BUILD in self.stages_to_run:
-                if not _run(BUILD, "pipeline-config.json"):
+                if not _run(BUILD):
                     raise _PipelineAbort()
 
             # #####################################################################
             # Stage: 12-validate-sbom
             # #####################################################################
             if VALIDATE_SBOM in self.stages_to_run:
-                if not _run(VALIDATE_SBOM, "pipeline-config.json,build_output/*sbom*.json"):
+                if not _run(VALIDATE_SBOM):
                     raise _PipelineAbort()
 
             # #####################################################################
             # Stage: 13-smoke-tests
             # #####################################################################
             if SMOKE_TESTS in self.stages_to_run and self.executor.condition_met(SMOKE_TESTS):
-                if not _run(SMOKE_TESTS, "pipeline-config.json,build_output/*.tar.gz,build_output/*.zip"):
+                if not _run(SMOKE_TESTS):
                     raise _PipelineAbort()
 
             # #####################################################################
             # Stage: 14-aqa-tests
             # #####################################################################
             if AQA_TESTS in self.stages_to_run and self.executor.condition_met(AQA_TESTS):
-                if not _run(AQA_TESTS, "pipeline-config.json,build_output/*.tar.gz,build_output/*.zip"):
+                if not _run(AQA_TESTS):
                     raise _PipelineAbort()
 
             # #####################################################################
             # Stage: 20-reproducible-compare
             # #####################################################################
             if REPRODUCIBLE_COMPARE in self.stages_to_run and self.executor.condition_met(REPRODUCIBLE_COMPARE):
-                _run(REPRODUCIBLE_COMPARE, "pipeline-config.json,build_output/*.tar.gz,build_output/*.zip")
+                _run(REPRODUCIBLE_COMPARE)
 
         except _PipelineAbort:
             pass

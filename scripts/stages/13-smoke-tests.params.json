@@ -5,6 +5,15 @@
   "stageCondition": [
     { "param": "RUN_TESTS", "value": true }
   ],
+  "buildInputArtifacts": [
+    "*.tar.gz",
+    "*.zip"
+  ],
+  "buildOutputArtifacts": [
+    "*.txt",
+    "test-results/**/*",
+    "smoke-test-summary.json"
+  ],
   "description": "Gate-only params.json for the smoke-tests stage. Runs only when RUN_TESTS is true.",
   "parameterGroups": [
     {

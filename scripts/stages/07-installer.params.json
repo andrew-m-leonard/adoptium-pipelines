@@ -5,6 +5,14 @@
   "stageCondition": [
     { "param": "ENABLE_INSTALLERS", "value": true }
   ],
+  "buildInputArtifacts": [
+    "**/*.tar.gz",
+    "**/*.zip",
+    "metadata/**/*"
+  ],
+  "buildOutputArtifacts": [
+    "installers/**/*"
+  ],
   "description": "Parameters consumed by the installer build stage.",
   "parameterGroups": [
     {

@@ -5,6 +5,12 @@
   "stageCondition": [
     { "param": "RUN_TESTS", "value": true }
   ],
+  "buildInputArtifacts": [
+    "*.tar.gz",
+    "*.zip",
+    "metadata/**/*"
+  ],
+  "buildOutputArtifacts": [],
   "description": "Parameters for the AQA test stage. Triggers AQA_Test_Pipeline asynchronously with the archived JDK URL. Vendor overrides may suppress, replace, or extend these via a vendor-scripts/14-aqa-tests.params.json in the config repo.",
   "parameterGroups": [
     {

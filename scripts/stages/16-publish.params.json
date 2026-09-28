@@ -5,6 +5,19 @@
   "stageCondition": [
     { "param": "PUBLISH_ARTIFACTS", "value": true }
   ],
+  "buildInputArtifacts": [
+    "**/*.tar.gz",
+    "**/*.zip",
+    "**/*.msi",
+    "**/*.pkg",
+    "**/*.sig",
+    "**/*.asc",
+    "**/*sbom*.json",
+    "metadata/**/*"
+  ],
+  "buildOutputArtifacts": [
+    "publish/**/*"
+  ],
   "description": "Parameters consumed by the publish artifacts stage.",
   "parameterGroups": [
     {

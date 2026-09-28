@@ -24,6 +24,8 @@ import json
 import shutil
 from pathlib import Path
 
+from lib.stage_env import BUILD_ARTIFACTS_PATH
+
 
 class WorkspaceManager:
     """
@@ -197,18 +199,21 @@ class WorkspaceManager:
             except Exception as e:
                 print(f"⚠️  Warning: Post-cleanup failed: {e}")
 
-    def archive_stage_outputs(self, stage_name, target_dir=None):
+    def archive_stage_outputs(self, stage_name, target_dir=None, output_patterns=None, build_artifacts_path=None):
         """
         Archive TARGET_DIR → build_artifacts/.
 
-        Local equivalent of Jenkins archiveArtifacts.  All files under
-        TARGET_DIR are merged into build_artifacts/ so they are available
-        to subsequent stages via restore_stage_inputs().
+        Local equivalent of Jenkins archiveArtifacts. Files matching output_patterns
+        under TARGET_DIR (or TARGET_DIR/build_artifacts_path) are placed into
+        build_artifacts/ under build_artifacts_path so they are available to subsequent stages.
 
         Args:
             stage_name: Human-readable stage name (for logging only)
-            target_dir: Path to the stage's TARGET_DIR.  Defaults to
+            target_dir: Path to the stage's TARGET_DIR. Defaults to
                         stage_workspace/target/ when not specified.
+            output_patterns: List of glob patterns relative to build_artifacts_path.
+                             Defaults to ["**/*"] if None.
+            build_artifacts_path: Relative path subfolder (defaults to stage_env.BUILD_ARTIFACTS_PATH).
         """
         target = Path(target_dir) if target_dir else self.stage_workspace / "target"
         if not target.exists():
@@ -230,16 +235,23 @@ class WorkspaceManager:
             print(f"ℹ️  Archive ({stage_name}): {rel} is empty — nothing to archive")
             return
 
+        rel_path = build_artifacts_path or BUILD_ARTIFACTS_PATH
+        patterns = output_patterns if output_patterns else ["**/*"]
         self.build_artifacts_dir.mkdir(parents=True, exist_ok=True)
 
+        # Check if output is in TARGET_DIR/build_artifacts_path or directly in TARGET_DIR
+        target_build_output = target / rel_path
+        source_root = target_build_output if target_build_output.exists() else target
+
         archived = 0
-        for src in target.rglob("*"):
+        for src in source_root.rglob("*"):
             if src.is_file():
-                rel = src.relative_to(target)
-                dst = self.build_artifacts_dir / rel
-                dst.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(src, dst)
-                archived += 1
+                rel = str(src.relative_to(source_root))
+                if any(self._matches_pattern(rel, src.name, pat) for pat in patterns):
+                    dst = self.build_artifacts_dir / rel_path / rel
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src, dst)
+                    archived += 1
 
         print(
             f"✅ Archive ({stage_name}): {archived} file(s) → {self.build_artifacts_dir}"
@@ -297,19 +309,22 @@ class WorkspaceManager:
                     return True
         return False
 
-    def restore_stage_inputs(self, stage_name, artifact_filter=None):
+    def restore_stage_inputs(self, stage_name, input_artifacts=None, artifact_filter=None, build_artifacts_path=None):
         """
         Copy matching files from build_artifacts/ → stage_workspace/.
 
-        Local equivalent of Jenkins copyArtifacts.  Called at the start of
+        Local equivalent of Jenkins copyArtifacts. Called at the start of
         every non-Initialize stage so the stage script finds its inputs
         (pipeline-config.json, JDK tarballs, etc.) inside WORKSPACE.
 
         Args:
             stage_name: Human-readable stage name (for logging only)
-            artifact_filter: Comma-separated list of glob patterns, e.g.
-                             'pipeline-config.json,**/*.tar.gz,**/*.zip'.
-                             If None or empty, all files are copied.
+            input_artifacts: List of glob strings relative to build_artifacts_path
+                             (e.g., ["*sbom*.json", "*.tar.gz"]). Automatically
+                             prefixed with build_artifacts_path/ and combined with
+                             pipeline-config.json.
+            artifact_filter: Direct comma-separated list of glob patterns (for override/fallback).
+            build_artifacts_path: Relative subfolder for build outputs.
         """
         if not self.build_artifacts_dir.exists():
             print(
@@ -317,9 +332,14 @@ class WorkspaceManager:
             )
             return
 
+        rel_path = build_artifacts_path or BUILD_ARTIFACTS_PATH
         # Build list of glob patterns
-        if artifact_filter:
+        if artifact_filter is not None:
             patterns = [p.strip() for p in artifact_filter.split(",") if p.strip()]
+        elif input_artifacts is not None:
+            patterns = ["pipeline-config.json"]
+            for pat in input_artifacts:
+                patterns.append(f"{rel_path}/{pat}".replace("//", "/"))
         else:
             patterns = ["**/*"]
 

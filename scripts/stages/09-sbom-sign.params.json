@@ -6,6 +6,12 @@
     { "param": "SIGN_ARTIFACTS", "value": true },
     { "param": "CREATE_SBOM",    "value": true }
   ],
+  "buildInputArtifacts": [
+    "*sbom*.json"
+  ],
+  "buildOutputArtifacts": [
+    "*sbom*.json"
+  ],
   "description": "Gate-only params.json for the SBOM sign stage. Runs only when SIGN_ARTIFACTS and CREATE_SBOM are both true.",
   "parameterGroups": [
     {

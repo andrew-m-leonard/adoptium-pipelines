@@ -5,6 +5,13 @@
   "stageCondition": [
     { "param": "SIGN_ARTIFACTS", "value": true }
   ],
+  "buildInputArtifacts": [
+    "**/*"
+  ],
+  "buildOutputArtifacts": [
+    "*.sig",
+    "*.asc"
+  ],
   "description": "Gate-only params.json for the digital-artifact-sign stage. Runs only when SIGN_ARTIFACTS is true.",
   "parameterGroups": [
     {

@@ -126,6 +126,19 @@ void loadStageConditions() {
     if (timeoutMap) {
         echo "✓ Loaded stage timeouts for ${timeoutMap.size()} stage(s): ${timeoutMap}"
     }
+
+    Map inputArtifactsMap = [:]
+    Map outputArtifactsMap = [:]
+    (collated.stages ?: []).each { Map stage ->
+        if (stage.containsKey('buildInputArtifacts')) {
+            inputArtifactsMap[stage.stageId] = stage.buildInputArtifacts
+        }
+        if (stage.containsKey('buildOutputArtifacts')) {
+            outputArtifactsMap[stage.stageId] = stage.buildOutputArtifacts
+        }
+    }
+    env.COLLATED_STAGE_INPUT_ARTIFACTS  = JsonOutput.toJson(inputArtifactsMap)
+    env.COLLATED_STAGE_OUTPUT_ARTIFACTS = JsonOutput.toJson(outputArtifactsMap)
 }
 
 /**
@@ -302,12 +315,6 @@ pipeline {
                                 error("Build failed with exit code: ${buildExitCode}")
                             }
 
-                            dir(stageRunner.resolveTargetDir(BUILD)) {
-                                archiveArtifacts artifacts: '**/*',
-                                               fingerprint: true,
-                                               allowEmptyArchive: false
-                            }
-
                             pipelineHelper.finalizeStage(BUILD)
                         }
                     }
@@ -336,7 +343,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(INTERNAL_CODE_SIGN)
                     pipelineHelper.executeStageWithTracking(INTERNAL_CODE_SIGN) {
-                        Map config = pipelineHelper.initializeStage(INTERNAL_CODE_SIGN, [BUILD], 'pipeline-config.json,workspace/target/jmods/**/*')
+                        Map config = pipelineHelper.initializeStage(INTERNAL_CODE_SIGN, [BUILD])
 
                         int signExitCode = stageRunner.run(INTERNAL_CODE_SIGN, config)
                         if (signExitCode != 0) { error("Internal Code Sign failed with exit code: ${signExitCode}") }
@@ -368,7 +375,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(ASSEMBLE_IMAGES)
                     pipelineHelper.executeStageWithTracking(ASSEMBLE_IMAGES) {
-                        Map config = pipelineHelper.initializeStage(ASSEMBLE_IMAGES, [INTERNAL_CODE_SIGN], 'pipeline-config.json,signed-jmods/**/*')
+                        Map config = pipelineHelper.initializeStage(ASSEMBLE_IMAGES, [INTERNAL_CODE_SIGN])
 
                         int assembleExitCode = stageRunner.run(ASSEMBLE_IMAGES, config)
                         if (assembleExitCode != 0) { error("Assemble Images failed with exit code: ${assembleExitCode}") }
@@ -394,7 +401,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(POST_BUILD_CODE_SIGN)
                     pipelineHelper.executeStageWithTracking(POST_BUILD_CODE_SIGN) {
-                        Map config = pipelineHelper.initializeStage(POST_BUILD_CODE_SIGN, [BUILD], 'pipeline-config.json,workspace/target/**/*.tar.gz,workspace/target/**/*.zip,workspace/target/metadata/**/*')
+                        Map config = pipelineHelper.initializeStage(POST_BUILD_CODE_SIGN, [BUILD])
 
                         int signExitCode = stageRunner.run(POST_BUILD_CODE_SIGN, config)
                         if (signExitCode != 0) { error("Post-Build Code Sign failed with exit code: ${signExitCode}") }
@@ -420,7 +427,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(BUILD_INSTALLERS)
                     pipelineHelper.executeStageWithTracking(BUILD_INSTALLERS) {
-                        Map config = pipelineHelper.initializeStage(BUILD_INSTALLERS, [BUILD], 'pipeline-config.json,**/*.tar.gz,**/*.zip,**/metadata/**/*')
+                        Map config = pipelineHelper.initializeStage(BUILD_INSTALLERS, [BUILD])
 
                         int installerExitCode = stageRunner.run(BUILD_INSTALLERS, config)
                         if (installerExitCode != 0) { error("Build Installers failed with exit code: ${installerExitCode}") }
@@ -446,7 +453,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(CODE_SIGN_INSTALLER)
                     pipelineHelper.executeStageWithTracking(CODE_SIGN_INSTALLER) {
-                        Map config = pipelineHelper.initializeStage(CODE_SIGN_INSTALLER, [BUILD_INSTALLERS], 'pipeline-config.json,installers/**/*')
+                        Map config = pipelineHelper.initializeStage(CODE_SIGN_INSTALLER, [BUILD_INSTALLERS])
 
                         int signInstExitCode = stageRunner.run(CODE_SIGN_INSTALLER, config)
                         if (signInstExitCode != 0) { error("Code Sign Installer failed with exit code: ${signInstExitCode}") }
@@ -472,7 +479,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(SBOM_SIGN)
                     pipelineHelper.executeStageWithTracking(SBOM_SIGN) {
-                        Map config = pipelineHelper.initializeStage(SBOM_SIGN, [BUILD], 'pipeline-config.json,build_output/**/*.json')
+                        Map config = pipelineHelper.initializeStage(SBOM_SIGN, [BUILD])
 
                         int sbomExitCode = stageRunner.run(SBOM_SIGN, config)
                         if (sbomExitCode != 0) { error("SBOM Sign failed with exit code: ${sbomExitCode}") }
@@ -498,7 +505,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(DIGITAL_ARTIFACT_SIGN)
                     pipelineHelper.executeStageWithTracking(DIGITAL_ARTIFACT_SIGN) {
-                        Map config = pipelineHelper.initializeStage(DIGITAL_ARTIFACT_SIGN, [POST_BUILD_CODE_SIGN, SBOM_SIGN], 'pipeline-config.json,build_output/**/*,signed/**/*,signed-installers/**/*,signed-sbom/**/*')
+                        Map config = pipelineHelper.initializeStage(DIGITAL_ARTIFACT_SIGN, [POST_BUILD_CODE_SIGN, SBOM_SIGN])
 
                         int gpgExitCode = stageRunner.run(DIGITAL_ARTIFACT_SIGN, config)
                         if (gpgExitCode != 0) { error("Digital Artifact Sign failed with exit code: ${gpgExitCode}") }
@@ -524,7 +531,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(VERIFY_SIGNING)
                     pipelineHelper.executeStageWithTracking(VERIFY_SIGNING) {
-                        Map config = pipelineHelper.initializeStage(VERIFY_SIGNING, [DIGITAL_ARTIFACT_SIGN, SBOM_SIGN, CODE_SIGN_INSTALLER, POST_BUILD_CODE_SIGN], 'pipeline-config.json,signed/**/*,*.sig,*.asc')
+                        Map config = pipelineHelper.initializeStage(VERIFY_SIGNING, [DIGITAL_ARTIFACT_SIGN, SBOM_SIGN, CODE_SIGN_INSTALLER, POST_BUILD_CODE_SIGN])
 
                         int verifyExitCode = stageRunner.run(VERIFY_SIGNING, config)
                         if (verifyExitCode != 0) { error("Verify Signing failed with exit code: ${verifyExitCode}") }
@@ -550,7 +557,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(VALIDATE_SBOM)
                     pipelineHelper.executeStageWithTracking(VALIDATE_SBOM) {
-                        Map config = pipelineHelper.initializeStage(VALIDATE_SBOM, [BUILD], 'pipeline-config.json,build_output/*sbom*.json')
+                        Map config = pipelineHelper.initializeStage(VALIDATE_SBOM, [BUILD])
 
                         int sbomValExitCode = stageRunner.run(VALIDATE_SBOM, config)
                         if (sbomValExitCode != 0) { error("Validate SBOM failed with exit code: ${sbomValExitCode}") }
@@ -576,7 +583,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(SMOKE_TESTS)
                     pipelineHelper.executeStageWithTracking(SMOKE_TESTS) {
-                        Map config = pipelineHelper.initializeStage(SMOKE_TESTS, [BUILD], 'pipeline-config.json,build_output/*.tar.gz,build_output/*.zip')
+                        Map config = pipelineHelper.initializeStage(SMOKE_TESTS, [BUILD])
 
                         int smokeTestExitCode = stageRunner.run(SMOKE_TESTS, config)
                         if (smokeTestExitCode != 0) {
@@ -604,15 +611,9 @@ pipeline {
                 script {
                     ensureLibsLoaded(REPRODUCIBLE_COMPARE)
                     pipelineHelper.executeStageWithTracking(REPRODUCIBLE_COMPARE) {
-                        Map config = pipelineHelper.initializeStage(REPRODUCIBLE_COMPARE, [BUILD], 'pipeline-config.json,build_output/*.tar.gz,build_output/*.zip')
+                        Map config = pipelineHelper.initializeStage(REPRODUCIBLE_COMPARE, [BUILD])
 
                         int comparisonExitCode = stageRunner.run(REPRODUCIBLE_COMPARE, config)
-
-                        dir(stageRunner.resolveTargetDir(REPRODUCIBLE_COMPARE)) {
-                            archiveArtifacts artifacts: '**/*',
-                                           fingerprint: true,
-                                           allowEmptyArchive: true
-                        }
 
                         if (comparisonExitCode != 0) {
                             error("Reproducible compare script failed with exit code ${comparisonExitCode}")
@@ -639,7 +640,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(AQA_TESTS)
                     pipelineHelper.executeStageWithTracking(AQA_TESTS) {
-                        Map config = pipelineHelper.initializeStage(AQA_TESTS, [SMOKE_TESTS], 'pipeline-config.json,workspace/target/**/*.tar.gz,workspace/target/metadata/**/*')
+                        Map config = pipelineHelper.initializeStage(AQA_TESTS, [SMOKE_TESTS])
 
                         int aqaExitCode = stageRunner.run(AQA_TESTS, config)
                         if (aqaExitCode != 0) { error("AQA Tests failed with exit code: ${aqaExitCode}") }
@@ -665,7 +666,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(TCK_TESTS)
                     pipelineHelper.executeStageWithTracking(TCK_TESTS) {
-                        Map config = pipelineHelper.initializeStage(TCK_TESTS, [SMOKE_TESTS], 'pipeline-config.json,workspace/target/**/*.tar.gz,workspace/target/metadata/**/*')
+                        Map config = pipelineHelper.initializeStage(TCK_TESTS, [SMOKE_TESTS])
 
                         int tckExitCode = stageRunner.run(TCK_TESTS, config)
                         if (tckExitCode != 0) { error("TCK Tests failed with exit code: ${tckExitCode}") }
@@ -691,7 +692,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(PUBLISH_ARTIFACTS)
                     pipelineHelper.executeStageWithTracking(PUBLISH_ARTIFACTS) {
-                        Map config = pipelineHelper.initializeStage(PUBLISH_ARTIFACTS, [BUILD], 'pipeline-config.json,build_output/**/*.tar.gz,build_output/**/*.zip,build_output/**/*.msi,build_output/**/*.pkg,build_output/**/metadata/**/*')
+                        Map config = pipelineHelper.initializeStage(PUBLISH_ARTIFACTS, [BUILD])
 
                         int publishExitCode = stageRunner.run(PUBLISH_ARTIFACTS, config)
                         if (publishExitCode != 0) { error("Publish Artifacts failed with exit code: ${publishExitCode}") }

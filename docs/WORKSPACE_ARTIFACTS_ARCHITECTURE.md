@@ -17,6 +17,7 @@ Every stage script receives the same five environment variables regardless of wh
 | `WORKSPACE` | Ephemeral scratch directory for this stage | Jenkins workspace root | `<pipeline_workspace>/stage_workspace/` |
 | `CONFIG_FILE` | Path to `pipeline-config.json` | `${WORKSPACE}/pipeline-config.json` | `${WORKSPACE}/pipeline-config.json` |
 | `INPUT_ARTIFACTS_DIR` | Directory containing artifacts from previous stages | `${WORKSPACE}` | `${WORKSPACE}` |
+| `BUILD_ARTIFACTS_PATH` | Relative subfolder path for build outputs | `'build_output'` | `'build_output'` |
 | `TARGET_DIR` | Directory where this stage writes its output artifacts | `${WORKSPACE}/<stage>_output/`; defaults to `${WORKSPACE}/target` | `${WORKSPACE}/<stage>_output/`; defaults to `${WORKSPACE}/target` |
 | `BUILD_NUMBER` | Build identifier | Jenkins build number | `local-<YYYYMMDD-HHMMSS>` |
 
@@ -41,11 +42,12 @@ ${WORKSPACE}/                         # Jenkins workspace root — wiped by clea
 │   ├── vendor-scripts/
 │   └── adoptium_pipeline_config.json
 ├── pipeline-config.json              # ← copyArtifacts pulls here (target: '.', i.e. WORKSPACE root)
-└── <previous stage outputs>          #   INPUT_ARTIFACTS_DIR == WORKSPACE
+└── build_output/                     # ← copyArtifacts restores buildInputArtifacts here
+    └── <previous stage outputs>      #   ${INPUT_ARTIFACTS_DIR}/${BUILD_ARTIFACTS_PATH}/
 
 # Stage outputs
-${WORKSPACE}/build_output/            # TARGET_DIR — stage writes here
-                                      # archiveArtifacts uploads to Jenkins artifact store
+${WORKSPACE}/<stage>_output/          # TARGET_DIR — stage writes outputs here (or under build_output/)
+                                      # StageScriptRunner automatically archives buildOutputArtifacts
 ```
 
 ### How artifacts flow (Jenkins)
@@ -62,15 +64,17 @@ Build stage (and every subsequent stage)
     checkout scm                             ← restore scripts/
     sparse-checkout config-repo              ← restore vendor-scripts/ + config files
     copyArtifacts(filter, target: '.')
-      ← retrieves pipeline-config.json + selected prior stage outputs into WORKSPACE root
+      ← retrieves pipeline-config.json + buildInputArtifacts under build_output/
 
   env.INPUT_ARTIFACTS_DIR = "${WORKSPACE}"
-  env.TARGET_DIR = "${WORKSPACE}/build_output"
+  env.BUILD_ARTIFACTS_PATH = "build_output"
+  env.TARGET_DIR = "${WORKSPACE}/02-build-output"
   stageRunner.run('02-build', config)
-    ← stage script reads from INPUT_ARTIFACTS_DIR (= WORKSPACE root)
-    ← stage script writes to TARGET_DIR (build_output/)
+    ← stage script reads from INPUT_ARTIFACTS_DIR/BUILD_ARTIFACTS_PATH
+    ← stage script writes to TARGET_DIR/BUILD_ARTIFACTS_PATH (or TARGET_DIR)
 
-  archiveArtifacts("${TARGET_DIR}/**/*")    ← uploads build_output/** to artifact store
+  StageScriptRunner._archiveStageOutputs()
+    ← automatically archives files matching buildOutputArtifacts to build_output/ in artifact store
 
   finalizeStage()
     ← optional cleanWs()

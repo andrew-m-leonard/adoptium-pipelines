@@ -34,7 +34,7 @@ import sys
 from pathlib import Path
 
 from lib.config_repo import load_adoptium_pipeline_config, sync_config_repo
-from lib.stage_env import build_stage_env
+from lib.stage_env import BUILD_ARTIFACTS_PATH, build_stage_env
 from lib.stage_registry import load_stage_registry
 from lib.stage_resolver import StageResolver
 from lib.workspace_manager import WorkspaceManager
@@ -71,6 +71,8 @@ class StageExecutor:
         # _stage_conditions: stageId → list of { param, value } dicts
         self._stage_disabled: dict[str, bool] = {}
         self._stage_conditions: dict[str, list[dict]] = {}
+        self._stage_input_artifacts: dict[str, list[str]] = {}
+        self._stage_output_artifacts: dict[str, list[str]] = {}
 
         # Stage param values injected into every stage environment.
         # Populated by PipelineRunner after post-Initialize collation.
@@ -85,7 +87,7 @@ class StageExecutor:
     # ------------------------------------------------------------------
 
     def load_stage_metadata(self, collated: dict) -> None:
-        """Extract stageDisabled and stageCondition maps from the collated output."""
+        """Extract stageDisabled, stageCondition, buildInputArtifacts, and buildOutputArtifacts from collated output."""
         for stage in collated.get("stages", []):
             stage_id = stage.get("stageId", "")
             if not stage_id:
@@ -94,6 +96,10 @@ class StageExecutor:
             conds = stage.get("stageCondition") or []
             if conds:
                 self._stage_conditions[stage_id] = conds
+            if "buildInputArtifacts" in stage:
+                self._stage_input_artifacts[stage_id] = stage["buildInputArtifacts"]
+            if "buildOutputArtifacts" in stage:
+                self._stage_output_artifacts[stage_id] = stage["buildOutputArtifacts"]
 
     def condition_met(self, stage_id: str) -> bool:
         """
@@ -176,7 +182,12 @@ class StageExecutor:
     # Stage execution
     # ------------------------------------------------------------------
 
-    def run_stage(self, stage_id: str, artifact_filter: str, extra_env: dict | None = None) -> int:
+    def run_stage(
+        self,
+        stage_id: str,
+        artifact_filter: str | None = None,
+        extra_env: dict | None = None,
+    ) -> int:
         """
         Execute one pipeline stage — the local equivalent of a Jenkins stage block.
 
@@ -196,13 +207,26 @@ class StageExecutor:
         print(f"STAGE: {stage_label}")
         print("=" * 80)
 
+        input_artifacts = self._stage_input_artifacts.get(stage_id)
+        output_artifacts = self._stage_output_artifacts.get(stage_id)
+
         self._workspace_mgr.cleanup_stage_workspace("pre")
-        self._workspace_mgr.restore_stage_inputs(stage_label, artifact_filter)
+        self._workspace_mgr.restore_stage_inputs(
+            stage_label,
+            input_artifacts=input_artifacts,
+            artifact_filter=artifact_filter,
+            build_artifacts_path=BUILD_ARTIFACTS_PATH,
+        )
 
         env = self._build_env(stage_id, extra_env)
         exit_code = self._get_resolver().run(stage_id, env)
 
-        self._workspace_mgr.archive_stage_outputs(stage_label, target_dir=env.get("TARGET_DIR"))
+        self._workspace_mgr.archive_stage_outputs(
+            stage_label,
+            target_dir=env.get("TARGET_DIR"),
+            output_patterns=output_artifacts,
+            build_artifacts_path=BUILD_ARTIFACTS_PATH,
+        )
         self._workspace_mgr.cleanup_stage_workspace("post")
         return exit_code
 

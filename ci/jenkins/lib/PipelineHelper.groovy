@@ -88,7 +88,8 @@ void executeStageWithTracking(String stageName, Closure body) {
  * Returns the parsed pipeline-config.json for non-Initialize stages,
  * or an empty map for the Initialize stage.
  */
-Map initializeStage(String stageName, List<String> prerequisites = [], String artifactFilter = 'pipeline-config.json') {
+Map initializeStage(String stageName, List<String> prerequisites = [], String artifactFilter = null) {
+    final String BUILD_ARTIFACTS_PATH = env.BUILD_ARTIFACTS_PATH ?: 'build_output'
     echo "=== ${stageName} ==="
 
     // Pre-cleanup: Always clean workspace for restartability
@@ -137,7 +138,18 @@ Map initializeStage(String stageName, List<String> prerequisites = [], String ar
     }
 
     // Retrieve artifacts into WORKSPACE root (skip for Initialize stage)
-    if (artifactFilter && stageName != '01-initialize') {
+    if (stageName != '01-initialize') {
+        // Resolve artifactFilter: combine pipeline-config.json with stage's buildInputArtifacts (prefixed by BUILD_ARTIFACTS_PATH)
+        String effectiveFilter = artifactFilter
+        if (!effectiveFilter) {
+            List inputArtifacts = _resolveInputArtifacts(stageName)
+            List filterParts = ['pipeline-config.json']
+            inputArtifacts.each { String pattern ->
+                filterParts << "${BUILD_ARTIFACTS_PATH}/${pattern}".replace('//', '/')
+            }
+            effectiveFilter = filterParts.join(',')
+        }
+
         // Use currentBuild.number rather than env.BUILD_NUMBER. On a
         // "Restart from Stage" Jenkins restores env vars from the prior build,
         // so env.BUILD_NUMBER holds the original build number. currentBuild.number
@@ -150,14 +162,14 @@ Map initializeStage(String stageName, List<String> prerequisites = [], String ar
             copyArtifacts(
                 projectName: env.JOB_NAME,
                 selector: specific(buildNumber),
-                filter: artifactFilter,
+                filter: effectiveFilter,
                 target: '.',
                 optional: false,
                 fingerprintArtifacts: true
             )
-            echo "✅ Successfully copied artifacts from build #${buildNumber}: ${artifactFilter}"
+            echo "✅ Successfully copied artifacts from build #${buildNumber}: ${effectiveFilter}"
         } catch (Exception e) {
-            error("Failed to copy artifacts '${artifactFilter}' from build #${buildNumber}: ${e.message}")
+            error("Failed to copy artifacts '${effectiveFilter}' from build #${buildNumber}: ${e.message}")
         }
     }
 
@@ -171,6 +183,22 @@ Map initializeStage(String stageName, List<String> prerequisites = [], String ar
     Map config = readJSON(file: env.CONFIG_FILE)
     ensureBuildDescriptionSet(config)
     return config
+}
+
+/**
+ * Resolve buildInputArtifacts for a stage from collated-stage-params.json.
+ */
+private List _resolveInputArtifacts(String stageName) {
+    if (env.COLLATED_STAGE_INPUT_ARTIFACTS) {
+        try {
+            Map inputMap = new JsonSlurper().parseText(env.COLLATED_STAGE_INPUT_ARTIFACTS)
+            if (inputMap.containsKey(stageName)) {
+                return (List) inputMap[stageName]
+            }
+        } catch (Exception ignored) {
+        }
+    }
+    return []
 }
 
 /**

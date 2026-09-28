@@ -5,6 +5,12 @@
   "stageCondition": [
     { "param": "SIGN_ARTIFACTS", "value": true }
   ],
+  "buildInputArtifacts": [
+    "jmods/**/*"
+  ],
+  "buildOutputArtifacts": [
+    "signed-jmods/**/*"
+  ],
   "description": "Parameters for the internal-code-sign stage.",
   "parameterGroups": [
     {
