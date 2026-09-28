@@ -172,7 +172,8 @@ String containerEnvFlags() {
 /**
  * Relative sub-folder path for build artifacts (archived and restored relative to this path).
  */
-@Field final String BUILD_ARTIFACTS_PATH = 'build_output'
+@groovy.transform.Field
+final String BUILD_ARTIFACTS_PATH = 'build_output'
 
 /**
  * Resolve the TARGET_DIR for a given stage stem.
