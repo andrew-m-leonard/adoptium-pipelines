@@ -134,7 +134,7 @@ int call(Map config) {
     echo "  Job              : ${aqaJobName}"
     echo "  JDK_VERSIONS     : ${jdkVersion}"
     echo "  BUILD_TYPE       : ${buildType}"
-    echo "  VARIANT          : ${variant == 'temurin' ? 'hotspot' : variant}"
+    echo "  VARIANT          : ${variant}"
     echo "  PLATFORMS        : ${archOsList}"
     echo "  ADOPTOPENJDK_BRANCH: ${aqaBranch}"
     echo "  CUSTOMIZED_SDK_URL : ${sdkUrl}"
@@ -152,7 +152,7 @@ int call(Map config) {
                 string(name: 'ADOPTOPENJDK_BRANCH',   value: aqaBranch),
                 string(name: 'JDK_VERSIONS',          value: jdkVersion),
                 string(name: 'BUILD_TYPE',            value: buildType),
-                string(name: 'VARIANT',               value: variant == 'temurin' ? 'hotspot' : variant),
+                string(name: 'VARIANT',               value: variant),
                 string(name: 'PLATFORMS',             value: archOsList),
                 string(name: 'PIPELINE_DISPLAY_NAME', value: displayName),
             ],
