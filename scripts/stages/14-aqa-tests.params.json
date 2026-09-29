@@ -8,6 +8,7 @@
   "buildInputArtifacts": [
     "*.tar.gz",
     "*.zip",
+    "*sbom*.json",
     "metadata/**/*"
   ],
   "buildOutputArtifacts": [],

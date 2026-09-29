@@ -99,13 +99,14 @@ int call(Map config) {
     // ── Find the JDK archive in artifactsDir ───────────────────────────
     // Extension is .zip on Windows, .tar.gz everywhere else.
     String extension = (targetOs == 'windows') ? 'zip' : 'tar.gz'
-    String jdkFileName = sh(
-        script: "find '${artifactsDir}' -maxdepth 1 -name 'OpenJDK*-jdk_*.${extension}' -printf '%f\\n' 2>/dev/null | head -1 || true",
+    String jdkFilePath = sh(
+        script: "find '${artifactsDir}' -name '*jdk_*.${extension}' 2>/dev/null | head -1 || true",
         returnStdout: true
     ).trim()
+    String jdkFileName = jdkFilePath ? new File(jdkFilePath).getName() : ''
 
     if (!jdkFileName) {
-        echo "❌ 14-aqa-tests: no JDK archive (OpenJDK*-jdk_*.${extension}) found in ${artifactsDir}"
+        echo "❌ 14-aqa-tests: no JDK archive (*jdk_*.${extension}) found in ${artifactsDir}"
         currentBuild.result = 'FAILURE'
         return 1
     }
