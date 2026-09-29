@@ -24,7 +24,7 @@ import json
 import shutil
 from pathlib import Path
 
-from lib.stage_env import BUILD_ARTIFACTS_PATH
+from pipeline_constants import BUILD_ARTIFACTS_PATH
 
 
 class WorkspaceManager:

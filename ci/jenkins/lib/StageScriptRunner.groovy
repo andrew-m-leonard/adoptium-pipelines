@@ -171,6 +171,7 @@ String containerEnvFlags() {
 
 /**
  * Relative sub-folder path for build artifacts (archived and restored relative to this path).
+ * Python equivalent: BUILD_ARTIFACTS_PATH in scripts/lib/pipeline_constants.py — keep in sync.
  */
 @groovy.transform.Field
 final String BUILD_ARTIFACTS_PATH = 'build_output'

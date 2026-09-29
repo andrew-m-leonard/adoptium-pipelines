@@ -34,7 +34,8 @@ import sys
 from pathlib import Path
 
 from lib.config_repo import load_adoptium_pipeline_config, sync_config_repo
-from lib.stage_env import BUILD_ARTIFACTS_PATH, build_stage_env
+from lib.stage_env import build_stage_env
+from pipeline_constants import BUILD_ARTIFACTS_PATH
 from lib.stage_registry import load_stage_registry
 from lib.stage_resolver import StageResolver
 from lib.workspace_manager import WorkspaceManager

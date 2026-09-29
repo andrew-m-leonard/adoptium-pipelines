@@ -34,6 +34,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# Add scripts/lib to the path so that shared constants (pipeline_constants.py)
+# and other utilities are importable by ci/local/lib modules.
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts" / "lib"))
+
 from lib.cli_parser import PipelineArgParser
 from lib.stage_executor import StageExecutor
 from lib.stage_params import collect_stage_params, parse_extra_args

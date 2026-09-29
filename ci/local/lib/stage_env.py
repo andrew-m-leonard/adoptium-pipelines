@@ -26,6 +26,8 @@ import os
 import stat
 from pathlib import Path
 
+from pipeline_constants import BUILD_ARTIFACTS_PATH
+
 
 def _setup_git_auth(stage_workspace: Path, env: dict) -> None:
     """
@@ -150,7 +152,7 @@ def build_stage_env(
     env["PIPELINE_ROOT"] = str(script_dir)
     env["CONFIG_FILE"] = str(stage_workspace / "pipeline-config.json")
     env["INPUT_ARTIFACTS_DIR"] = str(stage_workspace)
-    env["BUILD_ARTIFACTS_PATH"] = "build_output"
+    env["BUILD_ARTIFACTS_PATH"] = BUILD_ARTIFACTS_PATH
     env["TARGET_DIR"] = str(resolve_target_dir(stage_workspace, stage_id))
     env["BUILD_NUMBER"] = build_number
     # Fixed job-level params that stage scripts read directly
