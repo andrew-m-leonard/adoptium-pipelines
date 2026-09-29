@@ -179,14 +179,15 @@ boolean stageConditionMet(String stageId) {
         echo "[stageConditionMet] ${stageId}: no COLLATED_STAGE_CONDITIONS — running unconditionally"
         return true
     }
-    List conditions = new JsonSlurper().parseText(condJson)[stageId]
+    Map parsed = (Map) new JsonSlurper().parseText(condJson)
+    List conditions = (List) parsed.get(stageId)
     if (!conditions) {
         echo "[stageConditionMet] ${stageId}: no conditions defined — running unconditionally"
         return true
     }
     boolean result = conditions.every { Map cond ->
         // Check job params first (explicit user override), then env
-        String actual   = params[cond.param]?.toString() ?: env[cond.param] ?: ''
+        String actual   = params.get(cond.param as String)?.toString() ?: env.getProperty(cond.param as String) ?: ''
         String expected = cond.value?.toString() ?: ''
         boolean met
         if (expected.startsWith('regex:')) {
