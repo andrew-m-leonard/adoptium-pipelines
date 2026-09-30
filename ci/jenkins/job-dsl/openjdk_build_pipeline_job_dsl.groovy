@@ -241,8 +241,14 @@ pipelineJob(jobName.replaceAll(/^\//, '')) {
             description('Target CPU architecture — fixed at job-generation time')
             trim(true)
         }
+        // Honour defaultParams.RELEASE_TYPE by placing the configured default first.
+        def allReleaseTypes    = ['NIGHTLY', 'WEEKLY', 'RELEASE']
+        def releaseTypeDefault = defaultParams?.RELEASE_TYPE?.toString()?.trim()
+        def releaseTypeChoices = releaseTypeDefault && allReleaseTypes.contains(releaseTypeDefault)
+            ? ([releaseTypeDefault] + allReleaseTypes.findAll { it != releaseTypeDefault })
+            : allReleaseTypes
         choiceParam('RELEASE_TYPE',
-            ['NIGHTLY', 'WEEKLY', 'RELEASE'],
+            releaseTypeChoices,
             'Type of release build')
         stringParam {
             name('GROUP_UID')

@@ -409,8 +409,14 @@ def createLaunchJobParams = { Map dep, String version, List platforms, Map defau
         }
         choiceParam('PLATFORMS', ['all'] + platforms,
             'Select platform to build, or "all" for all available platforms')
+        // Honour defaultParams.RELEASE_TYPE by placing the configured default first.
+        def allReleaseTypes  = ['NIGHTLY', 'WEEKLY', 'RELEASE']
+        def releaseTypeDefault = defaultParams?.RELEASE_TYPE?.toString()?.trim()
+        def releaseTypeChoices = releaseTypeDefault && allReleaseTypes.contains(releaseTypeDefault)
+            ? ([releaseTypeDefault] + allReleaseTypes.findAll { it != releaseTypeDefault })
+            : allReleaseTypes
         choiceParam('RELEASE_TYPE',
-            ['NIGHTLY', 'WEEKLY', 'RELEASE'],
+            releaseTypeChoices,
             'Type of release build (NIGHTLY = default nightly, WEEKLY = EA beta, RELEASE = official)')
 
         // Collated stage parameters
