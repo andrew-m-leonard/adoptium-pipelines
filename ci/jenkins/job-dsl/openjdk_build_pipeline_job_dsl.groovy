@@ -62,6 +62,7 @@ def pipelineCommitSha       = binding.variables.get('PIPELINE_COMMIT_SHA')      
 def configRepoUrl           = binding.variables.get('CONFIG_REPO_URL')            ?: ''
 def configRepoBranch        = binding.variables.get('CONFIG_REPO_BRANCH')         ?: ''
 def configRepoCredentialsId = binding.variables.get('CONFIG_REPO_CREDENTIALS_ID') ?: ''
+def configDeploymentName    = binding.variables.get('CONFIG_DEPLOYMENT_NAME')     ?: ''
 def pipelineBaseFolder      = (binding.variables.get('PIPELINE_BASE_FOLDER') ?: '').toString().trim().replaceAll(/\/+$/, '')
 
 final int SEPARATOR_WIDTH = 80
@@ -127,7 +128,18 @@ if (!architecture || !targetOs) {
 }
 println "✓ Platform: arch=${architecture}, os=${targetOs}, variant=${variant}"
 
-def defaultParams = jenkinsConfig?.jobConfiguration?.defaultParameters
+// Resolve the jobConfiguration for this deployment.
+// CONFIG_DEPLOYMENT_NAME is baked into the launch job by the seed and forwarded here.
+// Falls back to the first deployment's jobConfiguration when absent (e.g. legacy seed runs).
+def deploymentJobConfig = {
+    List deps = jenkinsConfig.deployments ?: []
+    Map dep = configDeploymentName
+        ? deps.find { it.name == configDeploymentName }
+        : deps.find { it.jobConfiguration }
+    return dep?.jobConfiguration ?: [:]
+}()
+
+def defaultParams = deploymentJobConfig.defaultParameters ?: [:]
 
 // ============================================================================
 // STEP 3: Build collated param groups from pre-computed JSON.
@@ -340,10 +352,11 @@ pipelineJob(jobName.replaceAll(/^\//, '')) {
         buildDiscarder {
             strategy {
                 logRotator {
-                    daysToKeepStr(jenkinsConfig.jobConfiguration.logRotation.daysToKeep.toString())
-                    numToKeepStr(jenkinsConfig.jobConfiguration.logRotation.numToKeep.toString())
-                    artifactDaysToKeepStr(jenkinsConfig.jobConfiguration.logRotation.artifactDaysToKeep.toString())
-                    artifactNumToKeepStr(jenkinsConfig.jobConfiguration.logRotation.artifactNumToKeep.toString())
+                    def lr = deploymentJobConfig.logRotation ?: [:]
+                    daysToKeepStr((lr.daysToKeep ?: 30).toString())
+                    numToKeepStr((lr.numToKeep ?: 50).toString())
+                    artifactDaysToKeepStr((lr.artifactDaysToKeep ?: 7).toString())
+                    artifactNumToKeepStr((lr.artifactNumToKeep ?: 10).toString())
                 }
             }
         }

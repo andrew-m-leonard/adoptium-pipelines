@@ -67,7 +67,7 @@ repository references that apply regardless of which CI system runs the pipeline
 
 ## `jenkins_job_config.json`
 
-Jenkins-specific configuration. Contains two groups: **job-creation settings** (`jenkinsfilePath`, `pipelineTimeoutHours`, `jobConfiguration`) used by the seed job only; and **agent-selection settings** (`stageAgentLabels`) read at build runtime by `ConfigHelper.generateJenkinsConfig()` to resolve which node each stage runs on.
+Jenkins-specific configuration. Contains two groups: **job-creation settings** (`jenkinsfilePath`, `pipelineTimeoutHours`, `deployments[].jobConfiguration`) used by the seed job only; and **agent-selection settings** (`stageAgentLabels`) read at build runtime by `ConfigHelper.generateJenkinsConfig()` to resolve which node each stage runs on.
 
 > For a full annotated example and a description of how each section is consumed, see [CODE_CONFIG_SEPARATION.md §2](./CODE_CONFIG_SEPARATION.md#2-jenkins_job_configjson--jenkins-specific-job-and-agent-settings).
 
@@ -94,24 +94,32 @@ Jenkins-specific configuration. Contains two groups: **job-creation settings** (
     "16-publish":            "ci.role.worker",
     "20-reproducible-compare": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}"
   },
-  "jobConfiguration": {
-    "defaultParameters": {
-      "VARIANT": "temurin",
-      "CLEAN_WORKSPACE_AFTER_STAGE": true,
-      "CREATE_SBOM": true,
-      "RUN_TESTS": true,
-      "ENABLE_INSTALLERS": true,
-      "SIGN_ARTIFACTS": true,
-      "PUBLISH_ARTIFACTS": false,
-      "RUN_REPRODUCIBLE_COMPARE": false
-    },
-    "logRotation": {
-      "daysToKeep": 30,
-      "numToKeep": 50,
-      "artifactDaysToKeep": 7,
-      "artifactNumToKeep": 10
+  "deployments": [
+    {
+      "name": "release",
+      "folder": "release",
+      "description": "Production release pipeline",
+      "jobConfiguration": {
+        "defaultParameters": {
+          "VARIANT": "temurin",
+          "CLEAN_WORKSPACE_AFTER_STAGE": true,
+          "CREATE_SBOM": true,
+          "RUN_TESTS": true,
+          "ENABLE_INSTALLERS": true,
+          "SIGN_ARTIFACTS": true,
+          "PUBLISH_ARTIFACTS": false,
+          "RUN_REPRODUCIBLE_COMPARE": false,
+          "RELEASE_TYPE": "RELEASE"
+        },
+        "logRotation": {
+          "daysToKeep": 30,
+          "numToKeep": 50,
+          "artifactDaysToKeep": 7,
+          "artifactNumToKeep": 10
+        }
+      }
     }
-  }
+  ]
 }
 ```
 
@@ -122,13 +130,21 @@ Jenkins-specific configuration. Contains two groups: **job-creation settings** (
 | `jenkinsfilePath` | string | ✅ | Relative path within the pipeline repository to the Jenkinsfile |
 | `pipelineTimeoutHours` | integer | ☑️ default `8` | Maximum wall-clock hours a platform build pipeline run is allowed before Jenkins aborts it. Applied as a job-level `buildTimeoutWrapper` (Build Timeout plugin) by the Job DSL when the platform build job is created or regenerated. |
 | `stageAgentLabels` | object | ✅ | Map of **stage ID** → label template. Keys must match stage IDs from `scripts/stages/pipeline-stages.json` (e.g. `"02-build"`, `"13-smoke-tests"`). `{os}` and `{arch}` placeholders are resolved at build runtime to `sw.os.*` / `hw.arch.*` values. The special key `__any__` sets the fallback label for any stage not explicitly listed; also used for launch-pipeline worker stages that require `python3`; defaults to `ci.role.worker` if absent. |
-| `jobConfiguration` | object | ✅ | Jenkins job settings (seed job only) |
-| `jobConfiguration.defaultParameters` | object | ✅ | Default values for Jenkins build parameters (can be overridden at trigger time). Keys are the stage-param names defined in `scripts/stages/*.params.json`. |
-| `jobConfiguration.logRotation` | object | ✅ | Jenkins log/artifact retention policy |
-| `jobConfiguration.logRotation.daysToKeep` | integer | ✅ | Number of days to retain build logs |
-| `jobConfiguration.logRotation.numToKeep` | integer | ✅ | Maximum number of build records to retain |
-| `jobConfiguration.logRotation.artifactDaysToKeep` | integer | ✅ | Number of days to retain build artifacts |
-| `jobConfiguration.logRotation.artifactNumToKeep` | integer | ✅ | Maximum number of builds whose artifacts are retained |
+| `deployments` | array | ☑️ | List of deployment descriptors. Each deployment gets its own Jenkins folder with independent jobs, triggers, and security. When absent the seed job creates a single set of jobs directly under `pipelineBaseFolder`. |
+| `deployments[].name` | string | ✅ | Logical name for the deployment (e.g. `"release"`, `"beta"`). Used in job descriptions and trigger parameter values. |
+| `deployments[].folder` | string | ✅ | Subfolder name created under `pipelineBaseFolder` (e.g. `"release"` → `pipelineBaseFolder/release/`). |
+| `deployments[].description` | string | ☑️ | Human-readable description shown on the Jenkins folder. |
+| `deployments[].jobConfiguration` | object | ✅ | Jenkins job settings for this deployment (seed job only). Each deployment declares its own complete set — there is no shared base to inherit from. |
+| `deployments[].jobConfiguration.defaultParameters` | object | ✅ | Default values for all Jenkins build parameters created for this deployment's launch and trigger jobs. Keys are the stage-param names defined in `scripts/stages/*.params.json`. |
+| `deployments[].jobConfiguration.logRotation` | object | ✅ | Jenkins log/artifact retention policy for this deployment's jobs. |
+| `deployments[].jobConfiguration.logRotation.daysToKeep` | integer | ✅ | Number of days to retain build logs |
+| `deployments[].jobConfiguration.logRotation.numToKeep` | integer | ✅ | Maximum number of build records to retain |
+| `deployments[].jobConfiguration.logRotation.artifactDaysToKeep` | integer | ✅ | Number of days to retain build artifacts |
+| `deployments[].jobConfiguration.logRotation.artifactNumToKeep` | integer | ✅ | Maximum number of builds whose artifacts are retained |
+| `deployments[].authorization` | object | ☑️ | Jenkins folder-level security ACLs. Omit to inherit from the parent folder. |
+| `deployments[].authorization.inheritParent` | boolean | ☑️ default `true` | When `false`, disables ACL inheritance from the parent folder and applies only the listed permissions. |
+| `deployments[].authorization.permissions` | array | ☑️ | List of `{ "permission": "Job/Build", "grantee": "group-or-user" }` entries. |
+| `deployments[].triggers` | array | ☑️ | List of automated trigger descriptors for this deployment. Each entry: `{ "type": "<trigger-stem>", "cronSchedule": "<cron>" }`. See `docs/TRIGGER_ARCHITECTURE.md` for supported types. |
 
 ---
 

@@ -92,8 +92,10 @@ This is the top-level config file that glues everything together. It tells the s
 
 Contains two distinct groups of settings:
 
-- **Job-creation settings** (`jenkinsfilePath`, `pipelineTimeoutHours`, `jobConfiguration`) — used by the seed job and launch job to configure Jenkins job definitions. Not needed at build runtime.
+- **Job-creation settings** (`jenkinsfilePath`, `pipelineTimeoutHours`, `deployments[].jobConfiguration`) — used by the seed job and launch job to configure Jenkins job definitions. Not needed at build runtime.
 - **Agent-selection settings** (`stageAgentLabels`) — used at build runtime to resolve which Jenkins node each pipeline stage runs on. Keys are **stage IDs** (from `pipeline-stages.json`), not display labels. The `{os}` and `{arch}` placeholders are substituted with `sw.os.*` / `hw.arch.*` schema label tokens derived from the platform's `os` and `arch` fields. The special key `__any__` provides the fallback label used for any stage whose ID is not explicitly listed.
+
+`jobConfiguration` (containing `defaultParameters` and `logRotation`) lives inside each deployment entry — not at the top level. Each deployment declares its own complete set of defaults so that, for example, a `release` deployment can retain artifacts for 250 days while a `beta` deployment keeps only 2 builds' worth.
 
 **Example structure**:
 
@@ -120,24 +122,31 @@ Contains two distinct groups of settings:
     "16-publish":            "ci.role.worker",
     "20-reproducible-compare": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}"
   },
-  "jobConfiguration": {
-    "defaultParameters": {
-      "VARIANT": "temurin",
-      "CLEAN_WORKSPACE_AFTER_STAGE": true,
-      "CREATE_SBOM": true,
-      "RUN_TESTS": true,
-      "ENABLE_INSTALLERS": true,
-      "SIGN_ARTIFACTS": true,
-      "PUBLISH_ARTIFACTS": false,
-      "RUN_REPRODUCIBLE_COMPARE": false
-    },
-    "logRotation": {
-      "daysToKeep": 30,
-      "numToKeep": 50,
-      "artifactDaysToKeep": 7,
-      "artifactNumToKeep": 10
+  "deployments": [
+    {
+      "name": "release",
+      "folder": "release",
+      "jobConfiguration": {
+        "defaultParameters": {
+          "VARIANT": "temurin",
+          "CLEAN_WORKSPACE_AFTER_STAGE": true,
+          "CREATE_SBOM": true,
+          "RUN_TESTS": true,
+          "ENABLE_INSTALLERS": true,
+          "SIGN_ARTIFACTS": true,
+          "PUBLISH_ARTIFACTS": true,
+          "RUN_REPRODUCIBLE_COMPARE": false,
+          "RELEASE_TYPE": "RELEASE"
+        },
+        "logRotation": {
+          "daysToKeep": 30,
+          "numToKeep": 50,
+          "artifactDaysToKeep": 7,
+          "artifactNumToKeep": 10
+        }
+      }
     }
-  }
+  ]
 }
 ```
 

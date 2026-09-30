@@ -426,6 +426,11 @@ def generate_jenkins_job_config() -> Dict[str, Any]:
     as keys, matching what Jenkinsfile.declarative and load-jenkins-json-config.py
     expect.  Any stage present in the registry but absent from
     _STAGE_AGENT_LABEL_DEFAULTS receives 'ci.role.worker' as a safe default.
+
+    jobConfiguration is now per-deployment (not a top-level key).  The migration
+    tool emits a skeleton with a single "release" deployment so that the generated
+    file is immediately valid under the new schema.  Add further deployments
+    (e.g. "beta") manually after generation, each with its own jobConfiguration.
     """
     stages = load_pipeline_stages()
     stage_agent_labels: Dict[str, str] = {"__any__": "ci.role.worker"}
@@ -435,12 +440,9 @@ def generate_jenkins_job_config() -> Dict[str, Any]:
             stage_id, "ci.role.worker"
         )
 
-    config: Dict[str, Any] = {
-        "jenkinsfilePath": "ci/jenkins/Jenkinsfile.declarative",
-        "pipelineTimeoutHours": 8,
-    }
-
-    config["jobConfiguration"] = {
+    # Skeleton jobConfiguration placed inside the deployment entry.
+    # Copy and adjust per deployment before committing the generated file.
+    skeleton_job_configuration: Dict[str, Any] = {
         "defaultParameters": {
             "VARIANT": "temurin",
             "CLEAN_WORKSPACE_AFTER_STAGE": True,
@@ -450,6 +452,7 @@ def generate_jenkins_job_config() -> Dict[str, Any]:
             "SIGN_ARTIFACTS": True,
             "PUBLISH_ARTIFACTS": False,
             "RUN_REPRODUCIBLE_COMPARE": False,
+            "RELEASE_TYPE": "RELEASE",
         },
         "logRotation": {
             "daysToKeep": 30,
@@ -458,7 +461,20 @@ def generate_jenkins_job_config() -> Dict[str, Any]:
             "artifactNumToKeep": 10,
         },
     }
-    config["stageAgentLabels"] = stage_agent_labels
+
+    config: Dict[str, Any] = {
+        "jenkinsfilePath": "ci/jenkins/Jenkinsfile.declarative",
+        "pipelineTimeoutHours": 8,
+        "stageAgentLabels": stage_agent_labels,
+        "deployments": [
+            {
+                "name": "release",
+                "folder": "release",
+                "description": "Production release pipeline",
+                "jobConfiguration": skeleton_job_configuration,
+            }
+        ],
+    }
     return config
 
 

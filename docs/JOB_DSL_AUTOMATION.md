@@ -214,27 +214,36 @@ params to platform builds automatically.
 
 ### Job Parameters
 
-Default parameter values come from `jenkins_job_config.json` in the config repository:
+Default parameter values are declared per-deployment inside `jenkins_job_config.json`.
+Each deployment carries its own complete `jobConfiguration` — there is no shared base
+with per-deployment overrides; every deployment is fully self-contained.
 
 ```json
 {
-  "pipelineTimeoutHours": 8,
-  "jobConfiguration": {
-    "defaultParameters": {
-      "RUN_TESTS": false,
-      "ENABLE_INSTALLERS": true,
-      "SIGN_ARTIFACTS": false,
-      "PUBLISH_ARTIFACTS": false,
-      "RUN_REPRODUCIBLE_COMPARE": false,
-      "CLEAN_WORKSPACE_AFTER_STAGE": true
-    },
-    "logRotation": {
-      "daysToKeep": 30,
-      "numToKeep": 50,
-      "artifactDaysToKeep": 7,
-      "artifactNumToKeep": 10
+  "pipelineBaseFolder": "temurin",
+  "deployments": [
+    {
+      "name": "release",
+      "folder": "release",
+      "jobConfiguration": {
+        "defaultParameters": {
+          "RUN_TESTS": true,
+          "ENABLE_INSTALLERS": true,
+          "SIGN_ARTIFACTS": true,
+          "PUBLISH_ARTIFACTS": true,
+          "RUN_REPRODUCIBLE_COMPARE": false,
+          "CLEAN_WORKSPACE_AFTER_STAGE": true,
+          "RELEASE_TYPE": "RELEASE"
+        },
+        "logRotation": {
+          "daysToKeep": 30,
+          "numToKeep": 50,
+          "artifactDaysToKeep": 7,
+          "artifactNumToKeep": 10
+        }
+      }
     }
-  }
+  ]
 }
 ```
 
@@ -253,21 +262,44 @@ Declare deployments in `jenkins_job_config.json`:
       "name": "release",
       "folder": "release",
       "description": "Production release pipeline — restricted access",
-      "triggers": ["detect-ga-tag"],
-      "defaultParameterOverrides": {
-        "RELEASE_TYPE": "RELEASE",
-        "PUBLISH_ARTIFACTS": false
-      }
+      "jobConfiguration": {
+        "defaultParameters": {
+          "RELEASE_TYPE": "RELEASE",
+          "PUBLISH_ARTIFACTS": true,
+          "SIGN_ARTIFACTS": true,
+          "RUN_TESTS": true,
+          "CLEAN_WORKSPACE_AFTER_STAGE": true
+        },
+        "logRotation": {
+          "daysToKeep": 30,
+          "numToKeep": 50,
+          "artifactDaysToKeep": 7,
+          "artifactNumToKeep": 10
+        }
+      },
+      "triggers": ["detect-ga-tag"]
     },
     {
       "name": "beta",
       "folder": "beta",
       "description": "EA/beta and weekly HEAD builds",
-      "triggers": ["detect-build-tag-for-github-release", "weekly-head"],
-      "defaultParameterOverrides": {
-        "RELEASE_TYPE": "WEEKLY",
-        "PUBLISH_ARTIFACTS": true
-      }
+      "jobConfiguration": {
+        "defaultParameters": {
+          "RELEASE_TYPE": "WEEKLY",
+          "PUBLISH_ARTIFACTS": true,
+          "SIGN_ARTIFACTS": true,
+          "RUN_TESTS": true,
+          "RUN_REPRODUCIBLE_COMPARE": true,
+          "CLEAN_WORKSPACE_AFTER_STAGE": true
+        },
+        "logRotation": {
+          "daysToKeep": 14,
+          "numToKeep": 30,
+          "artifactDaysToKeep": 7,
+          "artifactNumToKeep": 5
+        }
+      },
+      "triggers": ["detect-build-tag-for-github-release", "weekly-head"]
     }
   ]
 }
@@ -291,9 +323,9 @@ Jenkins root
             └── Trigger_weekly-head                          — weekly cron
 ```
 
-`defaultParameterOverrides` are merged on top of `jobConfiguration.defaultParameters`
-for all launch jobs and trigger jobs in that deployment. The base defaults apply
-to all deployments unless overridden.
+Each deployment owns its full `jobConfiguration` — default parameters and log
+rotation are set independently per deployment, so `release` and `beta` can have
+different retention policies, publish flags, and release types without any merging.
 
 Apply Jenkins folder-level security to `temurin/release/` after the first seed
 run to restrict access to the release deployment.

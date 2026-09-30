@@ -29,9 +29,8 @@ limitations under the License.
  *   CONFIG_REPO_URL          — vendor config repo URL
  *   CONFIG_REPO_BRANCH       — vendor config repo branch
  *   CONFIG_REPO_CREDENTIALS_ID — Jenkins credential ID for config repo (optional)
- *   DEFAULT_PARAMETERS_JSON  — JSON object of merged default parameters for this deployment
- *                              (base jobConfiguration.defaultParameters merged with
- *                               deployment.defaultParameterOverrides)
+ *   DEFAULT_PARAMETERS_JSON  — JSON object of default parameters for this deployment
+ *                              (deployment.jobConfiguration.defaultParameters, baked in at seed time)
  *
  * Type-specific dedup policies (all Jenkins API logic lives here, not in scripts):
  *

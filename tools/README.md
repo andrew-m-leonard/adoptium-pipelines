@@ -77,24 +77,32 @@ python3 tools/migrate-groovy-pipeline-configs.py \
 {
   "jenkinsfilePath": "ci/jenkins/Jenkinsfile.declarative",
   "pipelineTimeoutHours": 8,
-  "jobConfiguration": {
-    "defaultParameters": {
-      "VARIANT": "temurin",
-      "CLEAN_WORKSPACE_AFTER_STAGE": true,
-      "RUN_TESTS": true,
-      "ENABLE_INSTALLERS": true,
-      "SIGN_ARTIFACTS": true,
-      "PUBLISH_ARTIFACTS": false,
-      "RUN_REPRODUCIBLE_COMPARE": false
-    },
-    "logRotation": {
-      "daysToKeep": 30,
-      "numToKeep": 50,
-      "artifactDaysToKeep": 7,
-      "artifactNumToKeep": 10
+  "stageAgentLabels": { "...": "..." },
+  "deployments": [
+    {
+      "name": "release",
+      "folder": "release",
+      "description": "Production release pipeline",
+      "jobConfiguration": {
+        "defaultParameters": {
+          "VARIANT": "temurin",
+          "CLEAN_WORKSPACE_AFTER_STAGE": true,
+          "RUN_TESTS": true,
+          "ENABLE_INSTALLERS": true,
+          "SIGN_ARTIFACTS": true,
+          "PUBLISH_ARTIFACTS": false,
+          "RUN_REPRODUCIBLE_COMPARE": false,
+          "RELEASE_TYPE": "RELEASE"
+        },
+        "logRotation": {
+          "daysToKeep": 30,
+          "numToKeep": 50,
+          "artifactDaysToKeep": 7,
+          "artifactNumToKeep": 10
+        }
+      }
     }
-  },
-  "stageAgentLabels": { "...": "..." }
+  ]
 }
 ```
 

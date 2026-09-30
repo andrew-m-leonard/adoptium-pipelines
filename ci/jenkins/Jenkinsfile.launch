@@ -190,6 +190,7 @@ List buildForwardedParams(List orderedGroups, Map platformCfg) {
     fwd << string(name: 'CONFIG_REPO_URL',             value: params.CONFIG_REPO_URL             ?: '')
     fwd << string(name: 'CONFIG_REPO_BRANCH',          value: params.CONFIG_REPO_BRANCH          ?: '')
     fwd << string(name: 'CONFIG_REPO_CREDENTIALS_ID',  value: params.CONFIG_REPO_CREDENTIALS_ID  ?: '')
+    fwd << string(name: 'CONFIG_DEPLOYMENT_NAME',      value: params.CONFIG_DEPLOYMENT_NAME      ?: '')
     return fwd
 }
 
@@ -363,7 +364,8 @@ pipeline {
                                     PIPELINE_COMMIT_SHA:         env.GIT_COMMIT,
                                     CONFIG_REPO_URL:             params.CONFIG_REPO_URL,
                                     CONFIG_REPO_BRANCH:          params.CONFIG_REPO_BRANCH,
-                                    CONFIG_REPO_CREDENTIALS_ID: params.CONFIG_REPO_CREDENTIALS_ID ?: '',
+                                    CONFIG_REPO_CREDENTIALS_ID:  params.CONFIG_REPO_CREDENTIALS_ID ?: '',
+                                    CONFIG_DEPLOYMENT_NAME:      params.CONFIG_DEPLOYMENT_NAME ?: '',
                                     PIPELINE_BASE_FOLDER:        env.PIPELINE_BASE_FOLDER ?: ''
                                 ]
                         )

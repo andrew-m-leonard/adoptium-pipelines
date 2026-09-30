@@ -376,13 +376,19 @@ def pipelineRepoUrl           = pipelineConfig.repository?.url ?: 'https://githu
 def pipelineRepoBranch        = pipelineConfig.repository?.branch ?: 'main'
 def pipelineRepoCredentialsId = credentialConfig.pipelineRepoCredentialsId ?: ''
 def configRepoCredentialsId   = credentialConfig.configRepoCredentialsId   ?: ''
-def baseDefaultParams         = jenkinsConfig.jobConfiguration?.defaultParameters ?: [:]
+// Validate: reject old-format configs that still carry a top-level jobConfiguration.
+// Each deployment must now declare its own jobConfiguration (defaultParameters + logRotation).
+if (jenkinsConfig.containsKey('jobConfiguration')) {
+    error('''\
+        jenkins_job_config.json uses the old schema: top-level "jobConfiguration" is no longer supported.
+        Move "defaultParameters" and "logRotation" into a "jobConfiguration" block inside each deployment entry,
+        and remove the top-level "jobConfiguration" key.  See docs/CONFIG_SCHEMA.md for the updated schema.'''.stripIndent())
+}
 
-// Helper: merge base default parameters with a deployment's defaultParameterOverrides.
+// Helper: return the defaultParameters for a deployment.
+// Each deployment owns its full parameter set — no base/override merge required.
 def mergedDefaultParams = { Map dep ->
-    Map merged = new LinkedHashMap(baseDefaultParams)
-    (dep.defaultParameterOverrides ?: [:]).each { k, v -> merged[k] = v }
-    return merged
+    return new LinkedHashMap(dep.jobConfiguration?.defaultParameters ?: [:])
 }
 
 // Helper: create the launch job parameter block (closure reused per deployment).
@@ -466,12 +472,18 @@ def createLaunchJobParams = { Map dep, String version, List platforms, Map defau
             description('Jenkins credential ID for the vendor config repo — baked in at job-generation time.')
             trim(true)
         }
+        stringParam {
+            name('CONFIG_DEPLOYMENT_NAME')
+            defaultValue(dep.name as String)
+            description('Deployment name — baked in at job-generation time. Used by platform build DSL to resolve jobConfiguration.')
+            trim(true)
+        }
     }
 }
 
 // Determine the set of deployment folder prefixes to create launch jobs under.
 // If no deployments declared, create a single set under pipelineBaseFolder directly.
-def launchDeployments = deployments ?: [[name: '(default)', folder: '', defaultParameterOverrides: [:]]]
+def launchDeployments = deployments ?: [[name: '(default)', folder: '', jobConfiguration: [:]]]
 
 println 'Creating launch orchestrator jobs:'
 launchDeployments.each { Map dep ->
@@ -533,10 +545,11 @@ launchDeployments.each { Map dep ->
                 buildDiscarder {
                     strategy {
                         logRotator {
-                            daysToKeepStr(jenkinsConfig.jobConfiguration.logRotation.daysToKeep.toString())
-                            numToKeepStr(jenkinsConfig.jobConfiguration.logRotation.numToKeep.toString())
-                            artifactDaysToKeepStr(jenkinsConfig.jobConfiguration.logRotation.artifactDaysToKeep.toString())
-                            artifactNumToKeepStr(jenkinsConfig.jobConfiguration.logRotation.artifactNumToKeep.toString())
+                            def lr = dep.jobConfiguration?.logRotation ?: [:]
+                            daysToKeepStr((lr.daysToKeep ?: 30).toString())
+                            numToKeepStr((lr.numToKeep ?: 50).toString())
+                            artifactDaysToKeepStr((lr.artifactDaysToKeep ?: 7).toString())
+                            artifactNumToKeepStr((lr.artifactNumToKeep ?: 10).toString())
                         }
                     }
                 }
@@ -670,10 +683,11 @@ if (deployments && triggerConfig.triggers) {
                     buildDiscarder {
                         strategy {
                             logRotator {
-                                daysToKeepStr(jenkinsConfig.jobConfiguration?.logRotation?.daysToKeep?.toString() ?: '30')
-                                numToKeepStr(jenkinsConfig.jobConfiguration?.logRotation?.numToKeep?.toString() ?: '50')
-                                artifactDaysToKeepStr(jenkinsConfig.jobConfiguration?.logRotation?.artifactDaysToKeep?.toString() ?: '30')
-                                artifactNumToKeepStr(jenkinsConfig.jobConfiguration?.logRotation?.artifactNumToKeep?.toString() ?: '10')
+                                def lr = dep.jobConfiguration?.logRotation ?: [:]
+                                daysToKeepStr((lr.daysToKeep ?: 30).toString())
+                                numToKeepStr((lr.numToKeep ?: 50).toString())
+                                artifactDaysToKeepStr((lr.artifactDaysToKeep ?: 7).toString())
+                                artifactNumToKeepStr((lr.artifactNumToKeep ?: 10).toString())
                             }
                         }
                     }
