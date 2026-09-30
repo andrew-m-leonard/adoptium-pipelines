@@ -182,18 +182,20 @@ main() {
 	log_section "Build Stage - Complete"
 }
 
-# Resolve the Python runner or interpreter
-resolve_python() {
-	if [[ -x "${PIPELINE_LIB}/python-runner.sh" ]]; then
-		echo "${PIPELINE_LIB}/python-runner.sh"
-	elif command -v python3 &>/dev/null; then
-		echo "python3"
-	elif command -v python &>/dev/null; then
-		echo "python"
-	else
-		log_error "No Python interpreter found (tried python-runner.sh, python3, python)"
-		exit 1
-	fi
+# Extract a named property value from an Adoptium SBOM JSON file.
+# Uses only grep/sed — no Python or jq dependency.
+# Prints the value to stdout, or an empty string if not found.
+# $1  sbom_file  - path to the SBOM JSON file
+# $2  field_name - property name to look up (e.g. "Build Workspace Directory")
+sbom_extract_field() {
+	local sbom_file="$1"
+	local field_name="$2"
+	# The SBOM properties array looks like:
+	#   {"name": "Build Workspace Directory", "value": "/some/path"}
+	# grep for the line after the matching "name" line and pull out the value.
+	grep -A1 "\"name\"[[:space:]]*:[[:space:]]*\"${field_name}\"" "${sbom_file}" \
+		| grep '"value"' \
+		| sed 's/.*"value"[[:space:]]*:[[:space:]]*"\(.*\)".*/\1/'
 }
 
 # Setup build environment
@@ -408,9 +410,9 @@ setup_reproducible_build_from_sbom() {
 		log_info "SBOM downloaded successfully"
 
 		# --- Path padding ---
-		# Extract BUILD_WORKSPACE_DIRECTORY from SBOM using Python (no jq dependency)
+		# Extract BUILD_WORKSPACE_DIRECTORY from SBOM using pure shell (no Python/jq)
 		local build_workspace_directory
-		build_workspace_directory=$($(resolve_python) "${PIPELINE_LIB}/sbom-field-extractor.py" --sbom "${sbom_file}" --field "Build Workspace Directory")
+		build_workspace_directory=$(sbom_extract_field "${sbom_file}" "Build Workspace Directory")
 
 		if [[ -n "${build_workspace_directory}" && "${build_workspace_directory}" != "null" ]]; then
 			log_info "Found BUILD_WORKSPACE_DIRECTORY in SBOM: ${build_workspace_directory}"
@@ -451,7 +453,7 @@ setup_reproducible_build_from_sbom() {
 		# ISO 8601 UTC form required by --build-reproducible-date ("YYYY-MM-DDTHH:MM:SSZ").
 		if [[ "${release_type}" == "WEEKLY" ]]; then
 			local build_timestamp
-			build_timestamp=$($(resolve_python) "${PIPELINE_LIB}/sbom-field-extractor.py" --sbom "${sbom_file}" --field "Build Timestamp")
+			build_timestamp=$(sbom_extract_field "${sbom_file}" "Build Timestamp")
 
 			if [[ -n "${build_timestamp}" && "${build_timestamp}" != "null" ]]; then
 				# Convert "YYYY-MM-DD HH:MM:SS" → "YYYY-MM-DDTHH:MM:SSZ"
@@ -470,7 +472,7 @@ setup_reproducible_build_from_sbom() {
 		# commit URL, e.g.:
 		#   https://github.com/adoptium/temurin-build/commit/<sha>
 		local sbom_build_ref_url
-		sbom_build_ref_url=$($(resolve_python) "${PIPELINE_LIB}/sbom-field-extractor.py" --sbom "${sbom_file}" --field "Temurin Build Ref")
+		sbom_build_ref_url=$(sbom_extract_field "${sbom_file}" "Temurin Build Ref")
 
 		if [[ -n "${sbom_build_ref_url}" && "${sbom_build_ref_url}" != "null" ]]; then
 			log_info "Found Temurin Build Ref in SBOM: ${sbom_build_ref_url}"
@@ -652,24 +654,33 @@ extract_build_metadata() {
 
 	local jdk_version="${JDK_VERSION:-${CONFIG_JAVA_TO_BUILD:-unknown}}"
 	local release_type="${RELEASE_TYPE:-NIGHTLY}"
+	local timestamp
+	timestamp=$(date -u +%s 2>/dev/null || date +%s)
+	local timestamp_iso
+	timestamp_iso=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-	local py_bin
-	py_bin=$(resolve_python)
 	log_info "Writing build metadata with jdk_version='${jdk_version}', releaseType='${release_type}', build_number='${BUILD_NUMBER}', stage='${STAGE_NAME}'"
 
-	# Create build-metadata.json via a standalone Python script.
-	# Values are passed as CLI arguments — no shell interpolation inside Python.
-	"${py_bin}" "${PIPELINE_LIB}/build-metadata-writer.py" \
-		--output "${WORKSPACE}/build-metadata.json" \
-		--jdk-version "${jdk_version}" \
-		--release-type "${release_type}" \
-		--build-number "${BUILD_NUMBER}" \
-		--stage "${STAGE_NAME}" \
-		--workspace "${WORKSPACE}" \
-		--build-uid "${BUILD_UID:-}" \
-		--group-uid "${GROUP_UID:-}" \
-		--build-ref "${build_ref}" \
-		--build-repo-url "${build_repo_url}"
+	# Write build-metadata.json directly in shell — no Python dependency.
+	# Values are single-quoted in the JSON via printf %s with backslash escaping.
+	# shellcheck disable=SC2059
+	printf '{\n  "jdk_version": "%s",\n  "releaseType": "%s",\n  "buildNumber": "%s",\n  "buildUid": "%s",\n  "groupUid": "%s",\n  "timestamp": %s,\n  "timestampISO": "%s",\n  "stage": "%s",\n  "workspace": "%s",\n  "javaVersion": "%s",\n  "targetOS": "%s",\n  "architecture": "%s",\n  "variant": "%s",\n  "buildRef": "%s",\n  "buildRepoUrl": "%s"\n}\n' \
+		"${jdk_version}" \
+		"${release_type}" \
+		"${BUILD_NUMBER:-}" \
+		"${BUILD_UID:-}" \
+		"${GROUP_UID:-}" \
+		"${timestamp}" \
+		"${timestamp_iso}" \
+		"${STAGE_NAME:-}" \
+		"${WORKSPACE}" \
+		"${CONFIG_JAVA_TO_BUILD:-}" \
+		"${CONFIG_TARGET_OS:-}" \
+		"${CONFIG_ARCHITECTURE:-}" \
+		"${CONFIG_VARIANT:-}" \
+		"${build_ref}" \
+		"${build_repo_url}" \
+		> "${WORKSPACE}/build-metadata.json"
 
 	log_info "Build metadata saved to build-metadata.json"
 }
