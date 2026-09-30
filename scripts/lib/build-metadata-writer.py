@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 ################################################################################
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -72,7 +72,11 @@ class BuildMetadataWriter(object):
 
     def __init__(self, args):
         self._output = args.output
-        self._jdk_version = args.jdk_version or os.environ.get("JDK_VERSION", "") or os.environ.get("CONFIG_JAVA_TO_BUILD", "")
+        self._jdk_version = (
+            args.jdk_version
+            or os.environ.get("JDK_VERSION", "")
+            or os.environ.get("CONFIG_JAVA_TO_BUILD", "")
+        )
         self._release_type = args.release_type or os.environ.get("RELEASE_TYPE", "NIGHTLY")
         self._build_number = args.build_number
         self._build_uid = args.build_uid or ""

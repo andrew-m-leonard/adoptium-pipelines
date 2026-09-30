@@ -182,14 +182,16 @@ main() {
 	log_section "Build Stage - Complete"
 }
 
-# Resolve the Python interpreter (python3 preferred, falls back to python)
+# Resolve the Python runner or interpreter
 resolve_python() {
-	if command -v python3 &>/dev/null; then
+	if [[ -x "${PIPELINE_LIB}/python-runner.sh" ]]; then
+		echo "${PIPELINE_LIB}/python-runner.sh"
+	elif command -v python3 &>/dev/null; then
 		echo "python3"
 	elif command -v python &>/dev/null; then
 		echo "python"
 	else
-		log_error "No Python interpreter found (tried python3, python)"
+		log_error "No Python interpreter found (tried python-runner.sh, python3, python)"
 		exit 1
 	fi
 }
@@ -653,7 +655,6 @@ extract_build_metadata() {
 
 	local py_bin
 	py_bin=$(resolve_python)
-	log_info "Using Python interpreter: ${py_bin}"
 	log_info "Writing build metadata with jdk_version='${jdk_version}', releaseType='${release_type}', build_number='${BUILD_NUMBER}', stage='${STAGE_NAME}'"
 
 	# Create build-metadata.json via a standalone Python script.
