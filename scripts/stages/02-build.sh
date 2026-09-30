@@ -650,28 +650,49 @@ extract_build_metadata() {
 
 	local version="unknown"
 
-	# Get VERSION_STRING from build spec.gmk (most reliable source)
-	# Use find rather than a glob in [[ -f ]] — bash does not expand globs in [[ ]]
-	local spec_file
-	spec_file=$(find "${WORKSPACE}/temurin-build/workspace/build/src/build" \
-		-name "spec.gmk" 2>/dev/null | head -1)
+	# Search for spec.gmk across temurin-build/workspace/build (handles jdk8 and jdk9+ layouts)
+	local search_dir="${WORKSPACE}/temurin-build/workspace/build"
+	log_info "Searching for spec.gmk under: ${search_dir}"
+
+	local spec_file=""
+	if [[ -d "${search_dir}" ]]; then
+		spec_file=$(find "${search_dir}" -name "spec.gmk" 2>/dev/null | head -1 || true)
+	else
+		log_warn "Build directory does not exist: ${search_dir}"
+	fi
+
 	if [[ -n "${spec_file}" && -f "${spec_file}" ]]; then
-		local v
-		v=$(grep "^VERSION_STRING[ ]*:=" "${spec_file}" |
-			sed "s/^VERSION_STRING[ ]*:=[ ]*//" | tr -d '[:space:]')
+		log_info "Found spec.gmk at: ${spec_file}"
+
+		# Check for VERSION_STRING (JDK 9+) or COOKED_JDK_VERSION / JDK_VERSION / FULL_VERSION (JDK 8)
+		local v=""
+		v=$(grep "^VERSION_STRING[ ]*:=" "${spec_file}" 2>/dev/null |
+			sed "s/^VERSION_STRING[ ]*:=[ ]*//" | tr -d '[:space:]' || true)
+
+		if [[ -z "${v}" ]]; then
+			log_info "VERSION_STRING not found in spec.gmk, checking JDK8 version variables"
+			v=$(grep "^JDK_VERSION[ ]*:=" "${spec_file}" 2>/dev/null |
+				sed "s/^JDK_VERSION[ ]*:=[ ]*//" | tr -d '[:space:]' || true)
+		fi
+
 		if [[ -n "${v}" ]]; then
 			version="jdk-${v}"
-			log_info "Build version: ${version}"
+			log_info "Build version resolved: ${version}"
 		else
-			log_warn "VERSION_STRING not found in spec.gmk"
+			log_warn "No recognized version variable found in spec.gmk"
 		fi
 	else
-		log_warn "spec.gmk not found under ${WORKSPACE}/temurin-build/workspace/build/src/build"
+		log_warn "spec.gmk not found under ${search_dir}"
 	fi
+
+	local py_bin
+	py_bin=$(resolve_python)
+	log_info "Using Python interpreter: ${py_bin}"
+	log_info "Writing build metadata with version='${version}', build_number='${BUILD_NUMBER}', stage='${STAGE_NAME}'"
 
 	# Create build-metadata.json via a standalone Python script.
 	# Values are passed as CLI arguments — no shell interpolation inside Python.
-	$(resolve_python) "${PIPELINE_LIB}/build-metadata-writer.py" \
+	"${py_bin}" "${PIPELINE_LIB}/build-metadata-writer.py" \
 		--output "${WORKSPACE}/build-metadata.json" \
 		--version "${version}" \
 		--build-number "${BUILD_NUMBER}" \
