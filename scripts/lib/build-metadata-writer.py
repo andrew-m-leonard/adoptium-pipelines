@@ -24,12 +24,13 @@ safe to call from any shell context.
 Usage:
     python build-metadata-writer.py \\
         --output /path/to/build-metadata.json \\
-        --version  jdk-21.0.12+7 \\
+        --jdk-version jdk8u \\
         --build-number 42 \\
         --stage build \\
         --workspace /workspace/build
 
 Optional arguments (fall back to empty string when absent):
+    --release-type   <type>      Release type (e.g. NIGHTLY, WEEKLY, RELEASE)
     --build-uid      <uid>
     --group-uid      <uid>
     --build-ref      <ref>       Exact temurin-build ref/commit used (after any SBOM override)
@@ -40,6 +41,7 @@ The following fields are read from environment variables (set by the pipeline):
     CONFIG_TARGET_OS
     CONFIG_ARCHITECTURE
     CONFIG_VARIANT
+    RELEASE_TYPE
 """
 
 from __future__ import print_function
@@ -70,7 +72,8 @@ class BuildMetadataWriter(object):
 
     def __init__(self, args):
         self._output = args.output
-        self._version = args.version
+        self._jdk_version = args.jdk_version or os.environ.get("JDK_VERSION", "") or os.environ.get("CONFIG_JAVA_TO_BUILD", "")
+        self._release_type = args.release_type or os.environ.get("RELEASE_TYPE", "NIGHTLY")
         self._build_number = args.build_number
         self._build_uid = args.build_uid or ""
         self._group_uid = args.group_uid or ""
@@ -82,7 +85,8 @@ class BuildMetadataWriter(object):
     def _collect(self):
         now = time.time()
         return {
-            "version": self._version,
+            "jdk_version": self._jdk_version,
+            "releaseType": self._release_type,
             "buildNumber": self._build_number,
             "buildUid": self._build_uid,
             "groupUid": self._group_uid,
@@ -125,7 +129,14 @@ def main():
         "--output", required=True, help="Destination path for build-metadata.json"
     )
     parser.add_argument(
-        "--version", required=True, help="JDK version string (e.g. jdk-21.0.12+7)"
+        "--jdk-version",
+        default="",
+        help="JDK version string from build job (e.g. jdk8u, jdk-21.0.12+7)",
+    )
+    parser.add_argument(
+        "--release-type",
+        default="",
+        help="Release type (e.g. NIGHTLY, WEEKLY, RELEASE)",
     )
     parser.add_argument("--build-number", required=True, help="Build number")
     parser.add_argument("--stage", required=True, help="Stage name (e.g. build)")

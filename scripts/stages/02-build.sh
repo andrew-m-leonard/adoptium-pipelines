@@ -648,53 +648,20 @@ extract_build_metadata() {
 	local build_ref="${2:-}"
 	log_info "Extracting build metadata"
 
-	local version="unknown"
-
-	# Search for spec.gmk across temurin-build/workspace/build (handles jdk8 and jdk9+ layouts)
-	local search_dir="${WORKSPACE}/temurin-build/workspace/build"
-	log_info "Searching for spec.gmk under: ${search_dir}"
-
-	local spec_file=""
-	if [[ -d "${search_dir}" ]]; then
-		spec_file=$(find "${search_dir}" -name "spec.gmk" 2>/dev/null | head -1 || true)
-	else
-		log_warn "Build directory does not exist: ${search_dir}"
-	fi
-
-	if [[ -n "${spec_file}" && -f "${spec_file}" ]]; then
-		log_info "Found spec.gmk at: ${spec_file}"
-
-		# Check for VERSION_STRING (JDK 9+) or COOKED_JDK_VERSION / JDK_VERSION / FULL_VERSION (JDK 8)
-		local v=""
-		v=$(grep "^VERSION_STRING[ ]*:=" "${spec_file}" 2>/dev/null |
-			sed "s/^VERSION_STRING[ ]*:=[ ]*//" | tr -d '[:space:]' || true)
-
-		if [[ -z "${v}" ]]; then
-			log_info "VERSION_STRING not found in spec.gmk, checking JDK8 version variables"
-			v=$(grep "^JDK_VERSION[ ]*:=" "${spec_file}" 2>/dev/null |
-				sed "s/^JDK_VERSION[ ]*:=[ ]*//" | tr -d '[:space:]' || true)
-		fi
-
-		if [[ -n "${v}" ]]; then
-			version="jdk-${v}"
-			log_info "Build version resolved: ${version}"
-		else
-			log_warn "No recognized version variable found in spec.gmk"
-		fi
-	else
-		log_warn "spec.gmk not found under ${search_dir}"
-	fi
+	local jdk_version="${JDK_VERSION:-${CONFIG_JAVA_TO_BUILD:-unknown}}"
+	local release_type="${RELEASE_TYPE:-NIGHTLY}"
 
 	local py_bin
 	py_bin=$(resolve_python)
 	log_info "Using Python interpreter: ${py_bin}"
-	log_info "Writing build metadata with version='${version}', build_number='${BUILD_NUMBER}', stage='${STAGE_NAME}'"
+	log_info "Writing build metadata with jdk_version='${jdk_version}', releaseType='${release_type}', build_number='${BUILD_NUMBER}', stage='${STAGE_NAME}'"
 
 	# Create build-metadata.json via a standalone Python script.
 	# Values are passed as CLI arguments — no shell interpolation inside Python.
 	"${py_bin}" "${PIPELINE_LIB}/build-metadata-writer.py" \
 		--output "${WORKSPACE}/build-metadata.json" \
-		--version "${version}" \
+		--jdk-version "${jdk_version}" \
+		--release-type "${release_type}" \
 		--build-number "${BUILD_NUMBER}" \
 		--stage "${STAGE_NAME}" \
 		--workspace "${WORKSPACE}" \
@@ -709,12 +676,8 @@ extract_build_metadata() {
 # Organize build outputs into standard structure
 #
 # Build artifacts (*.tar.gz, *.zip, *.json from temurin-build/workspace/target/)
-# are written into TARGET_DIR/build_output/ so downstream stages and signing jobs
-# can reference them by a predictable subdirectory path (e.g. UPSTREAM_DIR=build_output).
-#
-# build-metadata.json and buildinfo.json stay at TARGET_DIR root because they are
-# pipeline-level metadata consumed directly by stage scripts via INPUT_ARTIFACTS_DIR,
-# not by the signing jobs.
+# and metadata files are written into TARGET_DIR/build_output/ so downstream stages
+# and archiveArtifacts can access them consistently from BUILD_ARTIFACTS_PATH.
 organize_build_outputs() {
 	log_info "Organizing build outputs"
 
@@ -730,7 +693,7 @@ organize_build_outputs() {
 	log_info "Found build outputs in: ${target_dir}"
 	mkdir -p "${build_output_dir}"
 
-	# Copy JDK artifacts (binaries + SBOM) into build_output/ subdirectory
+	# Copy JDK artifacts (binaries + SBOM + metadata JSON files) into build_output/ subdirectory
 	log_info "Searching for JDK artifacts..."
 	local artifacts_found=0
 
@@ -749,11 +712,13 @@ organize_build_outputs() {
 		log_info "Copied ${artifacts_found} artifact(s) to ${build_output_dir}"
 	fi
 
-	# Copy pipeline-level metadata files to TARGET_DIR root
+	# Copy pipeline-level metadata and temurin-build info to build_output/ so they are archived
 	if [[ -f "${WORKSPACE}/build-metadata.json" ]]; then
+		cp "${WORKSPACE}/build-metadata.json" "${build_output_dir}/"
 		cp "${WORKSPACE}/build-metadata.json" "${TARGET_DIR}/"
 	fi
 
+	find "${target_dir}" -type f \( -name "buildinfo.json" -o -name "release" \) -exec cp {} "${build_output_dir}/" \; 2>/dev/null || true
 	find "${target_dir}" -type f \( -name "buildinfo.json" -o -name "release" \) -exec cp {} "${TARGET_DIR}/" \; 2>/dev/null || true
 
 	log_info "Build outputs organized in: ${TARGET_DIR} (artifacts in ${BUILD_ARTIFACTS_PATH}/)"
