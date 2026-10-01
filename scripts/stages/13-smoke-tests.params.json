@@ -5,11 +5,11 @@
   "stageCondition": [
     { "param": "RUN_TESTS", "value": true }
   ],
-  "buildInputArtifacts": [
+  "stageInputArtifacts": [
     "*.tar.gz",
     "*.zip"
   ],
-  "buildOutputArtifacts": [
+  "stageOutputArtifacts": [
     "*.txt",
     "test-results/**/*",
     "smoke-test-summary.json"

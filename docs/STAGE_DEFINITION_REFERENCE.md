@@ -59,11 +59,11 @@ Every `scripts/stages/NN-stem.params.json` file follows this schema:
   "stageCondition": [
     { "param": "PARAM_NAME", "value": true }
   ],
-  "buildInputArtifacts": [
+  "stageInputArtifacts": [
     "*.tar.gz",
     "*.zip"
   ],
-  "buildOutputArtifacts": [
+  "stageOutputArtifacts": [
     "**/*"
   ],
   "description": "Human-readable description of this file's purpose.",
@@ -126,20 +126,22 @@ Optional wall-clock timeout in minutes for this stage.
 - `0` (or omitted) — no stage timeout is enforced; the stage is bounded only by the overall `pipelineTimeoutHours`.
 - `> 0` — `pipelineHelper.executeStageWithTracking()` wraps the stage execution in a Jenkins `timeout(time: N, unit: 'MINUTES')` block. If the stage exceeds this duration, it is aborted cleanly.
 
-#### `buildInputArtifacts` (array of strings, optional, default `[]`)
+#### `stageInputArtifacts` (array of strings, optional, default `[]`)
 
-A list of glob patterns declaring which artifacts this stage requires as inputs from the build artifact store, **relative to `BUILD_ARTIFACTS_PATH`** (e.g. `["*sbom*.json"]`, `["*.tar.gz", "*.zip"]`, `["**/*"]`).
+A list of glob patterns declaring which artifacts this stage requires as inputs from the build artifact store (e.g. `["*sbom*.json"]`, `["*.tar.gz", "*.zip"]`, `["**/*"]`).
 
-- The CI orchestration layer automatically prefixes each glob with `${BUILD_ARTIFACTS_PATH}/` (e.g. `build_output/*sbom*.json`) and always implicitly includes `pipeline-config.json` at the root.
+- `pipeline-config.json` is always implicitly included at the artifact store root regardless of this list.
 - In Jenkins, `PipelineHelper.initializeStage()` resolves these patterns from collated stage params and passes them to `copyArtifacts`.
 - In the local runner, `WorkspaceManager.restore_stage_inputs()` restores matching files from `build_artifacts/` into the stage workspace.
+- Patterns match files as they sit in the artifact store. Stages that need to read JDK binaries produced by `02-build` should use patterns like `${BUILD_OUTPUT_DIR}/*.tar.gz` so they target the `build_output/` sub-directory explicitly.
 
-#### `buildOutputArtifacts` (array of strings, optional, default `["**/*"]`)
+#### `stageOutputArtifacts` (array of strings, optional, default `["**/*"]`)
 
-A list of glob patterns declaring which output artifacts created by this stage in `${TARGET_DIR}/${BUILD_ARTIFACTS_PATH}` (or `${TARGET_DIR}`) should be archived into the build artifact store under `BUILD_ARTIFACTS_PATH`.
+A list of glob patterns declaring which output artifacts created by this stage in `${TARGET_DIR}` should be archived into the build artifact store.
 
-- In Jenkins, `StageScriptRunner._archiveStageOutputs()` automatically archives matching files after the stage script finishes.
-- In the local runner, `WorkspaceManager.archive_stage_outputs()` automatically copies matching files into `build_artifacts/${BUILD_ARTIFACTS_PATH}/`.
+- In Jenkins, `StageScriptRunner._archiveStageOutputs()` automatically archives the entire `TARGET_DIR` into the artifact store after the stage script finishes.
+- In the local runner, `WorkspaceManager.archive_stage_outputs()` automatically copies the contents of `TARGET_DIR` into `build_artifacts/`.
+- The `02-build` stage writes its JDK binaries into `${TARGET_DIR}/${BUILD_OUTPUT_DIR}` (i.e. a `build_output/` sub-directory of `TARGET_DIR`). Downstream stages that need those binaries should look for them under `${INPUT_ARTIFACTS_DIR}/${BUILD_OUTPUT_DIR}`.
 
 #### `parameterGroups` (array, optional)
 

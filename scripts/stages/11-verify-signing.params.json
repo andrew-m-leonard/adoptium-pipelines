@@ -5,12 +5,12 @@
   "stageCondition": [
     { "param": "SIGN_ARTIFACTS", "value": true }
   ],
-  "buildInputArtifacts": [
+  "stageInputArtifacts": [
     "signed/**/*",
     "*.sig",
     "*.asc"
   ],
-  "buildOutputArtifacts": [
+  "stageOutputArtifacts": [
     "verification-report.txt"
   ],
   "description": "Gate-only params.json for the verify-signing stage. Runs only when SIGN_ARTIFACTS is true."

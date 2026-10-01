@@ -5,10 +5,10 @@
   "stageCondition": [
     { "param": "SIGN_ARTIFACTS", "value": true }
   ],
-  "buildInputArtifacts": [
+  "stageInputArtifacts": [
     "**/*"
   ],
-  "buildOutputArtifacts": [
+  "stageOutputArtifacts": [
     "*.sig",
     "*.asc"
   ],

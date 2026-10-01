@@ -5,10 +5,10 @@
   "stageCondition": [
     { "param": "CREATE_SBOM", "value": true }
   ],
-  "buildInputArtifacts": [
+  "stageInputArtifacts": [
     "*sbom*.json"
   ],
-  "buildOutputArtifacts": [
+  "stageOutputArtifacts": [
     "sbom-validation.txt"
   ],
   "description": "Gate-only params.json for the validate-sbom stage. Runs only when CREATE_SBOM is true. CREATE_SBOM is defined in 09-sbom-sign.params.json."

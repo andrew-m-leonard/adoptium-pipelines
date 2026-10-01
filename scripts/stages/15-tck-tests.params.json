@@ -6,12 +6,12 @@
     { "param": "RUN_TESTS",  "value": true },
     { "param": "ENABLE_TCK", "value": true }
   ],
-  "buildInputArtifacts": [
+  "stageInputArtifacts": [
     "*.tar.gz",
     "*.zip",
     "metadata/**/*"
   ],
-  "buildOutputArtifacts": [],
+  "stageOutputArtifacts": [],
   "description": "Parameters consumed by the TCK test stage.",
   "parameterGroups": [
     {

@@ -17,7 +17,7 @@ Every stage script receives the same five environment variables regardless of wh
 | `WORKSPACE` | Ephemeral scratch directory for this stage | Jenkins workspace root | `<pipeline_workspace>/stage_workspace/` |
 | `CONFIG_FILE` | Path to `pipeline-config.json` | `${WORKSPACE}/pipeline-config.json` | `${WORKSPACE}/pipeline-config.json` |
 | `INPUT_ARTIFACTS_DIR` | Directory containing artifacts from previous stages | `${WORKSPACE}` | `${WORKSPACE}` |
-| `BUILD_ARTIFACTS_PATH` | Relative subfolder path for build outputs | `'build_output'` | `'build_output'` |
+| `BUILD_OUTPUT_DIR` | Name of the sub-directory under `TARGET_DIR` where `02-build` places JDK binaries; downstream stages read from `${INPUT_ARTIFACTS_DIR}/${BUILD_OUTPUT_DIR}` | `'build_output'` (from `stage-constants.properties`) | same |
 | `TARGET_DIR` | Directory where this stage writes its output artifacts | `${WORKSPACE}/<stage>_output/`; defaults to `${WORKSPACE}/target` | `${WORKSPACE}/<stage>_output/`; defaults to `${WORKSPACE}/target` |
 | `BUILD_NUMBER` | Build identifier | Jenkins build number | `local-<YYYYMMDD-HHMMSS>` |
 
@@ -42,12 +42,12 @@ ${WORKSPACE}/                         # Jenkins workspace root — wiped by clea
 │   ├── vendor-scripts/
 │   └── adoptium_pipeline_config.json
 ├── pipeline-config.json              # ← copyArtifacts pulls here (target: '.', i.e. WORKSPACE root)
-└── build_output/                     # ← copyArtifacts restores buildInputArtifacts here
-    └── <previous stage outputs>      #   ${INPUT_ARTIFACTS_DIR}/${BUILD_ARTIFACTS_PATH}/
+└── build_output/                     # ← copyArtifacts restores stageInputArtifacts here
+    └── <previous stage outputs>      #   ${INPUT_ARTIFACTS_DIR}/${BUILD_OUTPUT_DIR}/
 
 # Stage outputs
-${WORKSPACE}/<stage>_output/          # TARGET_DIR — stage writes outputs here (or under build_output/)
-                                      # StageScriptRunner automatically archives buildOutputArtifacts
+${WORKSPACE}/<stage>_output/          # TARGET_DIR — stage writes outputs here
+                                      # StageScriptRunner automatically archives stageOutputArtifacts
 ```
 
 ### How artifacts flow (Jenkins)
@@ -64,17 +64,18 @@ Build stage (and every subsequent stage)
     checkout scm                             ← restore scripts/
     sparse-checkout config-repo              ← restore vendor-scripts/ + config files
     copyArtifacts(filter, target: '.')
-      ← retrieves pipeline-config.json + buildInputArtifacts under build_output/
+      ← retrieves pipeline-config.json + stageInputArtifacts under build_output/
 
   env.INPUT_ARTIFACTS_DIR = "${WORKSPACE}"
-  env.BUILD_ARTIFACTS_PATH = "build_output"
+  env.BUILD_OUTPUT_DIR    = "build_output"   # injected via loadStageConstants()
   env.TARGET_DIR = "${WORKSPACE}/02-build-output"
   stageRunner.run('02-build', config)
-    ← stage script reads from INPUT_ARTIFACTS_DIR/BUILD_ARTIFACTS_PATH
-    ← stage script writes to TARGET_DIR/BUILD_ARTIFACTS_PATH (or TARGET_DIR)
+    ← stage script reads JDK binaries from INPUT_ARTIFACTS_DIR/BUILD_OUTPUT_DIR
+    ← 02-build writes binaries to TARGET_DIR/BUILD_OUTPUT_DIR
+    ← other stages write to TARGET_DIR directly
 
   StageScriptRunner._archiveStageOutputs()
-    ← automatically archives files matching buildOutputArtifacts to build_output/ in artifact store
+    ← archives entire TARGET_DIR matching stageOutputArtifacts into artifact store
 
   finalizeStage()
     ← optional cleanWs()
@@ -112,9 +113,10 @@ The local runner uses a persistent root (`pipeline_workspace`) containing three 
 │   │                                 # Wiped BEFORE every stage (pre-cleanup)
 │   │                                 # and optionally AFTER (cleanWorkspaceAfterStage)
 │   ├── pipeline-config.json          # ← restored from build_artifacts/ before each stage
-│   ├── *.tar.gz, *.zip, etc.         # ← restored from build_artifacts/ (stage inputs)
-│   └── build_output/                 # ← TARGET_DIR example (Build stage)
-│       └── <stage output files>      #   smoke_test_output/, sbom_validation_output/, etc.
+│   ├── build_output/                 # ← restored stageInputArtifacts from build_artifacts/
+│   │   └── *.tar.gz, *.zip, etc.     #   ${INPUT_ARTIFACTS_DIR}/${BUILD_OUTPUT_DIR}/
+│   └── <stage>_output/               # ← TARGET_DIR (e.g. build_output/, smoke_test_output/)
+│       └── <stage output files>
 │
 └── build_artifacts/                  # ≈ Jenkins artifact store
     │                                 # Durable — never auto-cleaned; survives --start-from-stage
@@ -143,11 +145,12 @@ Build stage (and every subsequent stage)
   env['WORKSPACE']           = stage_workspace/
   env['CONFIG_FILE']         = stage_workspace/pipeline-config.json
   env['INPUT_ARTIFACTS_DIR'] = stage_workspace/
-  env['TARGET_DIR']          = stage_workspace/build_output/   # per-stage name, e.g. build_output
+  env['BUILD_OUTPUT_DIR']    = 'build_output'   # injected from stage-constants.properties
+  env['TARGET_DIR']          = stage_workspace/build_output/   # per-stage name
 
   StageResolver.run('02-build', env)
-    ← stage script reads from INPUT_ARTIFACTS_DIR (= stage_workspace/)
-    ← stage script writes to TARGET_DIR (= stage_workspace/build_output/)
+    ← 02-build writes JDK binaries to TARGET_DIR/BUILD_OUTPUT_DIR
+    ← downstream stages read from INPUT_ARTIFACTS_DIR/BUILD_OUTPUT_DIR
 
   workspace_mgr.archive_stage_outputs('Build', target_dir=stage_workspace/build_output/)
     ← copies stage_workspace/build_output/** → build_artifacts/

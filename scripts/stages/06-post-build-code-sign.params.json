@@ -5,12 +5,12 @@
   "stageCondition": [
     { "param": "SIGN_ARTIFACTS", "value": true }
   ],
-  "buildInputArtifacts": [
+  "stageInputArtifacts": [
     "**/*.tar.gz",
     "**/*.zip",
     "metadata/**/*"
   ],
-  "buildOutputArtifacts": [
+  "stageOutputArtifacts": [
     "signed/**/*"
   ],
   "description": "Gate-only params.json for the post-build-code-sign stage. Runs only when SIGN_ARTIFACTS is true.",

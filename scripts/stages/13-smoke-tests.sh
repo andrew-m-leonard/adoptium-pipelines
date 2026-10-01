@@ -112,17 +112,18 @@ main() {
 
 # Find JDK artifact to test
 find_jdk_artifact() {
-	# Look for the main JDK image, excluding other image types
-	# JDK image pattern: *jdk_*.tar.gz or *jdk_*.zip (Windows)
+	# Look for the main JDK image under INPUT_ARTIFACTS_DIR/BUILD_OUTPUT_DIR.
+	# BUILD_OUTPUT_DIR is injected by the pipeline infrastructure from stage-constants.properties.
+	local artifacts_dir="${INPUT_ARTIFACTS_DIR}/${BUILD_OUTPUT_DIR}"
 	local artifact
-	artifact=$(find "${INPUT_ARTIFACTS_DIR}" \( -name "*jdk_*.tar.gz" -o -name "*jdk_*.zip" \) |
+	artifact=$(find "${artifacts_dir}" \( -name "*jdk_*.tar.gz" -o -name "*jdk_*.zip" \) |
 		head -n 1)
 
 	if [[ -z "${artifact}" ]]; then
-		log_error "No JDK image artifact found in ${INPUT_ARTIFACTS_DIR}"
+		log_error "No JDK image artifact found in ${artifacts_dir}"
 		log_error "Looking for pattern: *jdk_*.tar.gz or *jdk_*.zip"
 		log_error "Available artifacts:"
-		find "${INPUT_ARTIFACTS_DIR}" \( -name "*.tar.gz" -o -name "*.zip" \) -exec basename {} \; || true
+		find "${artifacts_dir}" \( -name "*.tar.gz" -o -name "*.zip" \) -exec basename {} \; || true
 		exit 1
 	fi
 

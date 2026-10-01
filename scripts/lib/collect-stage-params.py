@@ -236,20 +236,20 @@ def _validate_params_file(data: dict, source: str) -> None:
                 f"[{source}] 'stageTimeoutMinutes' must be a non-negative integer: {timeout!r}"
             )
 
-    # Validate buildInputArtifacts if present
-    if "buildInputArtifacts" in data and data["buildInputArtifacts"] is not None:
-        bia = data["buildInputArtifacts"]
+    # Validate stageInputArtifacts if present
+    if "stageInputArtifacts" in data and data["stageInputArtifacts"] is not None:
+        bia = data["stageInputArtifacts"]
         if not isinstance(bia, list) or not all(isinstance(item, str) for item in bia):
             raise ValueError(
-                f"[{source}] 'buildInputArtifacts' must be a list of strings: {bia!r}"
+                f"[{source}] 'stageInputArtifacts' must be a list of strings: {bia!r}"
             )
 
-    # Validate buildOutputArtifacts if present
-    if "buildOutputArtifacts" in data and data["buildOutputArtifacts"] is not None:
-        boa = data["buildOutputArtifacts"]
+    # Validate stageOutputArtifacts if present
+    if "stageOutputArtifacts" in data and data["stageOutputArtifacts"] is not None:
+        boa = data["stageOutputArtifacts"]
         if not isinstance(boa, list) or not all(isinstance(item, str) for item in boa):
             raise ValueError(
-                f"[{source}] 'buildOutputArtifacts' must be a list of strings: {boa!r}"
+                f"[{source}] 'stageOutputArtifacts' must be a list of strings: {boa!r}"
             )
 
 
@@ -298,15 +298,15 @@ class StageEntry:
     stages list; groups carry only parameters.
     """
 
-    __slots__ = ("stem", "disabled", "condition", "timeout", "build_input_artifacts", "build_output_artifacts", "groups")
+    __slots__ = ("stem", "disabled", "condition", "timeout", "stage_input_artifacts", "stage_output_artifacts", "groups")
 
     def __init__(self, stem: str) -> None:
         self.stem: str = stem
         self.disabled: bool = False
         self.condition: List[dict] = []
         self.timeout: int = 0
-        self.build_input_artifacts: List[str] = []
-        self.build_output_artifacts: List[str] = ["**/*"]
+        self.stage_input_artifacts: List[str] = []
+        self.stage_output_artifacts: List[str] = ["**/*"]
         # groups: ordered dict of group_name → {name, description, parameters: []}
         self.groups: Dict[str, dict] = {}
 
@@ -326,10 +326,10 @@ class StageEntry:
             self.condition = list(data["stageCondition"] or [])
         if "stageTimeoutMinutes" in data:
             self.timeout = int(data.get("stageTimeoutMinutes") or 0)
-        if "buildInputArtifacts" in data:
-            self.build_input_artifacts = list(data.get("buildInputArtifacts") or [])
-        if "buildOutputArtifacts" in data:
-            self.build_output_artifacts = list(data.get("buildOutputArtifacts") or [])
+        if "stageInputArtifacts" in data:
+            self.stage_input_artifacts = list(data.get("stageInputArtifacts") or [])
+        if "stageOutputArtifacts" in data:
+            self.stage_output_artifacts = list(data.get("stageOutputArtifacts") or [])
 
         ignore_set: Set[str] = set(data.get("ignoreDefaultParams") or [])
 
@@ -399,8 +399,8 @@ class StageEntry:
             "stageDisabled": self.disabled,
             "stageCondition": list(self.condition),
             "stageTimeoutMinutes": self.timeout,
-            "buildInputArtifacts": list(self.build_input_artifacts),
-            "buildOutputArtifacts": list(self.build_output_artifacts),
+            "stageInputArtifacts": list(self.stage_input_artifacts),
+            "stageOutputArtifacts": list(self.stage_output_artifacts),
         }
 
 

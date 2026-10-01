@@ -6,11 +6,11 @@
     { "param": "RUN_REPRODUCIBLE_COMPARE", "value": true },
     { "param": "SCM_REF", "value": "regex:.+" }
   ],
-  "buildInputArtifacts": [
+  "stageInputArtifacts": [
     "*.tar.gz",
     "*.zip"
   ],
-  "buildOutputArtifacts": [
+  "stageOutputArtifacts": [
     "comparison-report.txt",
     "reprotest.diff",
     "ReproduciblePercent"

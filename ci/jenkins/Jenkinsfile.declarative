@@ -130,11 +130,11 @@ void loadStageConditions() {
     Map inputArtifactsMap = [:]
     Map outputArtifactsMap = [:]
     (collated.stages ?: []).each { Map stage ->
-        if (stage.containsKey('buildInputArtifacts')) {
-            inputArtifactsMap[stage.stageId] = stage.buildInputArtifacts
+        if (stage.containsKey('stageInputArtifacts')) {
+            inputArtifactsMap[stage.stageId] = stage.stageInputArtifacts
         }
-        if (stage.containsKey('buildOutputArtifacts')) {
-            outputArtifactsMap[stage.stageId] = stage.buildOutputArtifacts
+        if (stage.containsKey('stageOutputArtifacts')) {
+            outputArtifactsMap[stage.stageId] = stage.stageOutputArtifacts
         }
     }
     env.COLLATED_STAGE_INPUT_ARTIFACTS  = JsonOutput.toJson(inputArtifactsMap)

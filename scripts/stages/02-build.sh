@@ -29,8 +29,8 @@
 #   BUILD_NUMBER  - Build number (optional, defaults to 'local')
 #
 # Outputs:
-#   ${TARGET_DIR}/**/*           - Built JDK artifacts
-#   stage-metadata.json          - Stage execution metadata
+#   ${TARGET_DIR}/build_output/**/*  - Built JDK artifacts (BUILD_OUTPUT_DIR subfolder)
+#   stage-metadata.json              - Stage execution metadata
 
 set -euo pipefail
 
@@ -46,6 +46,8 @@ source "${PIPELINE_LIB}/logging-utils.sh"
 source "${PIPELINE_LIB}/config-utils.sh"
 # shellcheck disable=SC1091
 source "${PIPELINE_LIB}/artifact-utils.sh"
+# shellcheck disable=SC1091
+source "${PIPELINE_LIB}/load-stage-constants.sh"
 
 # Stage configuration
 STAGE_NAME="build"
@@ -688,14 +690,14 @@ extract_build_metadata() {
 # Organize build outputs into standard structure
 #
 # Build artifacts (*.tar.gz, *.zip, *.json from temurin-build/workspace/target/)
-# and metadata files are written into TARGET_DIR/build_output/ so downstream stages
-# and archiveArtifacts can access them consistently from BUILD_ARTIFACTS_PATH.
+# and metadata files are written into TARGET_DIR/BUILD_OUTPUT_DIR so downstream stages
+# can read them from INPUT_ARTIFACTS_DIR/BUILD_OUTPUT_DIR.
 organize_build_outputs() {
 	log_info "Organizing build outputs"
 
 	local build_repo_dir="${WORKSPACE}/temurin-build"
 	local target_dir="${build_repo_dir}/workspace/target"
-	local build_output_dir="${TARGET_DIR}/${BUILD_ARTIFACTS_PATH}"
+	local build_output_dir="${TARGET_DIR}/${BUILD_OUTPUT_DIR}"
 
 	if [[ ! -d "${target_dir}" ]]; then
 		log_error "Target directory not found: ${target_dir}"
@@ -733,7 +735,7 @@ organize_build_outputs() {
 	find "${target_dir}" -type f \( -name "buildinfo.json" -o -name "release" \) -exec cp {} "${build_output_dir}/" \; 2>/dev/null || true
 	find "${target_dir}" -type f \( -name "buildinfo.json" -o -name "release" \) -exec cp {} "${TARGET_DIR}/" \; 2>/dev/null || true
 
-	log_info "Build outputs organized in: ${TARGET_DIR} (artifacts in ${BUILD_ARTIFACTS_PATH}/)"
+	log_info "Build outputs organized in: ${TARGET_DIR} (artifacts in ${BUILD_OUTPUT_DIR}/)"
 }
 
 # Error handler

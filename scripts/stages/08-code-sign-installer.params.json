@@ -6,10 +6,10 @@
     { "param": "ENABLE_INSTALLERS", "value": true },
     { "param": "SIGN_ARTIFACTS",    "value": true }
   ],
-  "buildInputArtifacts": [
+  "stageInputArtifacts": [
     "installers/**/*"
   ],
-  "buildOutputArtifacts": [
+  "stageOutputArtifacts": [
     "signed-installers/**/*"
   ],
   "description": "Gate-only params.json for the code-sign-installer stage. Runs only when both ENABLE_INSTALLERS and SIGN_ARTIFACTS are true.",

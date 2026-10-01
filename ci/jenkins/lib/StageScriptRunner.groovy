@@ -75,7 +75,7 @@ String containerEnvFlags() {
         'CONFIG_FILE',
         'TARGET_DIR',
         'INPUT_ARTIFACTS_DIR',
-        'BUILD_ARTIFACTS_PATH',
+        'BUILD_OUTPUT_DIR',
         'BUILD_NUMBER',
         'BUILD_UID',
         'GROUP_UID',
@@ -170,11 +170,43 @@ String containerEnvFlags() {
 }
 
 /**
- * Relative sub-folder path for build artifacts (archived and restored relative to this path).
- * Python equivalent: BUILD_ARTIFACTS_PATH in scripts/lib/pipeline_constants.py — keep in sync.
+ * Parse a .properties file and return a Map<String,String> of its entries.
+ *
+ * Skips blank lines and lines whose first non-whitespace character is '#'.
+ * Lines must have the form KEY=VALUE; lines without '=' are skipped.
+ * Returns an empty map if the file does not exist.
  */
-@groovy.transform.Field
-final String BUILD_ARTIFACTS_PATH = 'build_output'
+@NonCPS
+private Map<String, String> _parseProperties(String path) {
+    Map<String, String> result = [:]
+    if (!fileExists(path)) {
+        return result
+    }
+    readFile(path).split('\n').each { String line ->
+        String trimmed = line.trim()
+        if (!trimmed || trimmed.startsWith('#')) return
+        int eq = trimmed.indexOf('=')
+        if (eq < 1) return
+        String key   = trimmed.substring(0, eq).trim()
+        String value = trimmed.substring(eq + 1).trim()
+        if (key) result[key] = value
+    }
+    return result
+}
+
+/**
+ * Load merged stage constants from core + optional vendor properties files.
+ *
+ * Reads scripts/stages/stage-constants.properties (core defaults) and, when
+ * config-repo/vendor-scripts/vendor-constants.properties exists, overlays
+ * vendor values on top.  Returns a Map<String,String> of all constants.
+ */
+Map<String, String> loadStageConstants() {
+    Map<String, String> constants = _parseProperties('scripts/stages/stage-constants.properties')
+    Map<String, String> vendor    = _parseProperties('config-repo/vendor-scripts/vendor-constants.properties')
+    constants.putAll(vendor)
+    return constants
+}
 
 /**
  * Resolve the TARGET_DIR for a given stage stem.
@@ -248,27 +280,31 @@ int run(String scriptStem, Map config = null) {
     // TARGET_DIR           — stage output directory, always under the current WORKSPACE.
     // CONFIG_FILE          — pipeline config written by initializeStage() to WORKSPACE root.
     // INPUT_ARTIFACTS_DIR  — artifacts copied into WORKSPACE root by initializeStage().
-    // BUILD_ARTIFACTS_PATH — relative sub-folder path containing build/stage outputs.
+    //
+    // Stage constants (BUILD_OUTPUT_DIR etc.) are loaded from the .properties files
+    // and injected here so every script type (.sh, .py, .groovy) can read them
+    // without any per-script sourcing step.
     //
     // withEnv() is a scoped override: the values are visible to everything called
     // within the closure (including _dispatch → sh → the stage script) but revert
-    // to their previous values when the closure returns.  Any env.TARGET_DIR = …
-    // assignment in the Jenkinsfile around the call site therefore has no effect
-    // while run() is executing, and run() cannot corrupt the global env on exit.
+    // to their previous values when the closure returns.
     String targetDir = resolveTargetDir(scriptStem)
     String workspace = env.WORKSPACE
+
+    Map<String, String> stageConstants = loadStageConstants()
+    List<String> constantEnvEntries = stageConstants.collect { String k, String v -> "${k}=${v}" }
+
     withEnv([
         "TARGET_DIR=${targetDir}",
         "CONFIG_FILE=${workspace}/pipeline-config.json",
         "INPUT_ARTIFACTS_DIR=${workspace}",
-        "BUILD_ARTIFACTS_PATH=${BUILD_ARTIFACTS_PATH}",
-    ]) {
+    ] + constantEnvEntries) {
         int exitCode = EXIT_SUCCESS
         _withStageCredentials(scriptStem) {
             exitCode = _dispatch(found, scriptStem, config)
         }
 
-        // Archive stage outputs from TARGET_DIR to BUILD_ARTIFACTS_PATH in the artifact store (CI-specific layer)
+        // Archive stage outputs from TARGET_DIR into the Jenkins artifact store.
         if (fileExists(targetDir)) {
             _archiveStageOutputs(scriptStem, targetDir)
         }
@@ -278,7 +314,10 @@ int run(String scriptStem, Map config = null) {
 }
 
 /**
- * Archive output artifacts from TARGET_DIR into BUILD_ARTIFACTS_PATH.
+ * Archive output artifacts from TARGET_DIR.
+ *
+ * stageOutputArtifacts patterns from <stem>.params.json are relative to
+ * TARGET_DIR — no subfolder indirection is applied.
  */
 private void _archiveStageOutputs(String scriptStem, String targetDir) {
     List outputPatterns = _resolveOutputArtifacts(scriptStem)
@@ -286,32 +325,17 @@ private void _archiveStageOutputs(String scriptStem, String targetDir) {
         return
     }
 
-    // Determine artifacts to archive. If output was organized into TARGET_DIR/build_output, archive from TARGET_DIR.
-    // If output was placed directly into TARGET_DIR, place/archive under BUILD_ARTIFACTS_PATH.
-    String targetBuildOutputDir = "${targetDir}/${BUILD_ARTIFACTS_PATH}"
-    if (fileExists(targetBuildOutputDir)) {
-        dir(targetDir) {
-            outputPatterns.each { String pattern ->
-                String archivePath = "${BUILD_ARTIFACTS_PATH}/${pattern}".replace('//', '/')
-                archiveArtifacts artifacts: archivePath,
-                               fingerprint: true,
-                               allowEmptyArchive: true
-            }
-        }
-    } else {
-        // Move/copy files into a build_output subfolder or archive directly with target
-        dir(targetDir) {
-            outputPatterns.each { String pattern ->
-                archiveArtifacts artifacts: pattern,
-                               fingerprint: true,
-                               allowEmptyArchive: true
-            }
+    dir(targetDir) {
+        outputPatterns.each { String pattern ->
+            archiveArtifacts artifacts: pattern,
+                             fingerprint: true,
+                             allowEmptyArchive: true
         }
     }
 }
 
 /**
- * Resolve buildOutputArtifacts for a stage from collated-stage-params.json.
+ * Resolve stageOutputArtifacts for a stage from collated-stage-params.json.
  */
 @NonCPS
 private List _resolveOutputArtifacts(String scriptStem) {

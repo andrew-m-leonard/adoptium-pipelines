@@ -24,7 +24,9 @@ When adding or modifying a stage, ensure all four artefacts are present and cons
 #   CONFIG_FILE         - Path to pipeline-config.json
 #   TARGET_DIR          - Where to write output artifacts
 #   INPUT_ARTIFACTS_DIR - Where to read input artifacts from (if needed)
-#   BUILD_ARTIFACTS_PATH- Relative subfolder path for build outputs (e.g. 'build_output')
+#   BUILD_OUTPUT_DIR    - Sub-directory name where 02-build places JDK binaries.
+#                         Read from stage-constants.properties via load-stage-constants.sh.
+#                         Downstream stages: read from ${INPUT_ARTIFACTS_DIR}/${BUILD_OUTPUT_DIR}
 #   BUILD_NUMBER        - Build identifier (optional, defaults to 'local')
 #
 # Optional Environment Variables
@@ -101,11 +103,11 @@ Every stage that introduces new parameters or has runtime gate conditions needs 
   "stageDisabled": false,
   "stageTimeoutMinutes": 0,
   "stageCondition": [],
-  "buildInputArtifacts": [
+  "stageInputArtifacts": [
     "*.tar.gz",
     "*.zip"
   ],
-  "buildOutputArtifacts": [
+  "stageOutputArtifacts": [
     "**/*"
   ],
   "description": "Parameters consumed by the NN-stem stage.",

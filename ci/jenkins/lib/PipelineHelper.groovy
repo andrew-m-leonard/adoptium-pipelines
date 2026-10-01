@@ -89,7 +89,6 @@ void executeStageWithTracking(String stageName, Closure body) {
  * or an empty map for the Initialize stage.
  */
 Map initializeStage(String stageName, List<String> prerequisites = [], String artifactFilter = null) {
-    final String BUILD_ARTIFACTS_PATH = env.BUILD_ARTIFACTS_PATH ?: 'build_output'
     echo "=== ${stageName} ==="
 
     // Pre-cleanup: Always clean workspace for restartability
@@ -139,14 +138,14 @@ Map initializeStage(String stageName, List<String> prerequisites = [], String ar
 
     // Retrieve artifacts into WORKSPACE root (skip for Initialize stage)
     if (stageName != '01-initialize') {
-        // Resolve artifactFilter: combine pipeline-config.json with stage's buildInputArtifacts (prefixed by BUILD_ARTIFACTS_PATH)
+        // Resolve artifactFilter: combine pipeline-config.json with stage's stageInputArtifacts.
+        // Patterns are relative to the Jenkins artifact store root (i.e. relative to TARGET_DIR
+        // of the producing stage) — no subfolder prefix is applied.
         String effectiveFilter = artifactFilter
         if (!effectiveFilter) {
             List inputArtifacts = _resolveInputArtifacts(stageName)
             List filterParts = ['pipeline-config.json']
-            inputArtifacts.each { String pattern ->
-                filterParts << "${BUILD_ARTIFACTS_PATH}/${pattern}".replace('//', '/')
-            }
+            inputArtifacts.each { String pattern -> filterParts << pattern }
             effectiveFilter = filterParts.join(',')
         }
 
@@ -186,7 +185,7 @@ Map initializeStage(String stageName, List<String> prerequisites = [], String ar
 }
 
 /**
- * Resolve buildInputArtifacts for a stage from collated-stage-params.json.
+ * Resolve stageInputArtifacts for a stage from collated-stage-params.json.
  */
 @NonCPS
 private List _resolveInputArtifacts(String stageName) {

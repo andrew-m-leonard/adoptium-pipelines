@@ -21,12 +21,15 @@ passed to every stage script, mirroring PipelineHelper.initializeStage()
 in Jenkins.
 """
 
+import importlib
 import json
 import os
 import stat
 from pathlib import Path
 
-from pipeline_constants import BUILD_ARTIFACTS_PATH
+# load_stage_constants lives in scripts/lib, which is on sys.path (added by
+# ci/local/run-pipeline.py before any lib module is imported).
+_lsc = importlib.import_module("load_stage_constants")
 
 
 def _setup_git_auth(stage_workspace: Path, env: dict) -> None:
@@ -93,6 +96,7 @@ def build_stage_env(
     clean_workspace: bool,
     stage_param_values: dict[str, str],
     stage_id: str,
+    config_repo_root: Path | None = None,
     extra: dict | None = None,
 ) -> dict:
     """
@@ -142,6 +146,7 @@ def build_stage_env(
         clean_workspace:     Whether --clean-workspace was requested.
         stage_param_values:  Dict of PARAM_NAME → value from collated stage params.
         stage_id:            Stage stem e.g. '02-build' — used to derive TARGET_DIR.
+        config_repo_root:    Path to the checked-out config repo, or None.
         extra:               Additional env vars to merge in last (highest priority).
 
     Returns:
@@ -152,8 +157,18 @@ def build_stage_env(
     env["PIPELINE_ROOT"] = str(script_dir)
     env["CONFIG_FILE"] = str(stage_workspace / "pipeline-config.json")
     env["INPUT_ARTIFACTS_DIR"] = str(stage_workspace)
-    env["BUILD_ARTIFACTS_PATH"] = BUILD_ARTIFACTS_PATH
     env["TARGET_DIR"] = str(resolve_target_dir(stage_workspace, stage_id))
+    # Inject stage constants (BUILD_OUTPUT_DIR etc.) so stage scripts can read
+    # them as env vars without sourcing load-stage-constants.sh themselves.
+    # setdefault preserves any value already in the ambient environment.
+    _stage_constants = _lsc.load_stage_constants(script_dir, config_repo_root)
+    if "BUILD_OUTPUT_DIR" not in _stage_constants:
+        raise KeyError(
+            "BUILD_OUTPUT_DIR is not defined in stage-constants.properties — "
+            f"check that {script_dir}/scripts/stages/stage-constants.properties exists"
+        )
+    for _k, _v in _stage_constants.items():
+        env.setdefault(_k, _v)
     env["BUILD_NUMBER"] = build_number
     # Fixed job-level params that stage scripts read directly
     env["RELEASE_TYPE"] = release_type.upper()

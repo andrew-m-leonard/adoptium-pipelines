@@ -502,15 +502,15 @@ class TestStageDisabled(unittest.TestCase):
         self.assertEqual(all_params["REPRO_EXTRA_ARGS"]["default"], "")
 
     def test_build_input_and_output_artifacts_collated(self):
-        """buildInputArtifacts and buildOutputArtifacts are preserved in collated stage output."""
+        """stageInputArtifacts and stageOutputArtifacts are preserved in collated stage output."""
         with tempfile.TemporaryDirectory() as tmp:
             d = Path(tmp)
             data = {
                 "stageId": "09-sbom-sign",
                 "stageDisabled": False,
                 "stageCondition": [],
-                "buildInputArtifacts": ["*sbom*.json"],
-                "buildOutputArtifacts": ["*sbom*.json"],
+                "stageInputArtifacts": ["*sbom*.json"],
+                "stageOutputArtifacts": ["*sbom*.json"],
                 "parameterGroups": [],
             }
             (d / "09-sbom-sign.params.json").write_text(json.dumps(data))
@@ -518,8 +518,8 @@ class TestStageDisabled(unittest.TestCase):
 
         stages = _stages_for(result, "09-sbom-sign")
         self.assertEqual(len(stages), 1)
-        self.assertEqual(stages[0].get("buildInputArtifacts"), ["*sbom*.json"])
-        self.assertEqual(stages[0].get("buildOutputArtifacts"), ["*sbom*.json"])
+        self.assertEqual(stages[0].get("stageInputArtifacts"), ["*sbom*.json"])
+        self.assertEqual(stages[0].get("stageOutputArtifacts"), ["*sbom*.json"])
 
 
 # ---------------------------------------------------------------------------

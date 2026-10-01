@@ -35,7 +35,6 @@ from pathlib import Path
 
 from lib.config_repo import load_adoptium_pipeline_config, sync_config_repo
 from lib.stage_env import build_stage_env
-from pipeline_constants import BUILD_ARTIFACTS_PATH
 from lib.stage_registry import load_stage_registry
 from lib.stage_resolver import StageResolver
 from lib.workspace_manager import WorkspaceManager
@@ -88,7 +87,7 @@ class StageExecutor:
     # ------------------------------------------------------------------
 
     def load_stage_metadata(self, collated: dict) -> None:
-        """Extract stageDisabled, stageCondition, buildInputArtifacts, and buildOutputArtifacts from collated output."""
+        """Extract stageDisabled, stageCondition, stageInputArtifacts, and stageOutputArtifacts from collated output."""
         for stage in collated.get("stages", []):
             stage_id = stage.get("stageId", "")
             if not stage_id:
@@ -97,10 +96,10 @@ class StageExecutor:
             conds = stage.get("stageCondition") or []
             if conds:
                 self._stage_conditions[stage_id] = conds
-            if "buildInputArtifacts" in stage:
-                self._stage_input_artifacts[stage_id] = stage["buildInputArtifacts"]
-            if "buildOutputArtifacts" in stage:
-                self._stage_output_artifacts[stage_id] = stage["buildOutputArtifacts"]
+            if "stageInputArtifacts" in stage:
+                self._stage_input_artifacts[stage_id] = stage["stageInputArtifacts"]
+            if "stageOutputArtifacts" in stage:
+                self._stage_output_artifacts[stage_id] = stage["stageOutputArtifacts"]
 
     def condition_met(self, stage_id: str) -> bool:
         """
@@ -149,11 +148,7 @@ class StageExecutor:
     def _get_resolver(self) -> StageResolver:
         """Return a StageResolver, (re-)creating it if the config repo has been
         cloned since the last call (i.e. after stage_initialize())."""
-        config_repo_root = None
-        if self._args.config_repo_url:
-            candidate = self._workspace_mgr.pipeline_workspace / "config-repo"
-            if candidate.exists():
-                config_repo_root = candidate
+        config_repo_root = self._config_repo_root()
 
         if self._resolver is None or (
             config_repo_root is not None
@@ -164,6 +159,14 @@ class StageExecutor:
             print(f"ℹ️  StageResolver initialised (config repo: {src})")
 
         return self._resolver
+
+    def _config_repo_root(self):
+        """Return the config-repo path if it has been cloned, else None."""
+        if self._args.config_repo_url:
+            candidate = self._workspace_mgr.pipeline_workspace / "config-repo"
+            if candidate.exists():
+                return candidate
+        return None
 
     def _build_env(self, stage_id: str, extra: dict | None = None) -> dict:
         """Build the standard environment dict passed to every stage script."""
@@ -176,6 +179,7 @@ class StageExecutor:
             clean_workspace=self._args.clean_workspace,
             stage_param_values=self.stage_param_values,
             stage_id=stage_id,
+            config_repo_root=self._config_repo_root(),
             extra=extra,
         )
 
@@ -216,7 +220,6 @@ class StageExecutor:
             stage_label,
             input_artifacts=input_artifacts,
             artifact_filter=artifact_filter,
-            build_artifacts_path=BUILD_ARTIFACTS_PATH,
         )
 
         env = self._build_env(stage_id, extra_env)
@@ -226,7 +229,6 @@ class StageExecutor:
             stage_label,
             target_dir=env.get("TARGET_DIR"),
             output_patterns=output_artifacts,
-            build_artifacts_path=BUILD_ARTIFACTS_PATH,
         )
         self._workspace_mgr.cleanup_stage_workspace("post")
         return exit_code

@@ -32,7 +32,7 @@
  * Environment Variables (set by StageScriptRunner.run() via withEnv, and
  * ConfigHelper.generatePipelineConfig()):
  *   INPUT_ARTIFACTS_DIR  - Directory containing archived JDK artifacts
- *   BUILD_ARTIFACTS_PATH - Relative subfolder path for build outputs (e.g. 'build_output')
+ *   BUILD_OUTPUT_DIR     - Relative subfolder under INPUT_ARTIFACTS_DIR containing build outputs
  *   BUILD_URL            - URL of the current Jenkins build
  *   RELEASE_TYPE         - NIGHTLY | WEEKLY | RELEASE
  *   SCM_REF              - Source tag/ref used for this build
@@ -67,8 +67,11 @@ int call(Map config) {
     String javaToBuild  = (env.CONFIG_JAVA_TO_BUILD ?: '').trim().toUpperCase()
     String buildUrl     = env.BUILD_URL ?: ''
     String inputDir     = env.INPUT_ARTIFACTS_DIR ?: env.WORKSPACE
-    String buildArtifactsPath = env.BUILD_ARTIFACTS_PATH
-    String artifactsDir = fileExists("${inputDir}/${buildArtifactsPath}") ? "${inputDir}/${buildArtifactsPath}" : inputDir
+    String buildOutputDir = env.BUILD_OUTPUT_DIR
+    if (!buildOutputDir) {
+        error('BUILD_OUTPUT_DIR is not set — ensure stage-constants.properties is present and loaded')
+    }
+    String artifactsDir = "${inputDir}/${buildOutputDir}"
 
     // ── Derive JDK version number from CONFIG_JAVA_TO_BUILD (e.g. "JDK21" → "21") ──
     String jdkVersion = javaToBuild.replaceAll(/[^0-9]/, '')
@@ -112,12 +115,12 @@ int call(Map config) {
     }
 
     // ── Build CUSTOMIZED_SDK_URL — JDK archive + test image (if not JDK 8 temurin) ──
-    String sdkUrl = "${buildUrl}artifact/${buildArtifactsPath}/${jdkFileName}"
+    String sdkUrl = "${buildUrl}artifact/${buildOutputDir}/${jdkFileName}"
 
     boolean isJdk8Temurin = (jdkVersion == '8' && variant == 'temurin')
     if (!isJdk8Temurin) {
         String testImageName = jdkFileName.replace('-jdk_', '-testimage_')
-        sdkUrl += " ${buildUrl}artifact/${buildArtifactsPath}/${testImageName}"
+        sdkUrl += " ${buildUrl}artifact/${buildOutputDir}/${testImageName}"
     }
 
     // Append SBOM URL when CREATE_SBOM is enabled (required by the special.system reproducible test)
@@ -127,7 +130,7 @@ int call(Map config) {
         sbomName = (targetOs == 'windows')
             ? sbomName.replace('.zip',   '.json')
             : sbomName.replace('.tar.gz', '.json')
-        sdkUrl += " ${buildUrl}artifact/${buildArtifactsPath}/${sbomName}"
+        sdkUrl += " ${buildUrl}artifact/${buildOutputDir}/${sbomName}"
     }
 
     // ── Log resolved parameters ───────────────────────────────────────────────
