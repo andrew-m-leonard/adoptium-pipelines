@@ -710,43 +710,36 @@ if (deployments && triggerConfig.triggers) {
 // STEP 7: Create Views (per deployment when deployments are declared)
 // ============================================================================
 
+def enabledVersions = pipelineConfig.activeJdkVersions.findAll { it.enabled }*.version
+
 if (deployments) {
     deployments.each { Map dep ->
-        def launchFolderPath = inDeploymentFolder(dep, 'Build_openjdk_launchers')
-        def buildFolderPath  = inDeploymentFolder(dep, 'Build_openjdk')
-
-        listView(launchFolderPath) {
-            description("Launch orchestrator jobs — ${dep.name} deployment")
-            jobs { regex('Build_openjdk_launchers/Build_openjdk\\d+_launch') }
-            recurse(true)
-            columns {
-                status(); weather(); name(); lastSuccess(); lastFailure(); lastDuration(); buildButton()
-            }
-        }
-        listView(buildFolderPath) {
-            description("Platform build jobs — ${dep.name} deployment")
-            jobs { regex('Build_openjdk/Build_openjdk\\d+_[^_]+_[^_]+_[^_]+') }
-            recurse(true)
-            columns {
-                status(); weather(); name(); lastSuccess(); lastFailure(); lastDuration(); buildButton()
+        enabledVersions.each { String v ->
+            def viewPath = inDeploymentFolder(dep, v)
+            listView(viewPath) {
+                description("Platform build jobs for ${v} — ${dep.name} deployment")
+                jobs {
+                    regex(".*${v}_(?!launch).*")
+                }
+                recurse(true)
+                columns {
+                    status(); weather(); name(); lastSuccess(); lastFailure(); lastDuration(); buildButton()
+                }
             }
         }
     }
 } else {
-    listView(inFolder('Build_openjdk_launchers')) {
-        description('Launch orchestrator jobs for coordinating platform builds (Build_openjdk<version>_launch)')
-        jobs { regex('Build_openjdk_launchers/Build_openjdk\\d+_launch') }
-        recurse(true)
-        columns {
-            status(); weather(); name(); lastSuccess(); lastFailure(); lastDuration(); buildButton()
-        }
-    }
-    listView(inFolder('Build_openjdk')) {
-        description('Platform-specific build jobs — AQA-style naming: Build_openjdk<version>_<distro>_<arch>_<os>')
-        jobs { regex('Build_openjdk/Build_openjdk\\d+_[^_]+_[^_]+_[^_]+') }
-        recurse(true)
-        columns {
-            status(); weather(); name(); lastSuccess(); lastFailure(); lastDuration(); buildButton()
+    enabledVersions.each { String v ->
+        def viewPath = inFolder(v)
+        listView(viewPath) {
+            description("Platform build jobs for ${v}")
+            jobs {
+                regex(".*${v}_(?!launch).*")
+            }
+            recurse(true)
+            columns {
+                status(); weather(); name(); lastSuccess(); lastFailure(); lastDuration(); buildButton()
+            }
         }
     }
 }
