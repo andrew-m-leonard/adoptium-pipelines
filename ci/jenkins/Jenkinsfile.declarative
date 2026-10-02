@@ -598,35 +598,6 @@ pipeline {
         }
 
         // #########################################################################
-        // Stage: 20-reproducible-compare
-        // #########################################################################
-        stage(REPRODUCIBLE_COMPARE) {
-            agent {
-                label getStageLabel(REPRODUCIBLE_COMPARE)
-            }
-            when {
-                beforeAgent true
-                expression { stageConditionMet(REPRODUCIBLE_COMPARE) }
-            }
-            steps {
-                script {
-                    ensureLibsLoaded(REPRODUCIBLE_COMPARE)
-                    pipelineHelper.executeStageWithTracking(REPRODUCIBLE_COMPARE) {
-                        Map config = pipelineHelper.initializeStage(REPRODUCIBLE_COMPARE, [BUILD])
-
-                        int comparisonExitCode = stageRunner.run(REPRODUCIBLE_COMPARE, config)
-
-                        if (comparisonExitCode != 0) {
-                            error("Reproducible compare script failed with exit code ${comparisonExitCode}")
-                        }
-
-                        pipelineHelper.finalizeStage(REPRODUCIBLE_COMPARE)
-                    }
-                }
-            }
-        }
-
-        // #########################################################################
         // Stage: 14-aqa-tests
         // #########################################################################
         stage(AQA_TESTS) {
@@ -699,6 +670,35 @@ pipeline {
                         if (publishExitCode != 0) { error("Publish Artifacts failed with exit code: ${publishExitCode}") }
 
                         pipelineHelper.finalizeStage(PUBLISH_ARTIFACTS)
+                    }
+                }
+            }
+        }
+
+        // #########################################################################
+        // Stage: 20-reproducible-compare
+        // #########################################################################
+        stage(REPRODUCIBLE_COMPARE) {
+            agent {
+                label getStageLabel(REPRODUCIBLE_COMPARE)
+            }
+            when {
+                beforeAgent true
+                expression { stageConditionMet(REPRODUCIBLE_COMPARE) }
+            }
+            steps {
+                script {
+                    ensureLibsLoaded(REPRODUCIBLE_COMPARE)
+                    pipelineHelper.executeStageWithTracking(REPRODUCIBLE_COMPARE) {
+                        Map config = pipelineHelper.initializeStage(REPRODUCIBLE_COMPARE, [BUILD])
+
+                        int comparisonExitCode = stageRunner.run(REPRODUCIBLE_COMPARE, config)
+
+                        if (comparisonExitCode != 0) {
+                            error("Reproducible compare script failed with exit code ${comparisonExitCode}")
+                        }
+
+                        pipelineHelper.finalizeStage(REPRODUCIBLE_COMPARE)
                     }
                 }
             }
