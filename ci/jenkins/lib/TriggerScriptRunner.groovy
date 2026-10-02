@@ -50,7 +50,7 @@ import groovy.json.JsonOutput
 
 // GitHub token credential ID — injected by Jenkinsfile.trigger after load().
 // When set, GITHUB_TOKEN is injected into the script environment via withCredentials.
-def githubTokenCredentialId = null
+githubTokenCredentialId = null
 
 void setGithubTokenCredentialId(String credId) {
     githubTokenCredentialId = credId

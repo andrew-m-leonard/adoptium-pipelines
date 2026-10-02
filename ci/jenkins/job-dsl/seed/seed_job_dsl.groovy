@@ -393,7 +393,6 @@ def mergedDefaultParams = { Map dep ->
 
 // Helper: create the launch job parameter block (closure reused per deployment).
 def createLaunchJobParams = { Map dep, String version, List platforms, Map defaultParams ->
-    def versionNum = version.replaceAll(/[^\d]/, '').toInteger()
     return {
         stringParam {
             name('JDK_VERSION')

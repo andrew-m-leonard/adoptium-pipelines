@@ -84,7 +84,6 @@ limitations under the License.
  *   BUILD_CONTAINER_WORKSPACE — workspace path inside the container
  */
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Runtime detection
 // ─────────────────────────────────────────────────────────────────────────────

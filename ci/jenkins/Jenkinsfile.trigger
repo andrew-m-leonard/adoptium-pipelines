@@ -52,7 +52,6 @@ limitations under the License.
  *     Treated as detect-ga-tag policy (Jenkins history dedup check).
  */
 
-import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 
 // ---------------------------------------------------------------------------
@@ -82,7 +81,6 @@ Calendar _utcMidnight(Calendar cal) {
  */
 List resolveEventWindow(String eventName, int daysBefore, int daysAfter) {
     // Use Calendar (UTC) — fully sandbox-safe; java.time APIs are sandbox-blocked.
-    Calendar now = Calendar.getInstance(TimeZone.getTimeZone('UTC'))
     Calendar eventDay
 
     switch (eventName) {
@@ -99,7 +97,7 @@ List resolveEventWindow(String eventName, int daysBefore, int daysAfter) {
             break
         default:
             echo "⚠️  Unknown suppressTestingConditions event '${eventName}' — ignoring window, testing NOT suppressed"
-            return null
+            return []
     }
 
     Calendar windowStart = eventDay.clone() as Calendar
@@ -158,7 +156,7 @@ boolean shouldSuppressTesting(Map versionConfig, Map effectiveParams) {
             int daysBefore    = (window.daysBefore ?: 0) as int
             int daysAfter     = (window.daysAfter  ?: 0) as int
             List windowRange  = resolveEventWindow(eventName, daysBefore, daysAfter)
-            if (windowRange == null) { return false }   // unknown event — don't suppress
+            if (!windowRange) { return false }   // unknown event — don't suppress
             long windowStart = windowRange[0] as long
             long windowEnd   = windowRange[1] as long
             boolean inWindow = nowMs >= windowStart && nowMs < windowEnd

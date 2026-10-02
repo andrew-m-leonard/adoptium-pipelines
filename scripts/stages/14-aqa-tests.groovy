@@ -49,6 +49,7 @@
  *   def script = load(found.path)
  *   exitCode = script(config) ?: EXIT_SUCCESS
  */
+@SuppressWarnings('UnusedMethodParameter')
 int call(Map config) {
 
     // ── Gate check ────────────────────────────────────────────────────────────
@@ -106,7 +107,7 @@ int call(Map config) {
         script: "find '${artifactsDir}' -name '*jdk_*.${extension}' 2>/dev/null | head -1 || true",
         returnStdout: true
     ).trim()
-    String jdkFileName = jdkFilePath ? new File(jdkFilePath).getName() : ''
+    String jdkFileName = jdkFilePath ? jdkFilePath.tokenize('/').last() : ''
 
     if (!jdkFileName) {
         echo "❌ 14-aqa-tests: no JDK archive (*jdk_*.${extension}) found in ${artifactsDir}"

@@ -127,7 +127,6 @@ void checkoutConfigRepo() {
     }
 }
 
-
 /**
  * Build the forwardedParams list for a platform build trigger in the exact
  * order the platform job defines its parameters, with separators interleaved.

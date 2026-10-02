@@ -28,8 +28,6 @@ limitations under the License.
  *     an admin has manually edited a parameter default in the Jenkins UI.
  */
 
-import groovy.json.JsonSlurper
-
 /**
  * Run the Python collator and invoke the Job DSL script to create/update all
  * launch and trigger jobs for every deployment declared in jenkins_job_config.json.

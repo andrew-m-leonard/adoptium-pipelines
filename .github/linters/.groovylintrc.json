@@ -21,6 +21,24 @@
     "serialization.SerializableClassMustDefineSerialVersionUID": "off",
     "ThrowExceptionFromFinallyBlock": "off",
     "naming.VariableName": "off",
-    "convention.VariableTypeRequired": "off"
+    "convention.VariableTypeRequired": "off",
+    "naming.MethodName": "off",
+    "groovyism.NoDef": "off",
+    "design.CompileStatic": "off",
+    "dry.DuplicateNumberLiteral": "off",
+    "dry.DuplicateListLiteral": "off",
+    "convention.ImplicitClosureParameter": "off",
+    "groovyism.UnnecessaryCollectCall": "off",
+    "unnecessary.UnnecessaryGetter": "off",
+    "unnecessary.UnnecessaryGString": "off",
+    "formatting.ConsecutiveBlankLines": "off",
+    "formatting.BlockStartsWithBlankLine": "off",
+    "formatting.BlockEndsWithBlankLine": "off",
+    "design.PublicMethodsBeforeNonPublicMethods": "off",
+    "size.MethodSize": "off",
+    "unnecessary.UnnecessaryObjectReferences": "off",
+    "design.ImplicitReturnStatement": "off",
+    "convention.MethodParameterTypeRequired": "off",
+    "unused.UnusedImport": "off"
   }
 }

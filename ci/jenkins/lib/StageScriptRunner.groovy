@@ -147,7 +147,7 @@ String containerEnvFlags() {
     if (gitAskPass) {
         // Override any host-side askpass entry already in the flags list.
         flags.removeAll { String f -> f.startsWith('-e "GIT_ASKPASS=') }
-        flags << '-e "GIT_ASKPASS=${GIT_ASKPASS}"'
+        flags << '-e \'GIT_ASKPASS=${GIT_ASKPASS}\''
     } else {
         // No GitHub auth — clear any Jenkins agent-side askpass binary that does not
         // exist inside the container.
@@ -164,7 +164,7 @@ String containerEnvFlags() {
     // Set HOME to the Jenkins agent's home directory.  The host home is
     // bind-mounted into the container at the same path (by NodeAgentHelper),
     // so it is writable.  Without a valid HOME, git's temp-file allocation fails.
-    flags << '-e "HOME=${HOME}"'
+    flags << '-e \'HOME=${HOME}\''
 
     return flags.join(' ')
 }
@@ -180,12 +180,12 @@ private Map<String, String> _parsePropertiesContent(String content) {
     Map<String, String> result = [:]
     content.split('\n').each { String line ->
         String trimmed = line.trim()
-        if (!trimmed || trimmed.startsWith('#')) return
+        if (!trimmed || trimmed.startsWith('#')) { return }
         int eq = trimmed.indexOf('=')
-        if (eq < 1) return
+        if (eq < 1) { return }
         String key   = trimmed.substring(0, eq).trim()
         String value = trimmed.substring(eq + 1).trim()
-        if (key) result[key] = value
+        if (key) { result[key] = value }
     }
     return result
 }
@@ -242,7 +242,8 @@ String resolveTargetDir(String scriptStem) {
 // CredentialHelper instance — injected by Jenkinsfile.declarative after load().
 // Null when running without credential support (e.g. Restart from Stage where
 // Initialize was skipped); _withStageCredentials() falls back to body() directly.
-def credentialHelper = null
+// credentialHelper is intentionally untyped (CPS script binding field).
+credentialHelper = null
 
 void setCredentialHelper(helper) {
     credentialHelper = helper
@@ -309,7 +310,7 @@ int run(String scriptStem, Map config = null) {
     ] + constantEnvEntries) {
         int exitCode = EXIT_SUCCESS
         _withStageCredentials(scriptStem) {
-            exitCode = _dispatch(found, scriptStem, config)
+            exitCode = _dispatch(found, config)
         }
 
         // Archive stage outputs from TARGET_DIR into the Jenkins artifact store.
@@ -365,7 +366,7 @@ private List _resolveOutputArtifacts(String scriptStem) {
  */
 @NonCPS
 private String _substituteEnvVars(String pattern) {
-    if (!pattern) return pattern
+    if (!pattern) { return pattern }
     String result = pattern.replaceAll(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/) { _, name ->
         env.getProperty(name) != null ? env.getProperty(name) : (env[name] != null ? env[name] : "\${${name}}")
     }
@@ -421,6 +422,7 @@ private void _withGitAuth(Closure body) {
     }
 
     String askPassPath = "${env.WORKSPACE}/git-askpass.sh"
+    // groovylint-disable-next-line GStringExpressionWithinString
     writeFile file: 'git-askpass.sh', text: '#!/bin/sh\necho "${GITHUB_TOKEN}"\n'
     sh "chmod +x '${askPassPath}'"
     echo '🔑 GitHub token present — git HTTPS operations will be authenticated via GIT_ASKPASS'
@@ -442,7 +444,7 @@ private void _withGitAuth(Closure body) {
  *   .groovy  — every sh("git ...") inside the loaded script inherits GIT_ASKPASS
  *              from the enclosing withEnv scope transparently.
  */
-private int _dispatch(Map found, String scriptStem, Map config) {
+private int _dispatch(Map found, Map config) {
     final int EXIT_SUCCESS = 0
     String containerId = env.BUILD_CONTAINER_ID?.trim()
     String containerWs = env.BUILD_CONTAINER_WORKSPACE?.trim()

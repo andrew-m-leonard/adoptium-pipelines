@@ -207,7 +207,7 @@ private List _resolveInputArtifacts(String stageName) {
  */
 @NonCPS
 private String _substituteEnvVars(String pattern) {
-    if (!pattern) return pattern
+    if (!pattern) { return pattern }
     String result = pattern.replaceAll(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/) { _, name ->
         env.getProperty(name) != null ? env.getProperty(name) : (env[name] != null ? env[name] : "\${${name}}")
     }

@@ -86,16 +86,16 @@ import groovy.json.JsonSlurper
  * @NonCPS — must not call any CPS pipeline steps.
  */
 @NonCPS
-List<String> _credentialNamesForStage(String stageId, String stageCredsJson) {
+List<String> credentialNamesForStage(String stageId, String stageCredsJson) {
     Map parsed = new JsonSlurper().parseText(stageCredsJson ?: '{}')
     // ALL_STAGES entries are injected into every stage regardless of stageId.
     List allStages = parsed['ALL_STAGES'] ?: []
     List stageOnly = parsed[stageId]      ?: []
     // Merge, preserving order (ALL_STAGES first), deduplicating by name.
     // ALL_STAGES entries whose envVar is overridden by a stage-specific entry are
-    // removed in _buildBindings(), not here — we still need both in the list so
-    // _buildBindings() can compare them.
-    LinkedHashSet<String> merged = new LinkedHashSet<>()
+    // removed in buildBindings(), not here — we still need both in the list so
+    // buildBindings() can compare them.
+    LinkedHashSet<String> merged = [] as LinkedHashSet
     (allStages + stageOnly).each { merged.add(it.toString()) }
     // Return a plain ArrayList<String> — LazyMap/LazyList are not serializable.
     return new ArrayList<>(merged)
@@ -108,9 +108,9 @@ List<String> _credentialNamesForStage(String stageId, String stageCredsJson) {
  * @NonCPS — must not call any CPS pipeline steps.
  */
 @NonCPS
-String _resolveEnvVar(String name, Map<String, String> cred) {
+String resolveEnvVar(String name, Map<String, String> cred) {
     String ev = cred.get('envVar')
-    return (ev != null && !ev.isEmpty()) ? ev : name
+    return (ev != null && !ev.empty) ? ev : name
 }
 
 /**
@@ -125,21 +125,21 @@ String _resolveEnvVar(String name, Map<String, String> cred) {
  * @NonCPS — must not call any CPS pipeline steps.
  */
 @NonCPS
-Map _buildBindings(String stageId, List<String> names,
+Map buildBindings(String stageId, List<String> names,
                    Map<String, Map<String, String>> credDefs,
                    String stageCredsJson) {
     // Determine which credential names are stage-specific (not from ALL_STAGES).
     Map parsed         = new JsonSlurper().parseText(stageCredsJson ?: '{}')
-    Set allStagesNames = new HashSet<>(parsed['ALL_STAGES']?.collect { it.toString() } ?: [])
-    Set stageOnlyNames = new HashSet<>(parsed[stageId]?.collect    { it.toString() } ?: [])
+    Set allStagesNames = ([] as Set) + (parsed['ALL_STAGES']?.collect { it.toString() } ?: [])
+    Set stageOnlyNames = ([] as Set) + (parsed[stageId]?.collect    { it.toString() } ?: [])
 
     // Collect the envVar names claimed by stage-specific string credentials.
     // These take precedence over any ALL_STAGES entry with the same envVar.
-    Set<String> stageClaimedEnvVars = new HashSet<>()
+    Set<String> stageClaimedEnvVars = [] as Set
     stageOnlyNames.each { String name ->
         Map<String, String> cred = credDefs[name]
         if (cred && cred.type == 'string') {
-            stageClaimedEnvVars.add(_resolveEnvVar(name, cred))
+            stageClaimedEnvVars.add(resolveEnvVar(name, cred))
         }
     }
 
@@ -154,7 +154,7 @@ Map _buildBindings(String stageId, List<String> names,
 
         switch (cred.type) {
             case 'string':
-                String ev = _resolveEnvVar(name, cred)
+                String ev = resolveEnvVar(name, cred)
                 // Suppress ALL_STAGES entry when a stage-specific entry claims the same envVar.
                 if (isAllStages && stageClaimedEnvVars.contains(ev)) {
                     return  // skip — stage-specific wins
@@ -193,7 +193,7 @@ Map _buildBindings(String stageId, List<String> names,
  * @NonCPS — must not call any CPS pipeline steps.
  */
 @NonCPS
-Map<String, Map<String, String>> _credentialDefs(List<String> names, String credDefsJson) {
+Map<String, Map<String, String>> credentialDefs(List<String> names, String credDefsJson) {
     Map parsed = new JsonSlurper().parseText(credDefsJson ?: '{}')
     Map<String, Map<String, String>> result = [:]
     names.each { String name ->
@@ -228,26 +228,26 @@ Map<String, Map<String, String>> _credentialDefs(List<String> names, String cred
 void withStageCredentials(String stageId, Closure body) {
     // All JSON parsing delegated to @NonCPS helpers — no LazyMap ever enters
     // this CPS method's stack frame, so program-state serialization cannot fail.
-    List<String> names = _credentialNamesForStage(stageId, env.CONFIG_STAGE_CREDENTIALS)
+    List<String> names = credentialNamesForStage(stageId, env.CONFIG_STAGE_CREDENTIALS)
 
     if (!names) {
         body()
         return
     }
 
-    Map<String, Map<String, String>> credDefs = _credentialDefs(names, env.CONFIG_CREDENTIAL_DEFINITIONS)
+    Map<String, Map<String, String>> defs = credentialDefs(names, env.CONFIG_CREDENTIAL_DEFINITIONS)
 
     // Validate that every referenced credential is defined.
     names.each { String name ->
-        if (!credDefs[name]) {
+        if (!defs[name]) {
             error("CredentialHelper: credential '${name}' referenced by stage '${stageId}' " +
-                  "is not defined in jenkins_credential_config.json")
+                  'is not defined in jenkins_credential_config.json')
         }
     }
 
     // Build bindings with ALL_STAGES suppression for envVar conflicts.
-    // _buildBindings() is @NonCPS so no LazyMap escapes into this CPS frame.
-    Map built = _buildBindings(stageId, names, credDefs, env.CONFIG_STAGE_CREDENTIALS)
+    // buildBindings() is @NonCPS so no LazyMap escapes into this CPS frame.
+    Map built = buildBindings(stageId, names, defs, env.CONFIG_STAGE_CREDENTIALS)
     List bindings    = built.bindings    as List
     List envVarNames = built.envVarNames as List
 
@@ -272,7 +272,7 @@ void withStageCredentials(String stageId, Closure body) {
     }
 
     echo "🔑 Injecting ${wcBindings.size()} credential binding(s) for stage '${stageId}': ${names.join(', ')}" +
-         ((_credentialNamesForStage('ALL_STAGES', env.CONFIG_STAGE_CREDENTIALS) ? ' (includes ALL_STAGES)' : ''))
+         ((credentialNamesForStage('ALL_STAGES', env.CONFIG_STAGE_CREDENTIALS) ? ' (includes ALL_STAGES)' : ''))
 
     // Set STAGE_CREDENTIAL_ENV_VARS *before* withCredentials() so containerEnvFlags()
     // — called from within the body closure — can enumerate the var names and pick
