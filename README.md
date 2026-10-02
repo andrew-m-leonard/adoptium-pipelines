@@ -63,7 +63,6 @@ ci-adoptium-pipelines/
 │   │   ├── load-pipeline-config-json.py      # Generates pipeline-config.json
 │   │   ├── logging-utils.sh         # Logging utilities
 │   │   ├── python-runner.sh         # Wrapper to invoke Python scripts from shell
-│   │   ├── sbom-field-extractor.py      # Extracts named fields from an SBOM JSON file
 │   │   └── workspace-cleanup.sh     # Workspace cleanup helper
 │   └── stages/
 │       ├── pipeline-stages.json     # Stage registry (names, order, conditions)
@@ -176,7 +175,6 @@ These files are sourced or invoked by every stage script regardless of whether i
 | [`load-adoptium-pipeline-config-json.py`](scripts/lib/load-adoptium-pipeline-config-json.py) | Standalone reader for `adoptium_pipeline_config.json`; used by tools and the seed job |
 | [`collect-stage-params.py`](scripts/lib/collect-stage-params.py) | Collates all `*.params.json` sidecars (default + vendor) into a single document consumed by Job DSL and the local runner |
 | [`build-metadata-writer.py`](scripts/lib/build-metadata-writer.py) | Writes `build-metadata.json` after a successful build stage |
-| [`sbom-field-extractor.py`](scripts/lib/sbom-field-extractor.py) | Extracts a named property value from an SBOM JSON file; used by `02-build.sh` for reproducible build setup (workspace path padding, build timestamp) |
 | [`python-runner.sh`](scripts/lib/python-runner.sh) | Resolves `python3`/`python` and execs a given `.py` script; used as the single shell-context Python entry point |
 | [`workspace-cleanup.sh`](scripts/lib/workspace-cleanup.sh) | Standalone script; cleans the ephemeral stage workspace pre/post stage based on `CLEANUP_TYPE` and `cleanWorkspaceAfterStage` config |
 

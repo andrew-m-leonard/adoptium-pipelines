@@ -74,16 +74,6 @@ CLI script. Writes `build-metadata.json` from explicit arguments and a small set
 
 Reads from env: `CONFIG_JAVA_TO_BUILD`, `CONFIG_TARGET_OS`, `CONFIG_ARCHITECTURE`, `CONFIG_VARIANT`.
 
-### [`scripts/lib/sbom-field-extractor.py`](../scripts/lib/sbom-field-extractor.py)
-
-CLI script. Reads an Adoptium SBOM JSON file and prints the value of a named property from the first component to stdout. Used by `02-build.sh` to extract fields such as `"Build Workspace Directory"` and `"Build Timestamp"` for reproducible build setup.
-
-```bash
-value=$(python3 sbom-field-extractor.py --sbom /path/to/sbom.json --field "Build Workspace Directory")
-```
-
-Exits 0 (prints empty line) when the property is absent; exits non-zero only on unreadable file or invalid JSON.
-
 ### [`scripts/lib/python-runner.sh`](../scripts/lib/python-runner.sh)
 
 Thin shim. Resolves the Python interpreter (`python3` → `python` fallback) and execs the given script with all arguments forwarded. Exits 127 if no Python is found. Used as the single canonical entry point for all shell-context Python invocations.
