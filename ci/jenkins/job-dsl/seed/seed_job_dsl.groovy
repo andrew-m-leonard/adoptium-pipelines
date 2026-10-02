@@ -154,7 +154,7 @@ def deployments        = jenkinsConfig.deployments ?: []
 println "  pipelineBaseFolder : ${pipelineBaseFolder ?: '(root)'}"
 println "  deployments        : ${deployments.collect { it.name }.join(', ') ?: '(none)'}"
 
-// jenkins_credential_config.json is optional — absent for public-repo setups.
+// jenkins_credential_config.json is optional — absent when no credentials (e.g. for private repos or authenticated GitHub API access) are needed.
 def credentialConfig = [:]
 try {
     credentialConfig = slurper.parseText(readFileFromWorkspace("${configRepoPrefix}jenkins_credential_config.json"))

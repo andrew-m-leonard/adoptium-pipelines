@@ -99,7 +99,7 @@ println '✓ Loaded adoptium_pipeline_config.json'
 def jenkinsConfig = slurper.parseText(readFileFromWorkspace('config-repo/jenkins_job_config.json'))
 println '✓ Loaded jenkins_job_config.json'
 
-// jenkins_credential_config.json is optional — absent for public-repo setups.
+// jenkins_credential_config.json is optional — absent when no credentials (e.g. for private repos or authenticated GitHub API access) are needed.
 def credentialConfig = [:]
 try {
     credentialConfig = slurper.parseText(readFileFromWorkspace('config-repo/jenkins_credential_config.json'))

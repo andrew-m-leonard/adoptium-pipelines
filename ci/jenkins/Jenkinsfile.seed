@@ -93,7 +93,7 @@ pipeline {
                     echo "✓ Pipelines repo : ${env.PIPELINES_REPO_URL} @ ${env.PIPELINES_REPO_BRANCH}"
 
                     // Read the Jenkins credential ID for the pipelines repo from
-                    // jenkins_credential_config.json (optional — public repos leave it absent).
+                    // jenkins_credential_config.json (optional — absent when no credentials are required).
                     // Keeping credential IDs out of the CI-agnostic adoptium_pipeline_config.json.
                     if (fileExists('jenkins_credential_config.json')) {
                         def credCfg = readJSON file: 'jenkins_credential_config.json'

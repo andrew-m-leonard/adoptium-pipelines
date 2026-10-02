@@ -216,7 +216,7 @@ Pay particular attention to:
 - Variant-specific values (e.g. `buildArgs: [temurin: '...', hotspot: '...']` → `"buildArgs": {"temurin": "...", "hotspot": "..."}`)
 - `enabled` flags — verify disabled versions are correctly set to `false`
 - `repository` block in `adoptium_pipeline_config.json` — update `url` and `branch` for your org
-- `pipelineRepoCredentialsId` / `configRepoCredentialsId` in `jenkins_credential_config.json` — set to your Jenkins credential ID for private repos (omit or leave empty for public repos)
+- `pipelineRepoCredentialsId` / `configRepoCredentialsId` in `jenkins_credential_config.json` — set to your Jenkins credential ID if authentication is required (e.g. for private repos or to avoid GitHub API rate limits)
 
 ### Step 4 — Commit to the configuration repository
 
