@@ -25,9 +25,9 @@ The seed job uses a **consolidated script** that contains all logic in a single 
   1. Creates `Build_openjdk_launchers/Build_openjdk<version>_launch` jobs for each active JDK version
   1. Creates the `Build_openjdk_launchers/` and `Build_openjdk/` top-level folders
   1. Creates/updates the seed job itself (self-updating)
-  1. Creates the `Build_openjdk_launchers` and `Build_openjdk` views
-
-#### Seed Job Configuration
+  1. Creates a Jenkins view for each enabled JDK version
+ 
+ #### Seed Job Configuration
 
 - DSL Scripts: `ci/jenkins/job-dsl/seed/seed_job_dsl.groovy`
 - Processes a single consolidated script

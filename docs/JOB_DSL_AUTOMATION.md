@@ -49,7 +49,7 @@ openjdk-build-seed-job  (Pipeline job — Pipeline from SCM → config repo Jenk
          reads pipelines/scripts/stages/       (default stage params)
          reads vendor-scripts/                 (vendor stage param overrides)
          creates Build_openjdk_launchers/ folder + one launch job per JDK version
-         creates Build_openjdk/ folder + Jenkins views
+         creates Build_openjdk/ folder + Jenkins views for each enabled JDK version
 
 Build_openjdk_launchers/Build_openjdk21_launch  (Pipeline — Jenkinsfile.launch)
   stage('Initialize'):
@@ -142,9 +142,9 @@ The job will:
 - Read `trigger_config.json` if present
 - Create one set of folders per deployment under `pipelineBaseFolder`
 - Create one launch job per enabled JDK version under `Build_openjdk_launchers/`
-- Create `Build_openjdk_launchers` and `Build_openjdk` Jenkins views
-
-### Step 4: Create Platform Build Jobs
+- Create a Jenkins view for each enabled JDK version
+ 
+ ### Step 4: Create Platform Build Jobs
 
 Simply run a launch job (e.g. `Build_openjdk_launchers/Build_openjdk21_launch`).
 Platform jobs are created automatically — no extra flag is needed.

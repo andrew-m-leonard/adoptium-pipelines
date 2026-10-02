@@ -25,7 +25,7 @@ limitations under the License.
  *      truth for stage parameter collation shared by seed, launch, and build jobs.
  *   3. Creates Build_openjdk_launchers/ folder and one launch job per enabled
  *      JDK version, each carrying the full collated stage parameter set.
- *   4. Creates Build_openjdk/ folder and Jenkins views.
+ *   4. Creates Build_openjdk/ folder and Jenkins views for each enabled JDK version.
  *
  * Workspace layout (set up by ci/jenkins/Jenkinsfile.seed):
  *   <workspace>/
