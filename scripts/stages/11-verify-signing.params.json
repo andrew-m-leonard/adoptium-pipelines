@@ -6,9 +6,7 @@
     { "param": "SIGN_ARTIFACTS", "value": true }
   ],
   "stageInputArtifacts": [
-    "signed/**/*",
-    "*.sig",
-    "*.asc"
+    "${BUILD_OUTPUT_DIR}/*"
   ],
   "stageOutputArtifacts": [
     "verification-report.txt"

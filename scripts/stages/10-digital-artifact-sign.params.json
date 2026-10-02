@@ -6,11 +6,11 @@
     { "param": "SIGN_ARTIFACTS", "value": true }
   ],
   "stageInputArtifacts": [
-    "**/*"
+    "${BUILD_OUTPUT_DIR}/*"
   ],
   "stageOutputArtifacts": [
-    "*.sig",
-    "*.asc"
+    "${BUILD_OUTPUT_DIR}/*.sig",
+    "${BUILD_OUTPUT_DIR}/*.asc"
   ],
   "description": "Gate-only params.json for the digital-artifact-sign stage. Runs only when SIGN_ARTIFACTS is true.",
   "parameterGroups": [

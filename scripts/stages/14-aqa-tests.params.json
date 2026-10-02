@@ -6,10 +6,9 @@
     { "param": "RUN_TESTS", "value": true }
   ],
   "stageInputArtifacts": [
-    "*.tar.gz",
-    "*.zip",
-    "*sbom*.json",
-    "metadata/**/*"
+    "${BUILD_OUTPUT_DIR}/*.tar.gz",
+    "${BUILD_OUTPUT_DIR}/*.zip",
+    "${BUILD_OUTPUT_DIR}/*sbom*.json"
   ],
   "stageOutputArtifacts": [],
   "description": "Parameters for the AQA test stage. Triggers AQA_Test_Pipeline asynchronously with the archived JDK URL. Vendor overrides may suppress, replace, or extend these via a vendor-scripts/14-aqa-tests.params.json in the config repo.",

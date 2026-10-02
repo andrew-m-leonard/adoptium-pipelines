@@ -6,7 +6,7 @@
     { "param": "CREATE_SBOM", "value": true }
   ],
   "stageInputArtifacts": [
-    "*sbom*.json"
+    "${BUILD_OUTPUT_DIR}/*sbom*.json"
   ],
   "stageOutputArtifacts": [
     "sbom-validation.txt"

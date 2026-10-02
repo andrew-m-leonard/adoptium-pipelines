@@ -351,12 +351,28 @@ private List _resolveOutputArtifacts(String scriptStem) {
         try {
             Map outputMap = new groovy.json.JsonSlurper().parseText(env.COLLATED_STAGE_OUTPUT_ARTIFACTS)
             if (outputMap.containsKey(scriptStem)) {
-                return (List) outputMap[scriptStem]
+                List rawList = (List) outputMap[scriptStem]
+                return rawList.collect { String pat -> _substituteEnvVars(pat) }
             }
         } catch (Exception ignored) {
         }
     }
     return ['**/*']
+}
+
+/**
+ * Expand ${VAR} and $VAR variable references from environment variables.
+ */
+@NonCPS
+private String _substituteEnvVars(String pattern) {
+    if (!pattern) return pattern
+    String result = pattern.replaceAll(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/) { _, name ->
+        env.getProperty(name) != null ? env.getProperty(name) : (env[name] != null ? env[name] : "\${${name}}")
+    }
+    result = result.replaceAll(/(?<!\\)\$([A-Za-z_][A-Za-z0-9_]*)/) { _, name ->
+        env.getProperty(name) != null ? env.getProperty(name) : (env[name] != null ? env[name] : "\$${name}")
+    }
+    return result
 }
 
 /**

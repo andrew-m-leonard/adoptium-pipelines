@@ -7,8 +7,8 @@
     { "param": "SCM_REF", "value": "regex:.+" }
   ],
   "stageInputArtifacts": [
-    "*.tar.gz",
-    "*.zip"
+    "${BUILD_OUTPUT_DIR}/*.tar.gz",
+    "${BUILD_OUTPUT_DIR}/*.zip"
   ],
   "stageOutputArtifacts": [
     "comparison-report.txt",

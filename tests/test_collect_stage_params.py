@@ -521,6 +521,62 @@ class TestStageDisabled(unittest.TestCase):
         self.assertEqual(stages[0].get("stageInputArtifacts"), ["*sbom*.json"])
         self.assertEqual(stages[0].get("stageOutputArtifacts"), ["*sbom*.json"])
 
+    def test_build_input_and_output_artifacts_with_env_variables_collated(self):
+        """stageInputArtifacts and stageOutputArtifacts containing variable syntax like ${BUILD_OUTPUT_DIR} are expanded during collation."""
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            (d / "stage-constants.properties").write_text("BUILD_OUTPUT_DIR=build_output\n")
+            data = {
+                "stageId": "09-sbom-sign",
+                "stageDisabled": False,
+                "stageCondition": [],
+                "stageInputArtifacts": ["${BUILD_OUTPUT_DIR}/*sbom*.json"],
+                "stageOutputArtifacts": ["${BUILD_OUTPUT_DIR}/*sbom*.json"],
+                "parameterGroups": [],
+            }
+            (d / "09-sbom-sign.params.json").write_text(json.dumps(data))
+            result = _collect(d)
+
+        stages = _stages_for(result, "09-sbom-sign")
+        self.assertEqual(len(stages), 1)
+        self.assertEqual(
+            stages[0].get("stageInputArtifacts"), ["build_output/*sbom*.json"]
+        )
+        self.assertEqual(
+            stages[0].get("stageOutputArtifacts"), ["build_output/*sbom*.json"]
+        )
+
+    def test_build_input_artifacts_with_vendor_constants_override(self):
+        """Vendor constants override core constants when expanding stageInputArtifacts."""
+        with tempfile.TemporaryDirectory() as tmp:
+            default_dir = Path(tmp) / "stages"
+            vendor_dir = Path(tmp) / "vendor"
+            default_dir.mkdir()
+            vendor_dir.mkdir()
+
+            (default_dir / "stage-constants.properties").write_text("BUILD_OUTPUT_DIR=build_output\n")
+            (vendor_dir / "vendor-constants.properties").write_text("BUILD_OUTPUT_DIR=custom_output\n")
+
+            data = {
+                "stageId": "09-sbom-sign",
+                "stageDisabled": False,
+                "stageCondition": [],
+                "stageInputArtifacts": ["${BUILD_OUTPUT_DIR}/*sbom*.json"],
+                "stageOutputArtifacts": ["${BUILD_OUTPUT_DIR}/*sbom*.json"],
+                "parameterGroups": [],
+            }
+            (default_dir / "09-sbom-sign.params.json").write_text(json.dumps(data))
+            result = _collect(default_dir, vendor_dir=vendor_dir)
+
+        stages = _stages_for(result, "09-sbom-sign")
+        self.assertEqual(len(stages), 1)
+        self.assertEqual(
+            stages[0].get("stageInputArtifacts"), ["custom_output/*sbom*.json"]
+        )
+        self.assertEqual(
+            stages[0].get("stageOutputArtifacts"), ["custom_output/*sbom*.json"]
+        )
+
 
 # ---------------------------------------------------------------------------
 # stageCondition tests

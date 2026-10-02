@@ -7,10 +7,10 @@
     { "param": "CREATE_SBOM",    "value": true }
   ],
   "stageInputArtifacts": [
-    "*sbom*.json"
+    "${BUILD_OUTPUT_DIR}/*sbom*.json"
   ],
   "stageOutputArtifacts": [
-    "*sbom*.json"
+    "${BUILD_OUTPUT_DIR}/*sbom*.json"
   ],
   "description": "Gate-only params.json for the SBOM sign stage. Runs only when SIGN_ARTIFACTS and CREATE_SBOM are both true.",
   "parameterGroups": [

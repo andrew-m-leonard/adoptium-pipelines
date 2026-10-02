@@ -127,6 +127,8 @@ Usage:
 
 import argparse
 import json
+import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -279,6 +281,50 @@ def _load_json_url(url: str) -> Optional[dict]:
         raise RuntimeError(f"Failed to fetch {url}: {e}") from e
 
 
+def _parse_properties_content(content: str) -> Dict[str, str]:
+    """Parse a Java-style .properties text content into a key -> value dict."""
+    result: Dict[str, str] = {}
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if "=" not in stripped:
+            continue
+        key, _, value = stripped.partition("=")
+        key = key.strip()
+        if key and all(c.isalnum() or c == "_" for c in key):
+            result[key] = value.strip()
+    return result
+
+
+def _substitute_variables(pattern: str, constants: Dict[str, str]) -> str:
+    """
+    Substitute ${VAR} and $VAR variable references in a pattern string.
+    Checks constants first, then os.environ, falling back to the match if not found.
+    """
+    def _repl_braced(match: re.Match) -> str:
+        var_name = match.group(1)
+        if var_name in constants:
+            return constants[var_name]
+        if var_name in os.environ:
+            return os.environ[var_name]
+        return match.group(0)
+
+    def _repl_simple(match: re.Match) -> str:
+        var_name = match.group(1)
+        if var_name in constants:
+            return constants[var_name]
+        if var_name in os.environ:
+            return os.environ[var_name]
+        return match.group(0)
+
+    # First replace ${VAR}
+    result = re.sub(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}", _repl_braced, pattern)
+    # Then replace $VAR (if not preceded by \)
+    result = re.sub(r"(?<!\\)\$([A-Za-z_][A-Za-z0-9_]*)", _repl_simple, result)
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Per-stage data model
 # ---------------------------------------------------------------------------
@@ -392,15 +438,22 @@ class StageEntry:
                     "parameters": vparams,
                 }
 
-    def to_stage_entry(self) -> dict:
-        """Return the stages-list entry for this stem."""
+    def to_stage_entry(self, constants: Optional[Dict[str, str]] = None) -> dict:
+        """Return the stages-list entry for this stem, resolving any variable substitutions."""
+        const_map = constants or {}
+        expanded_inputs = [
+            _substitute_variables(p, const_map) for p in self.stage_input_artifacts
+        ]
+        expanded_outputs = [
+            _substitute_variables(p, const_map) for p in self.stage_output_artifacts
+        ]
         return {
             "stageId": self.stem,
             "stageDisabled": self.disabled,
             "stageCondition": list(self.condition),
             "stageTimeoutMinutes": self.timeout,
-            "stageInputArtifacts": list(self.stage_input_artifacts),
-            "stageOutputArtifacts": list(self.stage_output_artifacts),
+            "stageInputArtifacts": expanded_inputs,
+            "stageOutputArtifacts": expanded_outputs,
         }
 
 
@@ -486,6 +539,25 @@ def collect(
             return _load_json_local(vendor_scripts_dir.parent / filename)
         return None
 
+    # Load stage-constants.properties (default and vendor)
+    constants: Dict[str, str] = {}
+    default_constants_path = default_stages_dir / "stage-constants.properties"
+    if default_constants_path.exists():
+        constants.update(_parse_properties_content(default_constants_path.read_text(encoding="utf-8")))
+
+    if vendor_scripts_dir:
+        vendor_constants_path = vendor_scripts_dir / "vendor-constants.properties"
+        if vendor_constants_path.exists():
+            constants.update(_parse_properties_content(vendor_constants_path.read_text(encoding="utf-8")))
+    elif vendor_raw_base_url:
+        v_url = f"{vendor_raw_base_url.rstrip('/')}/vendor-scripts/vendor-constants.properties"
+        try:
+            with urllib.request.urlopen(v_url, timeout=15) as resp:
+                v_content = resp.read().decode("utf-8")
+                constants.update(_parse_properties_content(v_content))
+        except Exception:
+            pass
+
     def in_scope(stem: str) -> bool:
         return not orchestrated_stages or stem in orchestrated_stages
 
@@ -540,7 +612,7 @@ def collect(
             continue
 
         # Always record the stage entry (metadata only).
-        stages_list.append(entry.to_stage_entry())
+        stages_list.append(entry.to_stage_entry(constants))
 
         # Merge each group from this stem into groups_map.
         for gname, grp in entry.groups.items():

@@ -21,8 +21,24 @@ Extracted from run-pipeline.py to improve code organization and readability.
 
 import fnmatch
 import json
+import os
+import re
 import shutil
 from pathlib import Path
+
+
+def _expand_pattern(pattern: str) -> str:
+    """Expand ${VAR} and $VAR variable references from environment variables."""
+    if not pattern:
+        return pattern
+
+    def _repl(match: re.Match) -> str:
+        var_name = match.group(1)
+        return os.environ.get(var_name, match.group(0))
+
+    result = re.sub(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}", _repl, pattern)
+    result = re.sub(r"(?<!\\)\$([A-Za-z_][A-Za-z0-9_]*)", _repl, result)
+    return result
 
 
 class WorkspaceManager:
@@ -236,7 +252,7 @@ class WorkspaceManager:
             print(f"ℹ️  Archive ({stage_name}): {rel} is empty — nothing to archive")
             return
 
-        patterns = output_patterns if output_patterns else ["**/*"]
+        patterns = [_expand_pattern(p) for p in output_patterns] if output_patterns else ["**/*"]
         self.build_artifacts_dir.mkdir(parents=True, exist_ok=True)
 
         archived = 0
@@ -332,9 +348,9 @@ class WorkspaceManager:
             return
 
         if artifact_filter is not None:
-            patterns = [p.strip() for p in artifact_filter.split(",") if p.strip()]
+            patterns = [_expand_pattern(p.strip()) for p in artifact_filter.split(",") if p.strip()]
         elif input_artifacts is not None:
-            patterns = ["pipeline-config.json"] + list(input_artifacts)
+            patterns = ["pipeline-config.json"] + [_expand_pattern(p) for p in input_artifacts]
         else:
             patterns = ["**/*"]
 

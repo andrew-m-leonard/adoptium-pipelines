@@ -7,9 +7,8 @@
     { "param": "ENABLE_TCK", "value": true }
   ],
   "stageInputArtifacts": [
-    "*.tar.gz",
-    "*.zip",
-    "metadata/**/*"
+    "${BUILD_OUTPUT_DIR}/*.tar.gz",
+    "${BUILD_OUTPUT_DIR}/*.zip"
   ],
   "stageOutputArtifacts": [],
   "description": "Parameters consumed by the TCK test stage.",

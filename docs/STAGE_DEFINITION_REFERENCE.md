@@ -128,19 +128,21 @@ Optional wall-clock timeout in minutes for this stage.
 
 #### `stageInputArtifacts` (array of strings, optional, default `[]`)
 
-A list of glob patterns declaring which artifacts this stage requires as inputs from the build artifact store (e.g. `["*sbom*.json"]`, `["*.tar.gz", "*.zip"]`, `["**/*"]`).
+A list of glob patterns declaring which artifacts this stage requires as inputs from the build artifact store (e.g. `["${BUILD_OUTPUT_DIR}/*sbom*.json"]`, `["${BUILD_OUTPUT_DIR}/*.tar.gz"]`, `["**/*"]`).
 
 - `pipeline-config.json` is always implicitly included at the artifact store root regardless of this list.
+- Supports variable substitution using `${VAR}` or `$VAR` syntax (e.g. `${BUILD_OUTPUT_DIR}`). Variables defined in `stage-constants.properties` / `vendor-constants.properties` or the environment are expanded during collation and at runtime.
 - In Jenkins, `PipelineHelper.initializeStage()` resolves these patterns from collated stage params and passes them to `copyArtifacts`.
 - In the local runner, `WorkspaceManager.restore_stage_inputs()` restores matching files from `build_artifacts/` into the stage workspace.
-- Patterns match files as they sit in the artifact store. Stages that need to read JDK binaries produced by `02-build` should use patterns like `${BUILD_OUTPUT_DIR}/*.tar.gz` so they target the `build_output/` sub-directory explicitly.
+- Patterns match files as they sit in the artifact store. Stages that need to read JDK binaries produced by `02-build` should use patterns like `${BUILD_OUTPUT_DIR}/*.tar.gz` or `${BUILD_OUTPUT_DIR}/*sbom*.json` so they target the `build_output/` sub-directory explicitly.
 
 #### `stageOutputArtifacts` (array of strings, optional, default `["**/*"]`)
 
 A list of glob patterns declaring which output artifacts created by this stage in `${TARGET_DIR}` should be archived into the build artifact store.
 
-- In Jenkins, `StageScriptRunner._archiveStageOutputs()` automatically archives the entire `TARGET_DIR` into the artifact store after the stage script finishes.
-- In the local runner, `WorkspaceManager.archive_stage_outputs()` automatically copies the contents of `TARGET_DIR` into `build_artifacts/`.
+- Supports variable substitution using `${VAR}` or `$VAR` syntax (e.g. `${BUILD_OUTPUT_DIR}`).
+- In Jenkins, `StageScriptRunner._archiveStageOutputs()` automatically archives the entire `TARGET_DIR` into the artifact store after the stage script finishes according to matching patterns.
+- In the local runner, `WorkspaceManager.archive_stage_outputs()` automatically copies matching files under `TARGET_DIR` into `build_artifacts/`.
 - The `02-build` stage writes its JDK binaries into `${TARGET_DIR}/${BUILD_OUTPUT_DIR}` (i.e. a `build_output/` sub-directory of `TARGET_DIR`). Downstream stages that need those binaries should look for them under `${INPUT_ARTIFACTS_DIR}/${BUILD_OUTPUT_DIR}`.
 
 #### `parameterGroups` (array, optional)
