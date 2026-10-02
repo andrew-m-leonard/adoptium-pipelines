@@ -58,8 +58,7 @@ if [ "${CLEANUP_TYPE}" = "pre" ]; then
 	CLEANUP_LABEL="Pre-stage workspace cleanup"
 elif [ "${CLEANUP_TYPE}" = "post" ]; then
 	# Post-cleanup: Check configuration
-	load_config "${CONFIG_FILE}"
-	CLEAN_AFTER=$(get_config_value ".parameters.cleanWorkspaceAfterStage" "true")
+	CLEAN_AFTER=$(get_config_value "${CONFIG_FILE}" ".parameters.cleanWorkspaceAfterStage" "true")
 
 	if [ "${CLEAN_AFTER}" = "true" ]; then
 		SHOULD_CLEAN="true"
