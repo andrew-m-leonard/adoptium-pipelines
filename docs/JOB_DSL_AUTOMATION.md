@@ -389,11 +389,11 @@ Commit and push, then re-run the seed job.
 
 **Fix**: Use **Build with Parameters** and supply `CONFIG_REPO_URL` and `CONFIG_REPO_BRANCH`.
 
-### Config Repo Checkout Fails with Authentication Error
+### Config Repository Checkout Fails with Authentication Error
 
 **Cause**: The vendor config repository is private but no credential is configured.
 
-**Fix**: Set `configRepoCredentialsId` in `jenkins_credential_config.json` in your config repo and re-run the seed job. The credential ID is baked into every generated launch and platform build job automatically.
+**Fix**: Set `configRepoCredentialsId` in `jenkins_credential_config.json` in your config repository and re-run the seed job. The credential ID is baked into every generated launch and platform build job automatically.
 
 ### Seed Job Fails with "vendor-scripts/ not found"
 

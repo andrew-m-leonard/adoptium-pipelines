@@ -12,7 +12,7 @@ The only existing credential reference in the pipeline is `dockerCredential` ins
 
 ## Vendor config file: `jenkins_credential_config.json`
 
-Placed at the config repo root alongside `jenkins_job_config.json`. Entirely optional — if absent, nothing changes.
+Placed at the config repository root alongside `jenkins_job_config.json`. Entirely optional — if absent, nothing changes.
 
 ```json
 {
@@ -156,9 +156,9 @@ stageRunner.run('16-publish', config)
 
 ## Files changed
 
-| File | Repo | Change |
+| File | Repository | Change |
 |---|---|---|
-| `jenkins_credential_config.json` | vendor config repo | **new** — credential definitions and stage mappings |
+| `jenkins_credential_config.json` | vendor config repository | **new** — credential definitions and stage mappings |
 | `ci/jenkins/lib/load-jenkins-credential-config.py` | ci-adoptium-pipelines | **new** — reads config file, validates, writes `jenkins-credential-config.json` |
 | `ci/jenkins/lib/CredentialHelper.groovy` | ci-adoptium-pipelines | **new** — `withStageCredentials(stageId, body)` |
 | `ci/jenkins/lib/ConfigHelper.groovy` | ci-adoptium-pipelines | **modified** — `generateJenkinsConfig()` calls new Python script, sets two env vars |
@@ -179,7 +179,7 @@ stageRunner.run('16-publish', config)
 
 ## Related documentation
 
-- [`docs/CODE_CONFIG_SEPARATION.md`](./CODE_CONFIG_SEPARATION.md) — three-repo architecture and config repo layout
+- [`docs/CODE_CONFIG_SEPARATION.md`](./CODE_CONFIG_SEPARATION.md) — three-repository architecture and config repository layout
 - [`docs/STAGE_DEFINITION_REFERENCE.md`](./STAGE_DEFINITION_REFERENCE.md) — vendor override rules for stage scripts and params files
 - [`ci/jenkins/lib/StageScriptRunner.groovy`](../ci/jenkins/lib/StageScriptRunner.groovy) — `containerEnvFlags()`, `run()`
 - [`ci/jenkins/lib/ConfigHelper.groovy`](../ci/jenkins/lib/ConfigHelper.groovy) — `generateJenkinsConfig()`

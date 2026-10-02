@@ -1,6 +1,6 @@
 # GitHub Authentication for Git Operations
 
-GitHub is introducing rate-limiting for unauthenticated HTTPS git operations. Pipeline stages that call `git clone https://github.com/...` (build repo, AQA tests, etc.) will be affected. This document describes how the framework provides transparent GitHub authentication to every stage without requiring any changes to stage scripts.
+GitHub is introducing rate-limiting for unauthenticated HTTPS git operations. Pipeline stages that call `git clone https://github.com/...` (build repository, AQA tests, etc.) will be affected. This document describes how the framework provides transparent GitHub authentication to every stage without requiring any changes to stage scripts.
 
 ---
 
@@ -9,7 +9,7 @@ GitHub is introducing rate-limiting for unauthenticated HTTPS git operations. Pi
 - **No secrets in config files** — the token value never appears in any file committed to any repository.
 - **No changes to stage scripts** — `.sh`, `.py`, and `.groovy` stage implementations are unchanged; authentication is injected transparently by the stage runner.
 - **CI-specific token source** — each CI adapter obtains the token in its own natural way; the mechanism that delivers it to `git` is identical across all adapters.
-- **Safe credential handling** — the token is never interpolated into a `withEnv` argument string or a git config key/value. It stays in its own named environment variable, which the CI system already masks in logs.
+- **Safe credential handling** — the token is never interpolated into a `withEnv` argument string or a git config key-value. It stays in its own named environment variable, which the CI system already masks in logs.
 
 ---
 
@@ -34,7 +34,7 @@ The token is stored as a **Jenkins `string` credential** and declared in the ven
 }
 ```
 
-The special key `ALL_STAGES` in `stageCredentials` instructs `CredentialHelper` to inject this credential into every stage, not just specific ones. Only the non-secret `credentialId` string appears in the config repo. The token value lives exclusively in the Jenkins credential store.
+The special key `ALL_STAGES` in `stageCredentials` instructs `CredentialHelper` to inject this credential into every stage, not just specific ones. Only the non-secret `credentialId` string appears in the config repository. The token value lives exclusively in the Jenkins credential store.
 
 ### Local runner
 
@@ -133,7 +133,7 @@ Groovy stage scripts (`.groovy` vendor overrides) run inside the Jenkins CPS eng
 |---|---|
 | Token in config file | ❌ Never — only the non-secret `credentialId` string |
 | Token in `withEnv` argument | ❌ Never — only the `GIT_ASKPASS` script *path* |
-| Token in git config key/value | ❌ Never — git reads it from the env at auth time via `GIT_ASKPASS` |
+| Token in git config key-value | ❌ Never — git reads it from the env at auth time via `GIT_ASKPASS` |
 | Token masked in Jenkins logs | ✅ Yes — `withCredentials(string(...))` masks it everywhere |
 | Token in container exec `-e` flags | ✅ Masked — forwarded via `STAGE_CREDENTIAL_ENV_VARS` / `containerEnvFlags()`, Jenkins masks the value |
 | `git-askpass.sh` content | Safe — contains only `echo "${GITHUB_TOKEN}"`, no literal secret |
@@ -145,9 +145,9 @@ Groovy stage scripts (`.groovy` vendor overrides) run inside the Jenkins CPS eng
 
 ### Files changed
 
-| File | Repo | Change |
+| File | Repository | Change |
 |---|---|---|
-| `jenkins_credential_config.json` | vendor config repo | Add `GITHUB_TOKEN` credential entry and `ALL_STAGES` mapping (optional) |
+| `jenkins_credential_config.json` | vendor config repository | Add `GITHUB_TOKEN` credential entry and `ALL_STAGES` mapping (optional) |
 | `ci/jenkins/lib/CredentialHelper.groovy` | ci-adoptium-pipelines | Recognise `ALL_STAGES` wildcard key in `stageCredentials` |
 | `ci/jenkins/lib/StageScriptRunner.groovy` | ci-adoptium-pipelines | Write `git-askpass.sh` and wrap `_dispatch()` with `withEnv(['GIT_ASKPASS=...'])` when `GITHUB_TOKEN` is set |
 | `ci/local/lib/stage_env.py` | ci-adoptium-pipelines | Write `git-askpass.sh` and set `GIT_ASKPASS` in env dict when `GITHUB_TOKEN` is present in `os.environ` |
@@ -171,7 +171,7 @@ If `GITHUB_TOKEN` is absent from the Jenkins credential config (i.e. no `ALL_STA
 ## Related documentation
 
 - [`docs/STAGE_CREDENTIALS.md`](./STAGE_CREDENTIALS.md) — the existing per-stage credential injection mechanism that `GITHUB_TOKEN` builds on
-- [`docs/CODE_CONFIG_SEPARATION.md`](./CODE_CONFIG_SEPARATION.md) — three-repo architecture and config repo layout
+- [`docs/CODE_CONFIG_SEPARATION.md`](./CODE_CONFIG_SEPARATION.md) — three-repository architecture and config repository layout
 - [`ci/jenkins/lib/CredentialHelper.groovy`](../ci/jenkins/lib/CredentialHelper.groovy) — `withStageCredentials()`, credential binding types
 - [`ci/jenkins/lib/StageScriptRunner.groovy`](../ci/jenkins/lib/StageScriptRunner.groovy) — `_dispatch()`, `containerEnvFlags()`
 - [`ci/local/lib/stage_env.py`](../ci/local/lib/stage_env.py) — `build_stage_env()`

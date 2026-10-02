@@ -99,12 +99,12 @@ treated with the `detect-ga-tag` dedup policy (Jenkins history check) by default
 
 | Field | Used in | Required | Default when absent | Description |
 |---|---|---|---|---|
-| `monitorRepo` | all detect types | yes | — | Git repo URL to watch for tags |
-| `buildTagPattern` | `detect-build-tag-*`, `detect-ga-tag` | no | Version-derived (see below) | ERE regex to match/resolve the build tag |
-| `gaTagPattern` | `detect-ga-tag` | no | `.*-ga$` | ERE regex to match the GA tag |
+| `monitorRepo` | all detect types | yes | — | Git repository URL to watch for tags |
+| `buildTagPattern` | `detect-build-tag-*`, `detect-ga-tag` | no | Version-derived (see below) | ERE regular expression to match/resolve the build tag |
+| `gaTagPattern` | `detect-ga-tag` | no | `.*-ga$` | ERE regular expression to match the GA tag |
 | `publishNameMap` | `detect-build-tag-*` | yes | — | `sed` expression: detected tag → publish name |
 | `targetReleaseTagMap` | `detect-build-tag-*` | yes | — | `sed` expression: publish name → release tag checked on `targetRepo` |
-| `targetRepo` | `detect-build-tag-*` | yes | — | GitHub/GHE releases repo to check for published assets |
+| `targetRepo` | `detect-build-tag-*` | yes | — | GitHub/GHE releases repository to check for published assets |
 | `suppressTestingConditions` | all | no | `[]` (never suppress) | Conditions under which `RUN_TESTS` is forced false |
 | `enabled` | all | yes | — | Set `false` to disable this version without removing it |
 
@@ -180,7 +180,7 @@ Vendor trigger scripts follow the same resolution order as stage scripts:
    `jenkins_job_config.json`
 4. Re-run the seed job — the trigger job is created automatically
 
-No changes to the pipeline repo are required. The vendor type receives the
+No changes to the pipeline repository are required. The vendor type receives the
 `detect-ga-tag` dedup policy (Jenkins history check) by default in
 `Jenkinsfile.trigger`.
 

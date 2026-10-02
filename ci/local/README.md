@@ -85,7 +85,7 @@ Every stage script receives the following environment variables, set by `build_s
 | `TARGET_DIR` | `$WORKSPACE/<stage-id>-output/` | Stage output directory. Derived from the stage ID so each stage writes to its own subdirectory and can never inherit a stale path from a prior stage. |
 | `BUILD_NUMBER` | CLI `--build-number` or `local-YYYYMMDD-HHMMSS` | Build identifier. |
 | `RELEASE_TYPE` | CLI `--release-type` (default: `NIGHTLY`) | `NIGHTLY`, `WEEKLY`, or `RELEASE`. |
-| `PIPELINE_ROOT` | Absolute path to the `ci-adoptium-pipelines` checkout root | Allows vendor stage scripts to source shared library utilities by a stable path independent of the ephemeral `WORKSPACE`. On Jenkins the pipeline repo is checked out into every agent workspace so `scripts/` is always at a known relative path; `PIPELINE_ROOT` makes that same root explicitly addressable in the local runner. |
+| `PIPELINE_ROOT` | Absolute path to the `ci-adoptium-pipelines` checkout root | Allows vendor stage scripts to source shared library utilities by a stable path independent of the ephemeral `WORKSPACE`. On Jenkins the pipeline repository is checked out into every agent workspace so `scripts/` is always at a known relative path; `PIPELINE_ROOT` makes that same root explicitly addressable in the local runner. |
 | `CONFIG_*` | Values from `pipeline-config.json` `buildConfig` | e.g. `CONFIG_TARGET_OS`, `CONFIG_ARCHITECTURE`, `CONFIG_JAVA_TO_BUILD`. Allows stage scripts to read platform config without a `jq` dependency. |
 | Stage params | From `*.params.json` + CLI overrides | e.g. `SCM_REF`, `CREATE_SBOM`, `RUN_TESTS`. Injected after all standard vars so they can override defaults. |
 

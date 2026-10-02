@@ -60,7 +60,7 @@ from within the launch job's `Create/Update Platform Jobs` stage.
 
 ### Normal re-generation (low risk)
 
-When the pipeline repo SHA changes (e.g. a new commit is pushed to `jenkins-creds`), the DSL
+When the pipeline repository SHA changes (e.g. a new commit is pushed to `jenkins-creds`), the DSL
 detects a SHA mismatch and **updates the existing job in place** — it calls `pipelineJob()` on a
 job that already exists. Jenkins updates the job configuration but **preserves the build history
 and the build number sequence**. In this case the next build is `#2`, `#3`, etc. — not `#1` —

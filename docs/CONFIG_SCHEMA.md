@@ -151,7 +151,7 @@ Jenkins-specific configuration. Contains two groups: **job-creation settings** (
 ## `jenkins_credential_config.json`
 
 Jenkins-specific credential configuration. Contains Jenkins credential IDs for SCM checkouts (pipelines
-repo and config repo) as well as per-stage secret injection used by `CredentialHelper`.
+repository and config repository) as well as per-stage secret injection used by `CredentialHelper`.
 
 This file is the single home for all Jenkins credential IDs — credential IDs must never appear in the
 CI-agnostic `adoptium_pipeline_config.json`.
