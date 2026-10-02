@@ -170,19 +170,15 @@ String containerEnvFlags() {
 }
 
 /**
- * Parse a .properties file and return a Map<String,String> of its entries.
+ * Parse a properties file content string and return a Map<String,String>.
  *
  * Skips blank lines and lines whose first non-whitespace character is '#'.
  * Lines must have the form KEY=VALUE; lines without '=' are skipped.
- * Returns an empty map if the file does not exist.
  */
 @NonCPS
-private Map<String, String> _parseProperties(String path) {
+private Map<String, String> _parsePropertiesContent(String content) {
     Map<String, String> result = [:]
-    if (!fileExists(path)) {
-        return result
-    }
-    readFile(path).split('\n').each { String line ->
+    content.split('\n').each { String line ->
         String trimmed = line.trim()
         if (!trimmed || trimmed.startsWith('#')) return
         int eq = trimmed.indexOf('=')
@@ -192,6 +188,18 @@ private Map<String, String> _parseProperties(String path) {
         if (key) result[key] = value
     }
     return result
+}
+
+/**
+ * Read a .properties file and return a Map<String,String> of its entries.
+ *
+ * Returns an empty map if the file does not exist.
+ */
+private Map<String, String> _parseProperties(String path) {
+    if (!fileExists(path)) {
+        return [:]
+    }
+    return _parsePropertiesContent(readFile(path))
 }
 
 /**
