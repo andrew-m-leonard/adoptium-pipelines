@@ -61,28 +61,28 @@ TRIGGER_UTILS="${PIPELINE_LIB}/python-runner.sh ${PIPELINE_LIB}/trigger-utils.py
 # main
 # ---------------------------------------------------------------------------
 main() {
-    log_section "weekly-head — Start"
+	log_section "weekly-head — Start"
 
-    require_env "WORKSPACE"
-    require_env "TARGET_DIR"
-    require_env "TRIGGER_VERSION_CONFIG_FILE"
-    require_file "${TRIGGER_VERSION_CONFIG_FILE}"
+	require_env "WORKSPACE"
+	require_env "TARGET_DIR"
+	require_env "TRIGGER_VERSION_CONFIG_FILE"
+	require_file "${TRIGGER_VERSION_CONFIG_FILE}"
 
-    mkdir -p "${TARGET_DIR}"
+	mkdir -p "${TARGET_DIR}"
 
-    local version
-    version=$(get_config_value "${TRIGGER_VERSION_CONFIG_FILE}" ".version")
-    log_info "version : ${version}"
+	local version
+	version=$(get_config_value "${TRIGGER_VERSION_CONFIG_FILE}" ".version")
+	log_info "version : ${version}"
 
-    # Unconditionally signal a trigger — no tag detection needed.
-    # scmRef is empty: the build pipeline will use HEAD of the configured branch.
-    ${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
-        "shouldTrigger=true" \
-        "scmRef=" \
-        "releaseType=Weekly"
+	# Unconditionally signal a trigger — no tag detection needed.
+	# scmRef is empty: the build pipeline will use HEAD of the configured branch.
+	${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
+		"shouldTrigger=true" \
+		"scmRef=" \
+		"releaseType=Weekly"
 
-    log_info "trigger-result.json written to ${TARGET_DIR}"
-    log_section "weekly-head — Complete"
+	log_info "trigger-result.json written to ${TARGET_DIR}"
+	log_section "weekly-head — Complete"
 }
 
 main "$@"

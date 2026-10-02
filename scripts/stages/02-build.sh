@@ -196,10 +196,10 @@ sbom_extract_field() {
 	#   {"name": "Build Workspace Directory", "value": "/some/path"}
 	# grep for the line after the matching "name" line and pull out the value.
 	# head -n1 ensures only the first match is returned.
-	grep -A1 "\"name\"[[:space:]]*:[[:space:]]*\"${field_name}\"" "${sbom_file}" \
-		| grep '"value"' \
-		| sed 's/.*"value"[[:space:]]*:[[:space:]]*"\(.*\)".*/\1/' \
-		| head -n1
+	grep -A1 "\"name\"[[:space:]]*:[[:space:]]*\"${field_name}\"" "${sbom_file}" |
+		grep '"value"' |
+		sed 's/.*"value"[[:space:]]*:[[:space:]]*"\(.*\)".*/\1/' |
+		head -n1
 }
 
 # Setup build environment
@@ -494,7 +494,7 @@ setup_reproducible_build_from_sbom() {
 				if [[ -n "${caller_commit}" ]]; then
 					# Normalise: compare only as many characters as the shorter value to
 					# handle a full SHA vs abbreviated SHA or ref mismatch gracefully.
-					local min_len=$(( ${#caller_commit} < ${#sbom_commit} ? ${#caller_commit} : ${#sbom_commit} ))
+					local min_len=$((${#caller_commit} < ${#sbom_commit} ? ${#caller_commit} : ${#sbom_commit}))
 					if [[ "${caller_commit:0:${min_len}}" != "${sbom_commit:0:${min_len}}" ]]; then
 						log_warn "Caller build_ref '${caller_build_ref}' resolves to commit '${caller_commit}'"
 						log_warn "  but SBOM Temurin Build Ref is '${sbom_commit}'"
@@ -684,7 +684,7 @@ extract_build_metadata() {
 		"${CONFIG_VARIANT:-}" \
 		"${build_ref}" \
 		"${build_repo_url}" \
-		> "${WORKSPACE}/build-metadata.json"
+		>"${WORKSPACE}/build-metadata.json"
 
 	log_info "Build metadata saved to build-metadata.json"
 }

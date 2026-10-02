@@ -79,175 +79,175 @@ TRIGGER_UTILS="${PIPELINE_LIB}/python-runner.sh ${PIPELINE_LIB}/trigger-utils.py
 # main
 # ---------------------------------------------------------------------------
 main() {
-    log_section "detect-ga-tag — Start"
+	log_section "detect-ga-tag — Start"
 
-    require_env "WORKSPACE"
-    require_env "TARGET_DIR"
-    require_env "TRIGGER_VERSION_CONFIG_FILE"
-    require_file "${TRIGGER_VERSION_CONFIG_FILE}"
+	require_env "WORKSPACE"
+	require_env "TARGET_DIR"
+	require_env "TRIGGER_VERSION_CONFIG_FILE"
+	require_file "${TRIGGER_VERSION_CONFIG_FILE}"
 
-    mkdir -p "${TARGET_DIR}"
+	mkdir -p "${TARGET_DIR}"
 
-    local cfg="${TRIGGER_VERSION_CONFIG_FILE}"
+	local cfg="${TRIGGER_VERSION_CONFIG_FILE}"
 
-    local monitor_repo version
-    monitor_repo=$(get_config_value "${cfg}" ".monitorRepo")
-    version=$(get_config_value      "${cfg}" ".version")
+	local monitor_repo version
+	monitor_repo=$(get_config_value "${cfg}" ".monitorRepo")
+	version=$(get_config_value "${cfg}" ".version")
 
-    # gaTagPattern — use config value or default to any -ga tag
-    local ga_tag_pattern
-    if ga_tag_pattern=$(get_config_value "${cfg}" ".gaTagPattern" 2>/dev/null) \
-            && [ -n "${ga_tag_pattern}" ]; then
-        log_info "Using configured gaTagPattern: ${ga_tag_pattern}"
-    else
-        ga_tag_pattern=".*-ga$"
-        log_info "Using default gaTagPattern: ${ga_tag_pattern}"
-    fi
+	# gaTagPattern — use config value or default to any -ga tag
+	local ga_tag_pattern
+	if ga_tag_pattern=$(get_config_value "${cfg}" ".gaTagPattern" 2>/dev/null) &&
+		[ -n "${ga_tag_pattern}" ]; then
+		log_info "Using configured gaTagPattern: ${ga_tag_pattern}"
+	else
+		ga_tag_pattern=".*-ga$"
+		log_info "Using default gaTagPattern: ${ga_tag_pattern}"
+	fi
 
-    # buildTagPattern — use config value or derive default via trigger-utils.py
-    local build_tag_pattern
-    if build_tag_pattern=$(get_config_value "${cfg}" ".buildTagPattern" 2>/dev/null) \
-            && [ -n "${build_tag_pattern}" ]; then
-        log_info "Using configured buildTagPattern: ${build_tag_pattern}"
-    else
-        build_tag_pattern=$(${TRIGGER_UTILS} default-build-tag-pattern "${version}")
-        log_info "Using default buildTagPattern for ${version}: ${build_tag_pattern}"
-    fi
+	# buildTagPattern — use config value or derive default via trigger-utils.py
+	local build_tag_pattern
+	if build_tag_pattern=$(get_config_value "${cfg}" ".buildTagPattern" 2>/dev/null) &&
+		[ -n "${build_tag_pattern}" ]; then
+		log_info "Using configured buildTagPattern: ${build_tag_pattern}"
+	else
+		build_tag_pattern=$(${TRIGGER_UTILS} default-build-tag-pattern "${version}")
+		log_info "Using default buildTagPattern for ${version}: ${build_tag_pattern}"
+	fi
 
-    log_info "monitorRepo      : ${monitor_repo}"
-    log_info "version          : ${version}"
-    log_info "gaTagPattern     : ${ga_tag_pattern}"
-    log_info "buildTagPattern  : ${build_tag_pattern}"
+	log_info "monitorRepo      : ${monitor_repo}"
+	log_info "version          : ${version}"
+	log_info "gaTagPattern     : ${ga_tag_pattern}"
+	log_info "buildTagPattern  : ${build_tag_pattern}"
 
-    # Step 1 — find the latest GA tag on monitorRepo matching gaTagPattern
-    log_info "Querying ${monitor_repo} for latest GA tag..."
-    local latest_ga_tag
-    latest_ga_tag=$(git ls-remote --sort=-v:refname --tags "${monitor_repo}" \
-        | grep -v '\^{}' \
-        | grep -E "${ga_tag_pattern}" \
-        | tr -s '\t ' ' ' | cut -d' ' -f2 | sed 's|refs/tags/||' \
-        | sort -V -r | head -1 | tr -d '\n') || true
+	# Step 1 — find the latest GA tag on monitorRepo matching gaTagPattern
+	log_info "Querying ${monitor_repo} for latest GA tag..."
+	local latest_ga_tag
+	latest_ga_tag=$(git ls-remote --sort=-v:refname --tags "${monitor_repo}" |
+		grep -v '\^{}' |
+		grep -E "${ga_tag_pattern}" |
+		tr -s '\t ' ' ' | cut -d' ' -f2 | sed 's|refs/tags/||' |
+		sort -V -r | head -1 | tr -d '\n') || true
 
-    if [ -z "${latest_ga_tag}" ]; then
-        log_warn "No GA tag found matching '${ga_tag_pattern}' on ${monitor_repo}"
-        ${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
-            "detected=false" "scmRef=" "gaTag="
-        log_section "detect-ga-tag — Complete (no GA tag found)"
-        return 0
-    fi
-    log_info "Latest GA tag: ${latest_ga_tag}"
+	if [ -z "${latest_ga_tag}" ]; then
+		log_warn "No GA tag found matching '${ga_tag_pattern}' on ${monitor_repo}"
+		${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
+			"detected=false" "scmRef=" "gaTag="
+		log_section "detect-ga-tag — Complete (no GA tag found)"
+		return 0
+	fi
+	log_info "Latest GA tag: ${latest_ga_tag}"
 
-    # Step 2 — resolve the commit SHA that the GA tag points at
-    local ga_commit_sha
-    ga_commit_sha=$(git ls-remote --tags "${monitor_repo}" "${latest_ga_tag}^{}" \
-        | tr -s '\t ' ' ' | cut -d' ' -f1 | tr -d '\n') || true
+	# Step 2 — resolve the commit SHA that the GA tag points at
+	local ga_commit_sha
+	ga_commit_sha=$(git ls-remote --tags "${monitor_repo}" "${latest_ga_tag}^{}" |
+		tr -s '\t ' ' ' | cut -d' ' -f1 | tr -d '\n') || true
 
-    if [ -z "${ga_commit_sha}" ]; then
-        # Lightweight tag — try without the ^{} dereference
-        ga_commit_sha=$(git ls-remote --tags "${monitor_repo}" "${latest_ga_tag}" \
-            | tr -s '\t ' ' ' | cut -d' ' -f1 | tr -d '\n') || true
-    fi
+	if [ -z "${ga_commit_sha}" ]; then
+		# Lightweight tag — try without the ^{} dereference
+		ga_commit_sha=$(git ls-remote --tags "${monitor_repo}" "${latest_ga_tag}" |
+			tr -s '\t ' ' ' | cut -d' ' -f1 | tr -d '\n') || true
+	fi
 
-    if [ -z "${ga_commit_sha}" ]; then
-        log_error "Cannot resolve commit SHA for GA tag ${latest_ga_tag}"
-        ${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
-            "detected=false" "scmRef=" "gaTag=${latest_ga_tag}"
-        return 1
-    fi
-    log_info "GA tag commit SHA: ${ga_commit_sha}"
+	if [ -z "${ga_commit_sha}" ]; then
+		log_error "Cannot resolve commit SHA for GA tag ${latest_ga_tag}"
+		${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
+			"detected=false" "scmRef=" "gaTag=${latest_ga_tag}"
+		return 1
+	fi
+	log_info "GA tag commit SHA: ${ga_commit_sha}"
 
-    # Step 3 — derive the version prefix from the GA tag (strip the "-ga" suffix)
-    # e.g. "jdk-21.0.12.1-ga" → "jdk-21.0.12.1"
-    #      "jdk8u492-ga"       → "jdk8u492"
-    local version_prefix="${latest_ga_tag%-ga}"
+	# Step 3 — derive the version prefix from the GA tag (strip the "-ga" suffix)
+	# e.g. "jdk-21.0.12.1-ga" → "jdk-21.0.12.1"
+	#      "jdk8u492-ga"       → "jdk8u492"
+	local version_prefix="${latest_ga_tag%-ga}"
 
-    # Fetch all remote tags once — reused in 3a and 3c.
-    log_info "Fetching all tags from ${monitor_repo}..."
-    local all_remote_tags
-    all_remote_tags=$(git ls-remote --tags "${monitor_repo}") || true
+	# Fetch all remote tags once — reused in 3a and 3c.
+	log_info "Fetching all tags from ${monitor_repo}..."
+	local all_remote_tags
+	all_remote_tags=$(git ls-remote --tags "${monitor_repo}") || true
 
-    # Step 3a — find upstream build tags at the GA commit SHA with the version prefix.
-    # These are the numbered build tags (e.g. jdk-21.0.12.1+7, jdk-21.0.12.1+8,
-    # or jdk8u492-b07, jdk8u492-b08) that share the GA commit.
-    log_info "Looking for upstream build tags at ${ga_commit_sha} with prefix '${version_prefix}'..."
+	# Step 3a — find upstream build tags at the GA commit SHA with the version prefix.
+	# These are the numbered build tags (e.g. jdk-21.0.12.1+7, jdk-21.0.12.1+8,
+	# or jdk8u492-b07, jdk8u492-b08) that share the GA commit.
+	log_info "Looking for upstream build tags at ${ga_commit_sha} with prefix '${version_prefix}'..."
 
-    # Collect tags at the GA commit: prefer annotated (^{}) derefs, fall back to lightweight.
-    local tags_at_commit
-    tags_at_commit=$(echo "${all_remote_tags}" \
-        | grep "${ga_commit_sha}" \
-        | grep '\^{}' \
-        | tr -s '\t ' ' ' | cut -d' ' -f2 | sed 's|refs/tags/||' | sed 's|\^{}||') || true
+	# Collect tags at the GA commit: prefer annotated (^{}) derefs, fall back to lightweight.
+	local tags_at_commit
+	tags_at_commit=$(echo "${all_remote_tags}" |
+		grep "${ga_commit_sha}" |
+		grep '\^{}' |
+		tr -s '\t ' ' ' | cut -d' ' -f2 | sed 's|refs/tags/||' | sed 's|\^{}||') || true
 
-    if [ -z "${tags_at_commit}" ]; then
-        tags_at_commit=$(echo "${all_remote_tags}" \
-            | grep "${ga_commit_sha}" \
-            | grep -v '\^{}' \
-            | tr -s '\t ' ' ' | cut -d' ' -f2 | sed 's|refs/tags/||') || true
-    fi
+	if [ -z "${tags_at_commit}" ]; then
+		tags_at_commit=$(echo "${all_remote_tags}" |
+			grep "${ga_commit_sha}" |
+			grep -v '\^{}' |
+			tr -s '\t ' ' ' | cut -d' ' -f2 | sed 's|refs/tags/||') || true
+	fi
 
-    # Keep only tags that start with the version prefix followed by "+" or "-b",
-    # and exclude the -ga tag itself. Also exclude tags that already match
-    # buildTagPattern — those are mirror tags, not upstream build tags.
-    local upstream_build_tags
-    upstream_build_tags=$(printf '%s\n' "${tags_at_commit}" \
-        | grep -E "^${version_prefix}([+]|-b)[0-9]" \
-        | grep -v -- '-ga$' \
-        | grep -vE "${build_tag_pattern}") || true
+	# Keep only tags that start with the version prefix followed by "+" or "-b",
+	# and exclude the -ga tag itself. Also exclude tags that already match
+	# buildTagPattern — those are mirror tags, not upstream build tags.
+	local upstream_build_tags
+	upstream_build_tags=$(printf '%s\n' "${tags_at_commit}" |
+		grep -E "^${version_prefix}([+]|-b)[0-9]" |
+		grep -v -- '-ga$' |
+		grep -vE "${build_tag_pattern}") || true
 
-    if [ -z "${upstream_build_tags}" ]; then
-        log_warn "No upstream build tags with prefix '${version_prefix}' found at GA commit ${ga_commit_sha}"
-        log_warn "The upstream build tag may not have been applied yet"
-        ${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
-            "detected=false" "scmRef=" "gaTag=${latest_ga_tag}"
-        log_section "detect-ga-tag — Complete (no upstream build tag at GA commit yet)"
-        return 0
-    fi
+	if [ -z "${upstream_build_tags}" ]; then
+		log_warn "No upstream build tags with prefix '${version_prefix}' found at GA commit ${ga_commit_sha}"
+		log_warn "The upstream build tag may not have been applied yet"
+		${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
+			"detected=false" "scmRef=" "gaTag=${latest_ga_tag}"
+		log_section "detect-ga-tag — Complete (no upstream build tag at GA commit yet)"
+		return 0
+	fi
 
-    # Step 3b — pick the upstream build tag with the highest build number.
-    # jdk9+: sort by integer after the last "+"  (jdk-21.0.12.1+8 > jdk-21.0.12.1+7)
-    # jdk8:  sort by integer after "-b"           (jdk8u492-b08    > jdk8u492-b07)
-    local best_upstream_tag
-    if printf '%s\n' "${upstream_build_tags}" | grep -qE '[+][0-9]+$'; then
-        best_upstream_tag=$(printf '%s\n' "${upstream_build_tags}" \
-            | awk -F'+' '{print $NF+0, $0}' \
-            | sort -k1,1 -n | tail -1 | cut -d' ' -f2-)
-    else
-        best_upstream_tag=$(printf '%s\n' "${upstream_build_tags}" \
-            | awk -F'-b' '{print $NF+0, $0}' \
-            | sort -k1,1 -n | tail -1 | cut -d' ' -f2-)
-    fi
-    log_info "Best upstream build tag: ${best_upstream_tag}"
+	# Step 3b — pick the upstream build tag with the highest build number.
+	# jdk9+: sort by integer after the last "+"  (jdk-21.0.12.1+8 > jdk-21.0.12.1+7)
+	# jdk8:  sort by integer after "-b"           (jdk8u492-b08    > jdk8u492-b07)
+	local best_upstream_tag
+	if printf '%s\n' "${upstream_build_tags}" | grep -qE '[+][0-9]+$'; then
+		best_upstream_tag=$(printf '%s\n' "${upstream_build_tags}" |
+			awk -F'+' '{print $NF+0, $0}' |
+			sort -k1,1 -n | tail -1 | cut -d' ' -f2-)
+	else
+		best_upstream_tag=$(printf '%s\n' "${upstream_build_tags}" |
+			awk -F'-b' '{print $NF+0, $0}' |
+			sort -k1,1 -n | tail -1 | cut -d' ' -f2-)
+	fi
+	log_info "Best upstream build tag: ${best_upstream_tag}"
 
-    # Step 3c — find the mirror build tag in monitorRepo that matches
-    # buildTagPattern and corresponds to the best upstream build tag.
-    # The exact naming convention (e.g. suffix appended to the upstream tag)
-    # is vendor-defined via buildTagPattern in trigger-version-config.json.
-    log_info "Looking for mirror build tag for '${best_upstream_tag}' matching '${build_tag_pattern}'..."
-    local scm_ref
-    scm_ref=$(printf '%s\n' "${all_remote_tags}" \
-        | grep -v '\^{}' \
-        | tr -s '\t ' ' ' | cut -d' ' -f2 | sed 's|refs/tags/||' \
-        | grep -E "${build_tag_pattern}" \
-        | grep -F "${best_upstream_tag}" \
-        | tr -d '\n') || true
+	# Step 3c — find the mirror build tag in monitorRepo that matches
+	# buildTagPattern and corresponds to the best upstream build tag.
+	# The exact naming convention (e.g. suffix appended to the upstream tag)
+	# is vendor-defined via buildTagPattern in trigger-version-config.json.
+	log_info "Looking for mirror build tag for '${best_upstream_tag}' matching '${build_tag_pattern}'..."
+	local scm_ref
+	scm_ref=$(printf '%s\n' "${all_remote_tags}" |
+		grep -v '\^{}' |
+		tr -s '\t ' ' ' | cut -d' ' -f2 | sed 's|refs/tags/||' |
+		grep -E "${build_tag_pattern}" |
+		grep -F "${best_upstream_tag}" |
+		tr -d '\n') || true
 
-    if [ -z "${scm_ref}" ]; then
-        log_warn "No mirror build tag for '${best_upstream_tag}' matching '${build_tag_pattern}' found"
-        log_warn "The mirror build tag may not have been applied yet"
-        ${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
-            "detected=false" "scmRef=" "gaTag=${latest_ga_tag}"
-        log_section "detect-ga-tag — Complete (no mirror build tag for ${best_upstream_tag} yet)"
-        return 0
-    fi
-    log_info "Resolved scmRef: ${scm_ref}"
+	if [ -z "${scm_ref}" ]; then
+		log_warn "No mirror build tag for '${best_upstream_tag}' matching '${build_tag_pattern}' found"
+		log_warn "The mirror build tag may not have been applied yet"
+		${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
+			"detected=false" "scmRef=" "gaTag=${latest_ga_tag}"
+		log_section "detect-ga-tag — Complete (no mirror build tag for ${best_upstream_tag} yet)"
+		return 0
+	fi
+	log_info "Resolved scmRef: ${scm_ref}"
 
-    ${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
-        "detected=true" \
-        "scmRef=${scm_ref}" \
-        "gaTag=${latest_ga_tag}"
+	${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
+		"detected=true" \
+		"scmRef=${scm_ref}" \
+		"gaTag=${latest_ga_tag}"
 
-    log_info "trigger-result.json written to ${TARGET_DIR}"
-    log_section "detect-ga-tag — Complete"
+	log_info "trigger-result.json written to ${TARGET_DIR}"
+	log_section "detect-ga-tag — Complete"
 }
 
 main "$@"

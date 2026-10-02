@@ -26,17 +26,17 @@
 # The file is intentionally idempotent: sourcing it multiple times is safe.
 
 _load_properties_file() {
-    local props_file="$1"
-    [[ -f "${props_file}" ]] || return 0
-    while IFS= read -r line || [[ -n "${line}" ]]; do
-        # Skip blank lines and comments
-        [[ -z "${line}" || "${line}" =~ ^[[:space:]]*# ]] && continue
-        # Require KEY=VALUE form
-        [[ "${line}" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] || continue
-        local key="${line%%=*}"
-        local value="${line#*=}"
-        export "${key}=${value}"
-    done < "${props_file}"
+	local props_file="$1"
+	[[ -f "${props_file}" ]] || return 0
+	while IFS= read -r line || [[ -n "${line}" ]]; do
+		# Skip blank lines and comments
+		[[ -z "${line}" || "${line}" =~ ^[[:space:]]*# ]] && continue
+		# Require KEY=VALUE form
+		[[ "${line}" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] || continue
+		local key="${line%%=*}"
+		local value="${line#*=}"
+		export "${key}=${value}"
+	done <"${props_file}"
 }
 
 # Resolve PIPELINE_ROOT (set by CI) or fall back to WORKSPACE
