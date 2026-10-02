@@ -570,7 +570,9 @@ def collect(
         if not in_scope(stem):
             continue
         entry = StageEntry(stem)
-        entry.apply(_load_json_local(path), f"{stem}.params.json (default)")
+        data = _load_json_local(path)
+        if data is not None:
+            entry.apply(data, f"{stem}.params.json (default)")
         entries[stem] = entry
 
     # --- Pass 2: overlay vendor stage files ---
