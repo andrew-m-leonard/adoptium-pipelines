@@ -122,7 +122,7 @@ For a fork or a pinned branch, change these values. Commit and push.
 > `configurations/`, and `vendor-scripts/` are all immediately available to the Job
 > DSL script without any additional checkout steps. Credentials are handled natively
 > by the Git plugin using the Jenkins Credentials store.
-
+>
 > **Multiple deployments**: the folder layout and security boundaries are defined
 > in `jenkins_job_config.json` via `pipelineBaseFolder` and `deployments[]`. A
 > single seed run generates all deployments. See [Deployments](#deployments) below.
@@ -143,8 +143,8 @@ The job will:
 - Create one set of folders per deployment under `pipelineBaseFolder`
 - Create one launch job per enabled JDK version under `Build_openjdk_launchers/`
 - Create a Jenkins view for each enabled JDK version
- 
- ### Step 4: Create Platform Build Jobs
+
+### Step 4: Create Platform Build Jobs
 
 Simply run a launch job (e.g. `Build_openjdk_launchers/Build_openjdk21_launch`).
 Platform jobs are created automatically — no extra flag is needed.
@@ -307,7 +307,7 @@ Declare deployments in `jenkins_job_config.json`:
 
 The effective folder for each deployment is `pipelineBaseFolder/deployment.folder`:
 
-```
+```text
 Jenkins root
 └── temurin/
     ├── release/

@@ -69,7 +69,7 @@ Maps stage IDs to a list of credential names. Same shape as `stageAgentLabels` i
 
 Called inside the existing `ConfigHelper.generateJenkinsConfig()` during Initialize, alongside the existing `load-jenkins-json-config.py` call:
 
-```
+```text
 generateJenkinsConfig()
   ├─ load-jenkins-json-config.py          (existing — unchanged)
   │    → jenkins-config.json
@@ -140,7 +140,7 @@ vars = vars + credEnvVarNames
 
 ### Call sequence for a containerised stage
 
-```
+```text
 stageRunner.run('16-publish', config)
   env.STAGE_CREDENTIAL_ENV_VARS = 'PUBLISH_API_KEY,RELEASE_SSH_KEYFILE'
   withCredentials([string(...), sshUserPrivateKey(...)]) {

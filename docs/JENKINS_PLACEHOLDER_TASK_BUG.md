@@ -10,7 +10,7 @@
 A pipeline build reaches a `node()` / `agent { label '...' }` block, enters the Jenkins queue,
 and immediately prints:
 
-```
+```text
 Still waiting to schedule task
 Stopping part of <folder> » <job-name> #N - <build description>
 ```
@@ -44,7 +44,7 @@ by a Job DSL `removedJobAction: DELETE` followed by re-generation), the build nu
 constructed with an **identical `CpsStepContext` key**. It finds the stale entry in `RunningTasks`,
 inherits `stopping = true` the moment it is created, and immediately reports:
 
-```
+```text
 "Stopping part of <job> #1"
 ```
 

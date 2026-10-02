@@ -182,7 +182,7 @@ CI-agnostic `adoptium_pipeline_config.json`.
 }
 ```
 
-### Fields
+### Fields (credential config)
 
 | Field | Type | Required | Description |
 |---|---|---|---|

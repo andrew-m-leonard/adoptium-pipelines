@@ -106,7 +106,6 @@ python3 tools/migrate-groovy-pipeline-configs.py \
 }
 ```
 
-
 > **Note**: Both `adoptium_pipeline_config.json` and `jenkins_job_config.json` are generated as starting-point templates. Review and update `repository.url` and other site-specific values before committing. See [CODE_CONFIG_SEPARATION.md](../docs/CODE_CONFIG_SEPARATION.md) for the distinction between CI-agnostic and CI-specific config.
 
 ---

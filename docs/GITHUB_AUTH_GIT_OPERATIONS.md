@@ -71,9 +71,9 @@ The script is written to the stage workspace, which is wiped by `cleanWs()` / st
 
 ## Flow diagrams
 
-### Jenkins
+### Jenkins pipeline
 
-```
+```text
 jenkins_credential_config.json
   "stageCredentials": { "ALL_STAGES": ["GITHUB_TOKEN"] }
        │
@@ -98,9 +98,9 @@ StageScriptRunner._dispatch()                    ← single change point
   }
 ```
 
-### Local runner
+### Local runner script
 
-```
+```text
 export GITHUB_TOKEN=ghp_xxx      ← developer sets in shell
        │
        ▼

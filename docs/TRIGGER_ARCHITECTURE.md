@@ -7,7 +7,7 @@ OpenJDK tag events and automatically fires the appropriate build pipeline.
 
 ## Three-Layer Model
 
-```
+```text
 Layer 0: Trigger Definitions (CI-agnostic JSON in config-repo)
   trigger_config.json      — what versions to watch, patterns, repo URLs
   jenkins_job_config.json  — deployments[], pipelineBaseFolder
@@ -111,6 +111,7 @@ treated with the `detect-ga-tag` dedup policy (Jenkins history check) by default
 ### `buildTagPattern` defaults
 
 When `buildTagPattern` is omitted, `trigger-utils.py default-build-tag-pattern` derives:
+
 - `jdk8` → `jdk8u.+_adopt$`
 - all others → `jdk-<N>[\\.+].+_adopt$`
 
@@ -163,7 +164,7 @@ No extra configuration is needed — the URL hostname drives the API path.
 
 Vendor trigger scripts follow the same resolution order as stage scripts:
 
-```
+```text
 1. config-repo/vendor-triggers/<type>.sh   ← vendor override or addition
 2. scripts/triggers/<type>.sh              ← default (core pipeline repo)
 3. not found → error
@@ -210,7 +211,7 @@ reads the same `monitorRepo`/`targetRepo`/`buildTagPattern`/`publishNameMap`/
 
 ## `TriggerScriptRunner` Reference
 
-```
+```text
 ci/jenkins/lib/TriggerScriptRunner.groovy
 
 Resolution order:
@@ -235,7 +236,7 @@ Public API:
 
 ## Deployment Folder Layout
 
-```
+```text
 Jenkins root
 └── <pipelineBaseFolder>/           (from jenkins_job_config.json)
     ├── <deployment.folder>/        e.g. "release"
