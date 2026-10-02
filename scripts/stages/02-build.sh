@@ -699,6 +699,7 @@ organize_build_outputs() {
 
 	local build_repo_dir="${WORKSPACE}/temurin-build"
 	local target_dir="${build_repo_dir}/workspace/target"
+	# shellcheck disable=SC2153  # BUILD_OUTPUT_DIR is exported at runtime by load-stage-constants.sh
 	local build_output_dir="${TARGET_DIR}/${BUILD_OUTPUT_DIR}"
 
 	if [[ ! -d "${target_dir}" ]]; then
