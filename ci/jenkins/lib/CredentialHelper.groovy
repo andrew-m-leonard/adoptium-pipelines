@@ -95,7 +95,7 @@ List<String> credentialNamesForStage(String stageId, String stageCredsJson) {
     // ALL_STAGES entries whose envVar is overridden by a stage-specific entry are
     // removed in buildBindings(), not here — we still need both in the list so
     // buildBindings() can compare them.
-    LinkedHashSet<String> merged = [] as LinkedHashSet
+    Set<String> merged = [] as LinkedHashSet
     (allStages + stageOnly).each { merged.add(it.toString()) }
     // Return a plain ArrayList<String> — LazyMap/LazyList are not serializable.
     return new ArrayList<>(merged)

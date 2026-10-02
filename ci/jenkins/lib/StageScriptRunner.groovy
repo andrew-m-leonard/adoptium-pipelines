@@ -147,7 +147,8 @@ String containerEnvFlags() {
     if (gitAskPass) {
         // Override any host-side askpass entry already in the flags list.
         flags.removeAll { String f -> f.startsWith('-e "GIT_ASKPASS=') }
-        flags << '-e \'GIT_ASKPASS=${GIT_ASKPASS}\''
+        // groovylint-disable-next-line GStringExpressionWithinString
+        flags << "-e 'GIT_ASKPASS=\${GIT_ASKPASS}'"
     } else {
         // No GitHub auth — clear any Jenkins agent-side askpass binary that does not
         // exist inside the container.
@@ -164,7 +165,8 @@ String containerEnvFlags() {
     // Set HOME to the Jenkins agent's home directory.  The host home is
     // bind-mounted into the container at the same path (by NodeAgentHelper),
     // so it is writable.  Without a valid HOME, git's temp-file allocation fails.
-    flags << '-e \'HOME=${HOME}\''
+    // groovylint-disable-next-line GStringExpressionWithinString
+    flags << "-e 'HOME=\${HOME}'"
 
     return flags.join(' ')
 }
