@@ -195,9 +195,11 @@ sbom_extract_field() {
 	# The SBOM properties array looks like:
 	#   {"name": "Build Workspace Directory", "value": "/some/path"}
 	# grep for the line after the matching "name" line and pull out the value.
+	# head -n1 ensures only the first match is returned.
 	grep -A1 "\"name\"[[:space:]]*:[[:space:]]*\"${field_name}\"" "${sbom_file}" \
 		| grep '"value"' \
-		| sed 's/.*"value"[[:space:]]*:[[:space:]]*"\(.*\)".*/\1/'
+		| sed 's/.*"value"[[:space:]]*:[[:space:]]*"\(.*\)".*/\1/' \
+		| head -n1
 }
 
 # Setup build environment
