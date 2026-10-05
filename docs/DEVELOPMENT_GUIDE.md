@@ -8,30 +8,6 @@ This guide covers everything you need to work on the pipeline codebase: running 
 
 Linting is enforced automatically on every pull request via GitHub Actions ([`.github/workflows/linter.yml`](../.github/workflows/linter.yml)). Run the same checks locally before pushing to catch issues early.
 
-### Python — black + pylint
-
-[black](https://black.readthedocs.io/) enforces consistent formatting. [pylint](https://pylint.readthedocs.io/) enforces style and catches common errors. Both are configured in the repository:
-
-- pylint config: [`.github/linters/.python-lint`](../.github/linters/.python-lint)
-
-```bash
-# Check formatting (--check does not modify files)
-python3.11 -m black --check .
-
-# Apply formatting
-python3.11 -m black .
-
-# Run pylint across all Python source
-python3.11 -m pylint --rcfile=.github/linters/.python-lint \
-    scripts/lib/*.py \
-    tools/*.py \
-    tests/*.py \
-    ci/local/*.py \
-    ci/local/lib/*.py
-```
-
-> **Note**: black and pylint must be installed in the Python environment you are using. If `python3.11 -m black` fails, check which Python has them installed (`pip show black pylint`) and use that interpreter. The project has no runtime dependency on third-party packages — black and pylint are developer-only tools.
-
 ### Shell — shellcheck
 
 ```bash
@@ -61,7 +37,7 @@ bash tests/test_release_type_validation.sh
 
 | Level | What | When required |
 |---|---|---|
-| 1 — Syntax & linting | `black`, `pylint`, `shellcheck` | Always |
+| 1 — Syntax & linting | `shellcheck` | Always |
 | 2 — Unit tests | `python3 -m unittest discover -s tests` | Always |
 | 3 — Stage smoke | Run a single stage script directly | Stage script changes |
 | 4 — Local pipeline | `ci/local/run-pipeline.py` end-to-end | Major or cross-stage changes |
@@ -178,7 +154,6 @@ fi
 
 ### Python
 
-- Formatted with **black** (no manual style decisions needed)
 - All imports from the standard library; no third-party runtime dependencies
 - Naming: `UPPER_SNAKE_CASE` for module-level constants, `lower_snake_case` for everything else
 

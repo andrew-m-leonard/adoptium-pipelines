@@ -30,6 +30,8 @@ This directory contains reference documentation for the Adoptium CI pipeline inf
 
 - **[CI_AGNOSTIC_ARCHITECTURE.md](./CI_AGNOSTIC_ARCHITECTURE.md)** — 3-layer design (Configuration / Shell Scripts / CI Orchestration), standard interface contract, per-stage summary
 - **[UNIVERSAL_STAGE_PATTERN.md](./UNIVERSAL_STAGE_PATTERN.md)** — How to write a new stage script following the standard pattern
+- **[TRIGGER_ARCHITECTURE.md](./TRIGGER_ARCHITECTURE.md)** — CI-agnostic trigger system: upstream OpenJDK tag detection and automatic build pipeline dispatch
+- **[DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md)** — Local linting and testing, testing strategy, architecture and code style rules for contributors
 
 ## Configuration
 
