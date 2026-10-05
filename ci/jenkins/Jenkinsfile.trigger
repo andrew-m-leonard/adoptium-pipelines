@@ -345,17 +345,23 @@ pipeline {
                     )
                     echo "✓ Launch jobs reseeded"
 
-                    def triggerRunner = load('ci/jenkins/lib/TriggerScriptRunner.groovy')
+                    def credentialHelper = load('ci/jenkins/lib/CredentialHelper.groovy')
+                    def triggerRunner    = load('ci/jenkins/lib/TriggerScriptRunner.groovy')
 
-                    // Inject GitHub token if configured
-                    String ghTokenCredId = ''
+                    // Load vendor credential config and pass it to TriggerScriptRunner so
+                    // it can inject GITHUB_TOKEN (and any future env-var credential) using
+                    // the same CredentialHelper.withEnvVarCredential() logic as StageScriptRunner.
                     if (fileExists('config-repo/jenkins_credential_config.json')) {
                         Map credCfg = readJSON(file: 'config-repo/jenkins_credential_config.json')
-                        ghTokenCredId = credCfg?.credentials?.DEFAULT_GITHUB_TOKEN?.credentialId ?: ''
                         env.JENKINS_API_CREDENTIALS_ID = credCfg?.jenkinsApiCredentialsId ?: ''
-                    }
-                    if (ghTokenCredId) {
-                        triggerRunner.setGithubTokenCredentialId(ghTokenCredId)
+                        // Serialise the 'credentials' sub-map to a JSON string.
+                        // writeJSON (Pipeline Utility Steps) is sandbox-safe; JsonOutput is not.
+                        writeJSON file: 'trigger-cred-defs.tmp.json', json: (credCfg?.credentials ?: [:])
+                        String credDefsJson = readFile('trigger-cred-defs.tmp.json').trim()
+                        sh 'rm -f trigger-cred-defs.tmp.json'
+                        triggerRunner.setCredentialHelper(credentialHelper, credDefsJson)
+                    } else {
+                        triggerRunner.setCredentialHelper(credentialHelper)
                     }
 
                     List versions          = new JsonSlurper().parseText(params.TRIGGER_VERSIONS_JSON) as List

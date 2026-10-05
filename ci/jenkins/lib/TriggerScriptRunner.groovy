@@ -34,9 +34,16 @@ limitations under the License.
  *   TARGET_DIR                  — <WORKSPACE>/trigger-<type>-<version>-output
  *   TRIGGER_VERSION_CONFIG_FILE — <WORKSPACE>/trigger-version-config-<version>.json
  *   PIPELINE_ROOT               — path to ci-adoptium-pipelines checkout
- *   GITHUB_TOKEN                — injected via withCredentials if configured
+ *   GITHUB_TOKEN                — injected via CredentialHelper.withEnvVarCredential()
+ *                                 when a matching string credential exists in
+ *                                 jenkins_credential_config.json
  *
  * Public API:
+ *   void setCredentialHelper(helper, String credDefsJson = '{}')
+ *     Inject a loaded CredentialHelper instance and the serialised 'credentials'
+ *     JSON from jenkins_credential_config.json.  Called by Jenkinsfile.trigger
+ *     immediately after load(), mirroring StageScriptRunner.setCredentialHelper().
+ *
  *   Map run(String triggerType, Map versionConfig)
  *     Writes trigger-version-config.json, resolves and runs the trigger script,
  *     reads back trigger-result.json and returns it as a Map.
@@ -48,12 +55,19 @@ limitations under the License.
 
 import groovy.json.JsonOutput
 
-// GitHub token credential ID — injected by Jenkinsfile.trigger after load().
-// When set, GITHUB_TOKEN is injected into the script environment via withCredentials.
-githubTokenCredentialId = null
+// CredentialHelper instance — injected by Jenkinsfile.trigger after load().
+// Null when running without credential support; _withGithubToken() falls back to
+// calling body() directly.
+credentialHelper = null
 
-void setGithubTokenCredentialId(String credId) {
-    githubTokenCredentialId = credId
+// JSON string of the 'credentials' object from jenkins_credential_config.json,
+// set alongside credentialHelper so _withGithubToken() can look up the
+// GITHUB_TOKEN credential ID without re-reading the file on every run() call.
+credentialDefsJson = '{}'
+
+void setCredentialHelper(helper, String credDefsJson = '{}') {
+    credentialHelper    = helper
+    credentialDefsJson  = credDefsJson ?: '{}'
 }
 
 // ---------------------------------------------------------------------------
@@ -150,14 +164,13 @@ private String _resolve(String triggerType) {
 }
 
 /**
- * Wrap body in a withCredentials block injecting GITHUB_TOKEN when a
- * credential ID has been configured, otherwise call body directly.
+ * Wrap body in a withCredentials block injecting GITHUB_TOKEN when a matching
+ * string credential is found via CredentialHelper.withEnvVarCredential().
+ * Falls back to calling body() directly when credentialHelper is not set.
  */
 private void _withGithubToken(Closure body) {
-    if (githubTokenCredentialId?.trim()) {
-        withCredentials([string(credentialsId: githubTokenCredentialId, variable: 'GITHUB_TOKEN')]) {
-            body()
-        }
+    if (credentialHelper) {
+        credentialHelper.withEnvVarCredential('GITHUB_TOKEN', credentialDefsJson, body)
     } else {
         body()
     }

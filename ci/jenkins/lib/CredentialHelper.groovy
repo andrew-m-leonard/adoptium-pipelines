@@ -211,6 +211,60 @@ Map<String, Map<String, String>> credentialDefs(List<String> names, String credD
 // ---------------------------------------------------------------------------
 
 /**
+ * Scan a credential definitions JSON string and return the Jenkins credentialId
+ * of the first string credential whose resolved env-var name equals targetEnvVar.
+ *
+ * Resolution mirrors resolveEnvVar(): uses the 'envVar' field when present,
+ * otherwise the map key name.  Returns null when no matching entry is found.
+ *
+ * @param targetEnvVar  The canonical env-var name to search for, e.g. 'GITHUB_TOKEN'
+ * @param credDefsJson  JSON string — the 'credentials' object from
+ *                      jenkins_credential_config.json (not the full file)
+ * @NonCPS — must not call any CPS pipeline steps.
+ */
+@NonCPS
+String findCredentialIdForEnvVar(String targetEnvVar, String credDefsJson) {
+    Map parsed = new JsonSlurper().parseText(credDefsJson ?: '{}')
+    for (Map.Entry entry in parsed.entrySet()) {
+        String keyName = entry.key.toString()
+        Map    cred    = entry.value as Map
+        if (cred?.get('type') != 'string') { continue }
+        String ev = cred.get('envVar')
+        String resolvedEnvVar = (ev != null && !ev.toString().empty) ? ev.toString() : keyName
+        if (resolvedEnvVar == targetEnvVar) {
+            return cred.get('credentialId')?.toString() ?: null
+        }
+    }
+    return null
+}
+
+/**
+ * Wrap body in a withCredentials block that injects targetEnvVar when a matching
+ * string credential is found in credDefsJson.  If no matching entry exists, or
+ * if credDefsJson is null/empty, body() is called directly with zero overhead.
+ *
+ * Designed for use by TriggerScriptRunner (and any other caller that reads
+ * jenkins_credential_config.json directly, rather than via the env vars set by
+ * ConfigHelper.generateJenkinsConfig()).
+ *
+ * @param targetEnvVar  Canonical env-var name, e.g. 'GITHUB_TOKEN'
+ * @param credDefsJson  JSON string — the 'credentials' object from
+ *                      jenkins_credential_config.json
+ * @param body          Closure to execute inside the credential scope
+ */
+void withEnvVarCredential(String targetEnvVar, String credDefsJson, Closure body) {
+    String credId = findCredentialIdForEnvVar(targetEnvVar, credDefsJson)
+    if (credId) {
+        echo "🔑 Injecting credential for '${targetEnvVar}'"
+        withCredentials([string(credentialsId: credId, variable: targetEnvVar)]) {
+            body()
+        }
+    } else {
+        body()
+    }
+}
+
+/**
  * Execute body wrapped in withCredentials() bindings for the given stageId.
  *
  * If no credentials are configured for stageId (or if CONFIG_STAGE_CREDENTIALS
