@@ -429,6 +429,50 @@ class TestStageDisabled(unittest.TestCase):
         # Enabled stage is unaffected
         self.assertIn("RUN_TESTS", result["paramNames"])
 
+    def test_disabled_stage_condition_referencing_own_param_does_not_raise(self):
+        """
+        Regression: a disabled stage whose stageCondition references a param declared
+        in its own parameterGroups must not trigger the dangling-reference error.
+
+        Previously the flatten loop skipped parameter registration entirely for
+        disabled stages, so stageCondition entries referencing those params would
+        fail validation even though the condition is never evaluated at runtime.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            # An enabled stage that owns RUN_TESTS
+            _write_params_json(
+                d,
+                "13-smoke-tests",
+                [_make_group("Stage Selections", [_make_bool_param("RUN_TESTS", True, "desc")])],
+            )
+            # A disabled stage whose stageCondition references its own ENABLE_TCK param
+            _write_params_json(
+                d,
+                "15-tck-tests",
+                [_make_group("Stage Selections", [_make_bool_param("ENABLE_TCK", False, "desc")])],
+                stage_disabled=True,
+                stage_condition=[
+                    {"param": "RUN_TESTS",  "value": True},
+                    {"param": "ENABLE_TCK", "value": True},
+                ],
+            )
+            # Must not raise — this was the bug
+            result = _collect(d)
+
+        # ENABLE_TCK must NOT appear as a live job parameter
+        self.assertNotIn("ENABLE_TCK", result["paramNames"])
+        # RUN_TESTS from the enabled stage is unaffected
+        self.assertIn("RUN_TESTS", result["paramNames"])
+        # The disabled stage must still be present in stages[] with its condition intact
+        tck = next(s for s in result["stages"] if s["stageId"] == "15-tck-tests")
+        self.assertTrue(tck["stageDisabled"])
+        self.assertEqual(
+            tck["stageCondition"],
+            [{"param": "RUN_TESTS", "value": True}, {"param": "ENABLE_TCK", "value": True}],
+        )
+
+
     def test_enabled_stem_included(self):
         """stageDisabled=false (explicit): params are emitted normally."""
         with tempfile.TemporaryDirectory() as tmp:
