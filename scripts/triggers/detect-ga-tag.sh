@@ -63,6 +63,7 @@
 #     "detected":       true|false,
 #     "shouldTrigger":  true|false,
 #     "scmRef":         "<build tag at GA commit SHA, or empty>",
+#     "releaseType":    "RELEASE",
 #     "dedupBuildType": "NOT_ALREADY_BUILT"
 #   }
 
@@ -133,7 +134,7 @@ main() {
 		log_warn "No GA tag found matching '${ga_tag_pattern}' on ${monitor_repo}"
 		${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
 			"detected=false" "shouldTrigger=false" "scmRef=" \
-			"dedupBuildType=NOT_ALREADY_BUILT"
+			"releaseType=RELEASE" "dedupBuildType=NOT_ALREADY_BUILT"
 		log_section "detect-ga-tag — Complete (no GA tag found)"
 		return 0
 	fi
@@ -154,7 +155,7 @@ main() {
 		log_error "Cannot resolve commit SHA for GA tag ${latest_ga_tag}"
 		${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
 			"detected=false" "shouldTrigger=false" "scmRef=" \
-			"dedupBuildType=NOT_ALREADY_BUILT"
+			"releaseType=RELEASE" "dedupBuildType=NOT_ALREADY_BUILT"
 		return 1
 	fi
 	log_info "GA tag commit SHA: ${ga_commit_sha}"
@@ -202,7 +203,7 @@ main() {
 		log_warn "The upstream build tag may not have been applied yet"
 		${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
 			"detected=false" "shouldTrigger=false" "scmRef=" \
-			"dedupBuildType=NOT_ALREADY_BUILT"
+			"releaseType=RELEASE" "dedupBuildType=NOT_ALREADY_BUILT"
 		log_section "detect-ga-tag — Complete (no upstream build tag at GA commit yet)"
 		return 0
 	fi
@@ -240,7 +241,7 @@ main() {
 		log_warn "The mirror build tag may not have been applied yet"
 		${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
 			"detected=false" "shouldTrigger=false" "scmRef=" \
-			"dedupBuildType=NOT_ALREADY_BUILT"
+			"releaseType=RELEASE" "dedupBuildType=NOT_ALREADY_BUILT"
 		log_section "detect-ga-tag — Complete (no mirror build tag for ${best_upstream_tag} yet)"
 		return 0
 	fi
@@ -250,6 +251,7 @@ main() {
 		"detected=true" \
 		"shouldTrigger=true" \
 		"scmRef=${scm_ref}" \
+		"releaseType=RELEASE" \
 		"dedupBuildType=NOT_ALREADY_BUILT"
 
 	log_info "trigger-result.json written to ${TARGET_DIR}"

@@ -46,7 +46,7 @@
 #     "shouldTrigger":   true|false,
 #     "scmRef":          "<latest build tag, or empty>",
 #     "publishName":     "<publish name, or empty>",
-#     "releaseType":     "Weekly",
+#     "releaseType":     "WEEKLY",
 #     "dedupBuildType":  "NONE"
 #   }
 
@@ -113,7 +113,7 @@ main() {
 	if [ -z "${latest_tag}" ]; then
 		log_warn "No build tag found matching '${build_tag_pattern}' on ${monitor_repo}"
 		${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
-			"shouldTrigger=false" "scmRef=" "publishName=" "releaseType=Weekly"
+			"shouldTrigger=false" "scmRef=" "publishName=" "releaseType=WEEKLY"
 		log_section "detect-build-tag-for-github-release — Complete (no tag found)"
 		return 0
 	fi
@@ -135,7 +135,7 @@ main() {
 			"shouldTrigger=false" \
 			"scmRef=${latest_tag}" \
 			"publishName=${publish_name}" \
-			"releaseType=Weekly" \
+			"releaseType=WEEKLY" \
 			"dedupBuildType=NONE"
 	else
 		log_info "Release ${target_release_tag} not yet published — trigger required"
@@ -143,7 +143,7 @@ main() {
 			"shouldTrigger=true" \
 			"scmRef=${latest_tag}" \
 			"publishName=${publish_name}" \
-			"releaseType=Weekly" \
+			"releaseType=WEEKLY" \
 			"dedupBuildType=NONE"
 	fi
 
