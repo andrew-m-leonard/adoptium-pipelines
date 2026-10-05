@@ -44,8 +44,8 @@ write-trigger-result <target_dir> [key=value ...]
     fields; "true"/"false" values are written as JSON booleans.
 
     Example:
-      python3 trigger-utils.py write-trigger-result /out \\
-          shouldTrigger=true scmRef=jdk-21.0.5+11_adopt publishName=jdk-21.0.5+11-ea
+      python3 trigger-utils.py write-trigger-result /out \
+          shouldTrigger=true scmRef=jdk-21.0.5+11_adopt publishName=jdk-21.0.5+11-ea dedupBuildType=NONE
 
 read-trigger-field <json_file> <field>
     Reads a single field from trigger-result.json and prints it to stdout.

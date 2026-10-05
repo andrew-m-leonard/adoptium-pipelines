@@ -35,28 +35,23 @@ derives the expected published release tag using `publishNameMap` and
 `targetReleaseTagMap`, and checks whether it already exists on `targetRepo`
 (GitHub or GitHub Enterprise releases API).
 
-**Dedup policy:** the script itself checks `targetRepo` — if `shouldTrigger=true`
-the CI layer triggers directly. No Jenkins history check needed.
+**Dedup policy:** guided by `"dedupBuildType": "NONE"` in the trigger result. The script itself checks `targetRepo` — if `shouldTrigger=true` the CI layer triggers directly. No Jenkins history check is needed.
 
 ### `detect-ga-tag`
 
 Detects the latest upstream GA tag matching `gaTagPattern` on `monitorRepo`,
 resolves the build tag at the same commit SHA matching `buildTagPattern`.
 
-**Dedup policy:** handled entirely in `Jenkinsfile.trigger` — queries Jenkins
-build history for an existing completed or in-progress build with matching
-`SCM_REF`. `IN_PROGRESS` or `ALREADY_BUILT` → skip. `NOT_FOUND` → trigger.
-This covers the window between a completed private build and manual publish.
+**Dedup policy:** guided by `"dedupBuildType": "NOT_ALREADY_BUILT"` in the trigger result. Handled entirely in `Jenkinsfile.trigger` — queries Jenkins build history for an existing completed or in-progress build with matching `SCM_REF`. `IN_PROGRESS` or `ALREADY_BUILT` → skip. `NOT_FOUND` → trigger. This covers the window between a completed private build and manual publish.
 
-### `weekly-head`
+### `weekly-head` (Moved to Vendor Triggers)
 
 No detection — unconditionally triggers a HEAD build on a weekly cron.
-No dedup needed (idempotent by design).
+**Dedup policy:** guided by `"dedupBuildType": "NONE"`. No dedup needed (idempotent by design).
 
-### Vendor types
+### Vendor types & Extensibility
 
-Any `type` value not listed above is resolved via `TriggerScriptRunner` and
-treated with the `detect-ga-tag` dedup policy (Jenkins history check) by default.
+All trigger scripts (whether core or vendor-defined) are governed by the same unified `trigger-result.json` contract. This decouples the detection script from hardcoded CI pipeline logic, allowing vendors to easily specify their own custom trigger/dedup combinations.
 
 ---
 
@@ -172,17 +167,20 @@ Vendor trigger scripts follow the same resolution order as stage scripts:
 
 ### Adding a new trigger type
 
-1. Create `config-repo/vendor-triggers/<type>.sh` — same interface contract as
-   default trigger scripts (reads `trigger-version-config.json`, writes
-   `trigger-result.json` to `$TARGET_DIR`)
-2. Add a `{ "type": "<type>", "versions": [...] }` entry to `trigger_config.json`
-3. Add `"<type>"` to the relevant deployment's `triggers` array in
-   `jenkins_job_config.json`
-4. Re-run the seed job — the trigger job is created automatically
-
-No changes to the pipeline repository are required. The vendor type receives the
-`detect-ga-tag` dedup policy (Jenkins history check) by default in
-`Jenkinsfile.trigger`.
+1. Create `config-repo/vendor-triggers/<type>.sh` — implementing the unified `trigger-result.json` interface contract.
+2. Ensure the script writes the required fields to `trigger-result.json` (at `$TARGET_DIR`):
+   ```json
+   {
+     "shouldTrigger":   true|false,
+     "dedupBuildType":  "NONE"|"NOT_ALREADY_BUILT",
+     "scmRef":          "<optional SCM ref, branch, or tag; blank/empty implies HEAD>",
+     "publishName":     "<optional publish name override>",
+     "releaseType":     "<optional release type, e.g. NIGHTLY, WEEKLY, or RELEASE>"
+   }
+   ```
+3. Add a `{ "type": "<type>", "versions": [...] }` entry to `trigger_config.json`
+4. Add `"<type>"` to the relevant deployment's `triggers` array in `jenkins_job_config.json`
+5. Re-run the seed job — the trigger job is created automatically. No changes to the pipeline repository are required.
 
 ### Example — Artifactory-backed build tag detection
 

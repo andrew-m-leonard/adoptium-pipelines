@@ -43,10 +43,11 @@
 #
 # Outputs $TARGET_DIR/trigger-result.json:
 #   {
-#     "shouldTrigger": true|false,
-#     "scmRef":        "<latest build tag, or empty>",
-#     "publishName":   "<publish name, or empty>",
-#     "releaseType":   "Weekly"
+#     "shouldTrigger":   true|false,
+#     "scmRef":          "<latest build tag, or empty>",
+#     "publishName":     "<publish name, or empty>",
+#     "releaseType":     "Weekly",
+#     "dedupBuildType":  "NONE"
 #   }
 
 set -euo pipefail
@@ -134,14 +135,16 @@ main() {
 			"shouldTrigger=false" \
 			"scmRef=${latest_tag}" \
 			"publishName=${publish_name}" \
-			"releaseType=Weekly"
+			"releaseType=Weekly" \
+			"dedupBuildType=NONE"
 	else
 		log_info "Release ${target_release_tag} not yet published — trigger required"
 		${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
 			"shouldTrigger=true" \
 			"scmRef=${latest_tag}" \
 			"publishName=${publish_name}" \
-			"releaseType=Weekly"
+			"releaseType=Weekly" \
+			"dedupBuildType=NONE"
 	fi
 
 	log_info "trigger-result.json written to ${TARGET_DIR}"

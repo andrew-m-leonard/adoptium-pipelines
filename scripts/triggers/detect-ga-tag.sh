@@ -60,9 +60,10 @@
 #
 # Outputs $TARGET_DIR/trigger-result.json:
 #   {
-#     "detected": true|false,
-#     "scmRef":   "<build tag at GA commit SHA, or empty>",
-#     "gaTag":    "<latest GA tag, or empty>"
+#     "detected":       true|false,
+#     "shouldTrigger":  true|false,
+#     "scmRef":         "<build tag at GA commit SHA, or empty>",
+#     "dedupBuildType": "NOT_ALREADY_BUILT"
 #   }
 
 set -euo pipefail
@@ -131,7 +132,8 @@ main() {
 	if [ -z "${latest_ga_tag}" ]; then
 		log_warn "No GA tag found matching '${ga_tag_pattern}' on ${monitor_repo}"
 		${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
-			"detected=false" "scmRef=" "gaTag="
+			"detected=false" "shouldTrigger=false" "scmRef=" \
+			"dedupBuildType=NOT_ALREADY_BUILT"
 		log_section "detect-ga-tag — Complete (no GA tag found)"
 		return 0
 	fi
@@ -151,7 +153,8 @@ main() {
 	if [ -z "${ga_commit_sha}" ]; then
 		log_error "Cannot resolve commit SHA for GA tag ${latest_ga_tag}"
 		${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
-			"detected=false" "scmRef=" "gaTag=${latest_ga_tag}"
+			"detected=false" "shouldTrigger=false" "scmRef=" \
+			"dedupBuildType=NOT_ALREADY_BUILT"
 		return 1
 	fi
 	log_info "GA tag commit SHA: ${ga_commit_sha}"
@@ -198,7 +201,8 @@ main() {
 		log_warn "No upstream build tags with prefix '${version_prefix}' found at GA commit ${ga_commit_sha}"
 		log_warn "The upstream build tag may not have been applied yet"
 		${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
-			"detected=false" "scmRef=" "gaTag=${latest_ga_tag}"
+			"detected=false" "shouldTrigger=false" "scmRef=" \
+			"dedupBuildType=NOT_ALREADY_BUILT"
 		log_section "detect-ga-tag — Complete (no upstream build tag at GA commit yet)"
 		return 0
 	fi
@@ -235,7 +239,8 @@ main() {
 		log_warn "No mirror build tag for '${best_upstream_tag}' matching '${build_tag_pattern}' found"
 		log_warn "The mirror build tag may not have been applied yet"
 		${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
-			"detected=false" "scmRef=" "gaTag=${latest_ga_tag}"
+			"detected=false" "shouldTrigger=false" "scmRef=" \
+			"dedupBuildType=NOT_ALREADY_BUILT"
 		log_section "detect-ga-tag — Complete (no mirror build tag for ${best_upstream_tag} yet)"
 		return 0
 	fi
@@ -243,8 +248,9 @@ main() {
 
 	${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
 		"detected=true" \
+		"shouldTrigger=true" \
 		"scmRef=${scm_ref}" \
-		"gaTag=${latest_ga_tag}"
+		"dedupBuildType=NOT_ALREADY_BUILT"
 
 	log_info "trigger-result.json written to ${TARGET_DIR}"
 	log_section "detect-ga-tag — Complete"

@@ -32,24 +32,16 @@ limitations under the License.
  *   DEFAULT_PARAMETERS_JSON  — JSON object of default parameters for this deployment
  *                              (deployment.jobConfiguration.defaultParameters, baked in at seed time)
  *
- * Type-specific dedup policies (all Jenkins API logic lives here, not in scripts):
- *
- *   detect-build-tag-for-github-release:
- *     Script already checked targetRepo — if shouldTrigger=true, trigger directly.
- *
- *   detect-ga-tag:
- *     If detected=true: query Jenkins API for an existing completed or in-progress
- *     build with matching SCM_REF on the launch job.
- *       IN_PROGRESS or ALREADY_BUILT → skip (any result incl. FAILURE/ABORTED)
- *       NOT_FOUND                    → trigger
- *       API error / misconfiguration → pipeline fails (never triggers blind)
- *     jenkinsApiCredentialsId MUST be configured — the job fails if it is absent.
- *
- *   weekly-head:
- *     No dedup — always trigger. Idempotent by design.
- *
- *   vendor types (unknown):
- *     Treated as detect-ga-tag policy (Jenkins history dedup check).
+ * Trigger Result JSON Interface Contract:
+ *   All trigger scripts must return a JSON result containing:
+ *     shouldTrigger  (boolean) — [REQUIRED] true if the trigger conditions are met (backward compatible with 'detected')
+ *     dedupBuildType (string)  — [REQUIRED] deduplication policy to apply. One of:
+ *                                  'NONE' — immediately trigger without Jenkins history checks
+ *                                  'NOT_ALREADY_BUILT' — perform Jenkins build history checks
+ *     scmRef         (string)  — [OPTIONAL] target SCM reference to build (branch or tag);
+ *                                  defaults to default branch HEAD. [REQUIRED when dedupBuildType is NOT_ALREADY_BUILT]
+ *     publishName    (string)  — [OPTIONAL] build/publish name override (passed as OVERRIDE_PUBLISH_NAME)
+ *     releaseType    (string)  — [OPTIONAL] RELEASE_TYPE, e.g. "WEEKLY" or "RELEASE" (defaults to "NIGHTLY")
  */
 
 import groovy.json.JsonSlurper
@@ -384,31 +376,30 @@ pipeline {
 
                                 Map result = triggerRunner.run(triggerType, versionConfig)
 
-                                if (triggerType == 'detect-build-tag-for-github-release') {
-                                    // ── Script verified targetRepo — trust its shouldTrigger ──
-                                    if (result.shouldTrigger == true) {
-                                        triggerLaunchJob(launchJobBase, version, deploymentDefaults,
-                                            versionConfig, result, (result.releaseType as String ?: 'WEEKLY').toUpperCase())
-                                    } else {
-                                        echo "↷ ${version}: already published or no new tag — skipping"
-                                    }
+                                boolean shouldTrigger = (result.shouldTrigger == true || result.detected == true)
 
-                                } else if (triggerType == 'weekly-head') {
-                                    // ── Always trigger — no dedup ──
+                                if (!shouldTrigger) {
+                                    echo "↷ ${version}: already published or no new tag detected — skipping"
+                                    return
+                                }
+
+                                String dedupBuildType = result.dedupBuildType as String
+                                if (!dedupBuildType) {
+                                    error "Trigger script result for '${triggerType}' did not return the required 'dedupBuildType' field. " +
+                                          "Please update the trigger script to return 'dedupBuildType' ('NONE' or 'NOT_ALREADY_BUILT') in trigger-result.json."
+                                }
+
+                                String releaseType = (result.releaseType as String ?: 'NIGHTLY').toUpperCase()
+
+                                if (dedupBuildType == 'NONE') {
                                     triggerLaunchJob(launchJobBase, version, deploymentDefaults,
-                                        versionConfig, result, 'WEEKLY')
+                                        versionConfig, result, releaseType)
 
-                                } else {
-                                    // ── detect-ga-tag and unknown vendor types ──
-                                    // Gate on Jenkins build history before triggering
-                                    if (result.detected != true) {
-                                        echo "↷ ${version}: no GA tag detected — skipping"
-                                        return
-                                    }
+                                } else if (dedupBuildType == 'NOT_ALREADY_BUILT') {
                                     String scmRef = result.scmRef as String
                                     if (!scmRef) {
-                                        echo "⚠️  ${version}: detected=true but scmRef is empty — skipping"
-                                        return
+                                        error "Trigger script for '${triggerType}' returned 'dedupBuildType' of 'NOT_ALREADY_BUILT' but 'scmRef' is empty or missing. " +
+                                              "An SCM reference is strictly required to perform deduplication checks."
                                     }
 
                                     String vnum      = version.replaceAll(/[^\d]/, '')
@@ -427,7 +418,7 @@ pipeline {
                                         }
                                     } else {
                                         error "jenkinsApiCredentialsId is not configured in jenkins_credential_config.json — " +
-                                            "cannot perform dedup check for detect-ga-tag. " +
+                                            "cannot perform dedup check for ${triggerType}. " +
                                             "Set jenkinsApiCredentialsId to a Jenkins API token credential and re-run."
                                     }
 
@@ -438,8 +429,10 @@ pipeline {
                                     } else {
                                         // NOT_FOUND — trigger
                                         triggerLaunchJob(launchJobBase, version, deploymentDefaults,
-                                            versionConfig, result, 'RELEASE')
+                                            versionConfig, result, releaseType)
                                     }
+                                } else {
+                                    error "Unknown dedupBuildType '${dedupBuildType}' returned in trigger-result.json"
                                 }
                             }
                         }
