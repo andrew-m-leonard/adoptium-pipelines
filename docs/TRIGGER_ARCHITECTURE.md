@@ -169,6 +169,7 @@ Vendor trigger scripts follow the same resolution order as stage scripts:
 
 1. Create `config-repo/vendor-triggers/<type>.sh` — implementing the unified `trigger-result.json` interface contract.
 2. Ensure the script writes the required fields to `trigger-result.json` (at `$TARGET_DIR`):
+
    ```json
    {
      "shouldTrigger":   true|false,
@@ -178,6 +179,7 @@ Vendor trigger scripts follow the same resolution order as stage scripts:
      "releaseType":     "<optional release type, e.g. NIGHTLY, WEEKLY, or RELEASE>"
    }
    ```
+
 3. Add a `{ "type": "<type>", "versions": [...] }` entry to `trigger_config.json`
 4. Add `"<type>"` to the relevant deployment's `triggers` array in `jenkins_job_config.json`
 5. Re-run the seed job — the trigger job is created automatically. No changes to the pipeline repository are required.
