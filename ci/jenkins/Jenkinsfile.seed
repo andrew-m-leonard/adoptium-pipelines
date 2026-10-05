@@ -87,7 +87,7 @@ pipeline {
                     // The config repo is already checked out in the workspace root by the
                     // Pipeline SCM step.  Read the pipelines repo coordinates from it so
                     // that no hardcoded values need to exist in this Jenkinsfile.
-                    def cfg = readJSON file: 'adoptium_pipeline_config.json'
+                    Map cfg = readJSON(file: 'adoptium_pipeline_config.json')
                     env.PIPELINES_REPO_URL    = cfg.repository.url
                     env.PIPELINES_REPO_BRANCH = cfg.repository.branch
                     echo "✓ Pipelines repo : ${env.PIPELINES_REPO_URL} @ ${env.PIPELINES_REPO_BRANCH}"
@@ -96,7 +96,7 @@ pipeline {
                     // jenkins_credential_config.json (optional — absent when no credentials are required).
                     // Keeping credential IDs out of the CI-agnostic adoptium_pipeline_config.json.
                     if (fileExists('jenkins_credential_config.json')) {
-                        def credCfg = readJSON file: 'jenkins_credential_config.json'
+                        Map credCfg = readJSON(file: 'jenkins_credential_config.json')
                         env.PIPELINES_REPO_CREDENTIALS_ID = credCfg.pipelineRepoCredentialsId ?: ''
                     } else {
                         env.PIPELINES_REPO_CREDENTIALS_ID = ''
@@ -137,7 +137,7 @@ pipeline {
         stage('Generate jobs') {
             steps {
                 script {
-                    def seedHelper = load('pipelines/ci/jenkins/lib/SeedHelper.groovy')
+                    Object seedHelper = load('pipelines/ci/jenkins/lib/SeedHelper.groovy')
                     seedHelper.generateJobs(
                         params.CONFIG_REPO_URL,
                         params.CONFIG_REPO_BRANCH,
