@@ -615,6 +615,18 @@ def collect(
             # stageConditionMet) can detect the disabled flag and skip the stage
             # without having to fall back to "no conditions defined".
             stages_list.append(entry.to_stage_entry(constants))
+            # Register this stage's parameter names into all_param_names so that
+            # stageCondition cross-references resolve even when the stage is
+            # disabled.  Parameters are NOT added to groups_map so they won't
+            # appear in the Jenkins job UI.
+            for grp in entry.groups.values():
+                for p in grp["parameters"]:
+                    if p["name"] not in all_param_names:
+                        all_param_names[p["name"]] = (
+                            f"{stem}/{grp['name']}/{p['name']} (disabled)",
+                            grp["name"],
+                            -1,
+                        )
             continue
 
         # Always record the stage entry (metadata only).
@@ -745,7 +757,9 @@ def collect(
             target_group["parameters"] = list(existing_map.values())
 
     # --- Validate stageCondition cross-references ---
-    all_collated_param_names: Set[str] = set(BUILTIN_PIPELINE_PARAMS)
+    # Include params from disabled stages (tracked in all_param_names but not
+    # emitted into output_groups) so their stageCondition references resolve.
+    all_collated_param_names: Set[str] = set(BUILTIN_PIPELINE_PARAMS) | set(all_param_names.keys())
     for grp in output_groups:
         for p in grp["parameters"]:
             all_collated_param_names.add(p["name"])
