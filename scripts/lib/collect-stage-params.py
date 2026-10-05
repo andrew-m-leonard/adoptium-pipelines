@@ -610,7 +610,11 @@ def collect(
 
     for stem, entry in entries.items():
         if entry.disabled:
-            print(f"  [{stem}] stageDisabled=true — skipping (no parameters emitted)")
+            print(f"  [{stem}] stageDisabled=true — recording metadata only (no parameters emitted)")
+            # Still emit the stage metadata so consumers (e.g. Jenkinsfile
+            # stageConditionMet) can detect the disabled flag and skip the stage
+            # without having to fall back to "no conditions defined".
+            stages_list.append(entry.to_stage_entry(constants))
             continue
 
         # Always record the stage entry (metadata only).

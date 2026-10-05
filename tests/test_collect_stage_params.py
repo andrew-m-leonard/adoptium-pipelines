@@ -25,7 +25,8 @@ Covers:
     - Duplicate across three stages → all descriptions merged
 
   New behaviour (stageDisabled / stageCondition / Stage Selections):
-    - stageDisabled=true: stem is skipped, no params emitted
+    - stageDisabled=true: stem metadata IS emitted in stages[] with stageDisabled=true, no params emitted
+    - stageDisabled=true: stageDisabled flag is true in the stages[] entry
     - stageDisabled vendor override: vendor can disable a core stage
     - stageDisabled vendor re-enable: vendor can re-enable an opt-in stage
     - stageCondition: propagated to group output
@@ -327,7 +328,7 @@ class TestCrossStageDuplicateParams(unittest.TestCase):
 class TestStageDisabled(unittest.TestCase):
 
     def test_disabled_stem_excluded(self):
-        """stageDisabled=true: no params or groups emitted for that stem."""
+        """stageDisabled=true: no params/groups emitted, but stage metadata IS in stages[]."""
         with tempfile.TemporaryDirectory() as tmp:
             d = Path(tmp)
             _write_params_json(
@@ -357,8 +358,76 @@ class TestStageDisabled(unittest.TestCase):
         self.assertNotIn(
             "RUN_TESTS", names, "disabled stage param should not be emitted"
         )
+        # Metadata entry must be present so consumers can detect the disabled flag
         stage_ids = [s["stageId"] for s in result["stages"]]
-        self.assertNotIn("14-aqa-tests", stage_ids)
+        self.assertIn(
+            "14-aqa-tests", stage_ids,
+            "disabled stage must still appear in stages[] so consumers can detect stageDisabled"
+        )
+        disabled_entry = next(s for s in result["stages"] if s["stageId"] == "14-aqa-tests")
+        self.assertTrue(
+            disabled_entry["stageDisabled"],
+            "stages[] entry for a disabled stage must carry stageDisabled=true"
+        )
+
+    def test_disabled_stage_stageDisabled_flag_true_in_stages(self):
+        """
+        Regression test: a stage marked stageDisabled=true must appear in collated
+        stages[] with stageDisabled=true so that Jenkinsfile.declarative
+        stageConditionMet() can return false for it instead of falling through to
+        the "no conditions defined — running unconditionally" branch.
+
+        Previously the disabled stage was absent from stages[], causing
+        loadStageConditions() to silently omit it from COLLATED_DISABLED_STAGES and
+        stageConditionMet() to log:
+          "[stageConditionMet] 15-tck-tests: no conditions defined — running unconditionally"
+        and execute the vendor script unconditionally (which happened to be a no-op
+        only because ENABLE_TCK was unset, not because the pipeline gate fired).
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            # A gate param owned by an enabled stage
+            _write_params_json(
+                d,
+                "13-smoke-tests",
+                [
+                    _make_group(
+                        "Stage Selections",
+                        [_make_bool_param("RUN_TESTS", True, "desc")],
+                    )
+                ],
+            )
+            # The disabled stage (mirrors real 15-tck-tests with stageDisabled=true)
+            _write_params_json(
+                d,
+                "15-tck-tests",
+                [
+                    _make_group(
+                        "Stage Selections",
+                        [_make_bool_param("ENABLE_TCK", False, "desc")],
+                    )
+                ],
+                stage_disabled=True,
+            )
+            result = _collect(d)
+
+        # No params from the disabled stage
+        self.assertNotIn("ENABLE_TCK", result["paramNames"])
+
+        # But the stage IS present in stages[] ...
+        tck_stages = _stages_for(result, "15-tck-tests")
+        self.assertEqual(
+            len(tck_stages), 1,
+            "15-tck-tests must appear in stages[] even when disabled"
+        )
+        # ... with stageDisabled=true so loadStageConditions() can populate
+        # COLLATED_DISABLED_STAGES and stageConditionMet() can return false.
+        self.assertTrue(
+            tck_stages[0]["stageDisabled"],
+            "stages[] entry must carry stageDisabled=true"
+        )
+        # Enabled stage is unaffected
+        self.assertIn("RUN_TESTS", result["paramNames"])
 
     def test_enabled_stem_included(self):
         """stageDisabled=false (explicit): params are emitted normally."""

@@ -106,14 +106,23 @@ void loadStageConditions() {
     Map collated = new JsonSlurper()
         .parseText(readFile('collated-stage-params.json'))
     Map condMap = [:]
+    List disabledList = []
     (collated.stages ?: []).each { Map stage ->
+        if (stage.stageDisabled) {
+            disabledList << stage.stageId
+            return  // no conditions to record for a disabled stage
+        }
         List conds = stage.stageCondition ?: []
         if (conds) {
             condMap[stage.stageId] = conds
         }
     }
     env.COLLATED_STAGE_CONDITIONS = JsonOutput.toJson(condMap)
+    env.COLLATED_DISABLED_STAGES  = JsonOutput.toJson(disabledList)
     echo "✓ Loaded stage conditions for ${condMap.size()} stage(s)"
+    if (disabledList) {
+        echo "✓ Disabled stages: ${disabledList}"
+    }
 
     Map timeoutMap = [:]
     (collated.stages ?: []).each { Map stage ->
@@ -178,6 +187,14 @@ boolean stageConditionMet(String stageId) {
     if (!condJson) {
         echo "[stageConditionMet] ${stageId}: no COLLATED_STAGE_CONDITIONS — running unconditionally"
         return true
+    }
+    String disabledJson = env.COLLATED_DISABLED_STAGES
+    if (disabledJson) {
+        List disabled = (List) new JsonSlurper().parseText(disabledJson)
+        if (disabled.contains(stageId)) {
+            echo "[stageConditionMet] ${stageId}: stageDisabled=true — skipping"
+            return false
+        }
     }
     Map parsed = (Map) new JsonSlurper().parseText(condJson)
     List conditions = (List) parsed.get(stageId)
