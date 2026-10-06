@@ -35,7 +35,10 @@ _load_properties_file() {
 		[[ "${line}" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] || continue
 		local key="${line%%=*}"
 		local value="${line#*=}"
-		export "${key}=${value}"
+		# Only set if not already set (preserves runner-injected vendor values)
+		# ${var+x} expands to "x" if var is set (even to empty), else empty.
+		# This works in Bash 3.2+ (macOS default) unlike [[ -v var ]].
+		[[ -n "${!key+x}" ]] || export "${key}=${value}"
 	done <"${props_file}"
 }
 
@@ -46,6 +49,9 @@ _pipeline_root="${PIPELINE_ROOT:-${WORKSPACE}}"
 _load_properties_file "${_pipeline_root}/scripts/stages/stage-constants.properties"
 
 # 2. Vendor overrides/additions (optional — absent when no config repo is used)
-_load_properties_file "${_pipeline_root}/config-repo/vendor-scripts/vendor-constants.properties"
+# CONFIG_REPO_ROOT is set by both local runner and Jenkins to the checked-out
+# config repository path.
+_vendor_root="${CONFIG_REPO_ROOT}"
+_load_properties_file "${_vendor_root}/vendor-scripts/vendor-constants.properties"
 
-unset _load_properties_file _pipeline_root
+unset _load_properties_file _pipeline_root _vendor_root

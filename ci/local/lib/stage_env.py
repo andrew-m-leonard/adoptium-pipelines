@@ -158,6 +158,10 @@ def build_stage_env(
     env["CONFIG_FILE"] = str(stage_workspace / "pipeline-config.json")
     env["INPUT_ARTIFACTS_DIR"] = str(stage_workspace)
     env["TARGET_DIR"] = str(resolve_target_dir(stage_workspace, stage_id))
+    # Export CONFIG_REPO_ROOT so shell scripts (e.g. load-stage-constants.sh)
+    # can locate the vendor-constants.properties file at the correct path.
+    if config_repo_root:
+        env["CONFIG_REPO_ROOT"] = str(config_repo_root)
     # Inject stage constants (BUILD_OUTPUT_DIR etc.) so stage scripts can read
     # them as env vars without sourcing load-stage-constants.sh themselves.
     # setdefault preserves any value already in the ambient environment.

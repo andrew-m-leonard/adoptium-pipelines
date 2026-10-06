@@ -120,6 +120,10 @@ Map initializeStage(String stageName, List<String> prerequisites = [], String ar
                 ]
             ])
         }
+        // CONFIG_REPO_ROOT is the path to the checked-out config repository.
+        // Set for all CIs (Jenkins + local runner) so vendor scripts can locate
+        // vendor-constants.properties and vendor-scripts/ at a stable path.
+        env.CONFIG_REPO_ROOT = "${env.WORKSPACE}/config-repo"
     }
 
     // Lazy-load BuildUidHelper (only once, persists across stages via the field)
