@@ -34,10 +34,11 @@ limitations under the License.
  *
  * Workspace layout (Jenkinsfile.seed):
  *   <workspace>/
- *     adoptium_pipeline_config.json
- *     jenkins_job_config.json
- *     vendor-scripts/
- *     trigger_config.json             — optional
+ *     config-repo/                    — config repo checkout (explicit, parameter-driven)
+ *       adoptium_pipeline_config.json
+ *       jenkins_job_config.json
+ *       vendor-scripts/
+ *       trigger_config.json           — optional
  *     pipelines/                      — ci-adoptium-pipelines checkout
  *       scripts/stages/
  *       ci/jenkins/job-dsl/
@@ -45,16 +46,28 @@ limitations under the License.
  * @param configRepoUrl      Vendor config repo URL — baked into generated jobs.
  * @param configRepoBranch   Vendor config repo branch — baked into generated jobs.
  * @param pipelineCommitSha  SHA of the ci-adoptium-pipelines checkout.
+ * @param pipelineBaseFolder (optional) Jenkins folder path to place all generated jobs
+ *                           under (e.g. "MyOrg/OpenJDK").  When non-empty, overrides
+ *                           pipelineBaseFolder in jenkins_job_config.json — intended for
+ *                           use by the development seed job to target a sandbox folder
+ *                           without editing the config file.  Empty string means "use the
+ *                           value from jenkins_job_config.json" (production default).
+ * @param configRepoPrefix   Workspace-relative path to the config repo root (e.g.
+ *                           "config-repo").  Passed to the Job DSL script so that all
+ *                           readFileFromWorkspace calls are correctly prefixed.
  */
-void generateJobs(String configRepoUrl, String configRepoBranch, String pipelineCommitSha) {
+void generateJobs(String configRepoUrl, String configRepoBranch, String pipelineCommitSha, String pipelineBaseFolder = '', String configRepoPrefix = 'config-repo') {
+    String vendorScriptsDir  = configRepoPrefix ? "${configRepoPrefix}/vendor-scripts"   : 'vendor-scripts'
+    String triggerConfigFile = configRepoPrefix ? "${configRepoPrefix}/trigger_config.json" : 'trigger_config.json'
     _runSeedDsl(
-        configRepoUrl:     configRepoUrl,
-        configRepoBranch:  configRepoBranch,
-        pipelineCommitSha: pipelineCommitSha,
-        pipelinesDir:      'pipelines',
-        configRepoPrefix:  '',
-        vendorScriptsDir:  'vendor-scripts',
-        triggerConfigFile: 'trigger_config.json',
+        configRepoUrl:       configRepoUrl,
+        configRepoBranch:    configRepoBranch,
+        pipelineCommitSha:   pipelineCommitSha,
+        pipelineBaseFolder:  pipelineBaseFolder,
+        pipelinesDir:        'pipelines',
+        configRepoPrefix:    configRepoPrefix,
+        vendorScriptsDir:    vendorScriptsDir,
+        triggerConfigFile:   triggerConfigFile,
     )
 }
 
@@ -82,16 +95,19 @@ void generateJobs(String configRepoUrl, String configRepoBranch, String pipeline
  * @param configRepoUrl      Vendor config repo URL — baked into generated jobs.
  * @param configRepoBranch   Vendor config repo branch — baked into generated jobs.
  * @param pipelineCommitSha  SHA of the ci-adoptium-pipelines checkout.
+ * @param pipelineBaseFolder (optional) Same semantics as generateJobs() — passed through
+ *                           so the trigger can reseed into the same folder the seed job used.
  */
-void reseedForTrigger(String configRepoUrl, String configRepoBranch, String pipelineCommitSha) {
+void reseedForTrigger(String configRepoUrl, String configRepoBranch, String pipelineCommitSha, String pipelineBaseFolder = '') {
     _runSeedDsl(
-        configRepoUrl:     configRepoUrl,
-        configRepoBranch:  configRepoBranch,
-        pipelineCommitSha: pipelineCommitSha,
-        pipelinesDir:      '',
-        configRepoPrefix:  'config-repo',
-        vendorScriptsDir:  'config-repo/vendor-scripts',
-        triggerConfigFile: 'config-repo/trigger_config.json',
+        configRepoUrl:       configRepoUrl,
+        configRepoBranch:    configRepoBranch,
+        pipelineCommitSha:   pipelineCommitSha,
+        pipelineBaseFolder:  pipelineBaseFolder,
+        pipelinesDir:        '',
+        configRepoPrefix:    'config-repo',
+        vendorScriptsDir:    'config-repo/vendor-scripts',
+        triggerConfigFile:   'config-repo/trigger_config.json',
     )
 }
 
@@ -104,6 +120,7 @@ private void _runSeedDsl(Map args) {
     String configRepoPrefix  = args.configRepoPrefix  ?: ''
     String vendorScriptsDir  = args.vendorScriptsDir  ?: 'vendor-scripts'
     String triggerConfigFile = args.triggerConfigFile ?: 'trigger_config.json'
+    String pipelineBaseFolder = args.pipelineBaseFolder ?: ''
 
     String psPath    = pipelinesDir ? "${pipelinesDir}/ci/jenkins/lib/PipelineStages.groovy"
                                     : 'ci/jenkins/lib/PipelineStages.groovy'
@@ -143,6 +160,7 @@ private void _runSeedDsl(Map args) {
             PIPELINE_COMMIT_SHA:  args.pipelineCommitSha,
             TRIGGER_CONFIG_JSON:  triggerConfigJson,
             CONFIG_REPO_PREFIX:   configRepoPrefix,
+            PIPELINE_BASE_FOLDER: pipelineBaseFolder,
         ]
     )
 }

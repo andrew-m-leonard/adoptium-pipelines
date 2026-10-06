@@ -96,6 +96,10 @@ def configRepoBranch   = binding.variables.get('CONFIG_REPO_BRANCH')   ?: ''
 def pipelineCommitSha  = binding.variables.get('PIPELINE_COMMIT_SHA')  ?: 'unknown'
 def collatedParamsJson = binding.variables.get('COLLATED_PARAMS_JSON') ?: ''
 def triggerConfigJson  = binding.variables.get('TRIGGER_CONFIG_JSON')  ?: ''
+// PIPELINE_BASE_FOLDER binding: set by the development seed job to target a sandbox
+// folder without editing jenkins_job_config.json.  Empty string means "use the value
+// from jenkins_job_config.json" (production default — binding is absent or blank).
+def pipelineBaseFolderOverride = (binding.variables.get('PIPELINE_BASE_FOLDER') ?: '').toString().trim().replaceAll(/\/+$/, '')
 
 // CONFIG_REPO_PREFIX: optional path prefix for all readFileFromWorkspace calls.
 // Empty string (default) → seed layout: config files at workspace root.
@@ -148,10 +152,12 @@ println "  Active JDK versions: ${pipelineConfig.activeJdkVersions.findAll { it.
 def jenkinsConfig = slurper.parseText(readFileFromWorkspace("${configRepoPrefix}jenkins_job_config.json"))
 println '✓ Loaded jenkins_job_config.json'
 
-// pipelineBaseFolder and deployments come from jenkins_job_config.json — single source of truth.
-def pipelineBaseFolder = (jenkinsConfig.pipelineBaseFolder ?: '').toString().trim().replaceAll(/\/+$/, '')
+// pipelineBaseFolder: jenkins_job_config.json is the checked-in default (production).
+// The PIPELINE_BASE_FOLDER binding overrides it when set by the development seed job,
+// so developers can seed into a sandbox folder without touching the config file.
+def pipelineBaseFolder = pipelineBaseFolderOverride ?: (jenkinsConfig.pipelineBaseFolder ?: '').toString().trim().replaceAll(/\/+$/, '')
 def deployments        = jenkinsConfig.deployments ?: []
-println "  pipelineBaseFolder : ${pipelineBaseFolder ?: '(root)'}"
+println "  pipelineBaseFolder : ${pipelineBaseFolder ?: '(root)'}${pipelineBaseFolderOverride ? ' (overridden via PIPELINE_BASE_FOLDER parameter)' : ''}"
 println "  deployments        : ${deployments.collect { it.name }.join(', ') ?: '(none)'}"
 
 // jenkins_credential_config.json is optional — absent when no credentials (e.g. for private repos or authenticated GitHub API access) are needed.

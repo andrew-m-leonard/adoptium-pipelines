@@ -26,9 +26,23 @@ limitations under the License.
  * 1. Copy this file into your vendor config repository:
  *      <config-repo-root>/Jenkinsfile.seed
  *
- * 2. In Jenkins, create a new Pipeline job named "openjdk-build-seed-job".
+ * 2. In Jenkins, create two Pipeline jobs from this file:
  *
- * 3. Under "Pipeline":
+ *    a) PRODUCTION seed job  (e.g. "openjdk-build-seed-job")
+ *       Runs on a cron schedule to keep jobs up-to-date.
+ *       Set CONFIG_REPO_URL and CONFIG_REPO_BRANCH to point at the production
+ *       config repo.  Do not set any of the optional parameters.
+ *
+ *    b) DEVELOPMENT seed job  (e.g. "openjdk-build-seed-job-dev")
+ *       Used by developers to test config-repo or pipeline-repo changes in a
+ *       sandbox folder without touching production jobs.
+ *       Set all mandatory parameters (pointing at the fork/branch under test)
+ *       and the optional parameters described below.
+ *
+ *    Both jobs point at the same Jenkinsfile — the difference is purely in
+ *    which parameter values are set in the Jenkins UI.
+ *
+ * 3. Under "Pipeline" (same for both jobs):
  *      - Definition : Pipeline script from SCM
  *      - SCM        : Git
  *      - Repository URL : <your config repo URL>
@@ -36,31 +50,74 @@ limitations under the License.
  *      - Branch         : <your config repo branch, e.g. main>
  *      - Script Path    : Jenkinsfile.seed   (or wherever you placed this file)
  *
+ *    NOTE: The Pipeline SCM definition above is used only to check out this
+ *    Jenkinsfile itself.  The config repo content actually used for seeding
+ *    is checked out explicitly in the 'Checkout config repo' stage using
+ *    CONFIG_REPO_URL and CONFIG_REPO_BRANCH.  This means the dev job can
+ *    target a completely different fork/branch than the job's SCM definition
+ *    without any Jenkins UI job reconfiguration.
+ *
  * 4. In the Jenkins job configuration UI, click "This project is parameterized"
  *    and add the following String Parameters (do NOT declare them in this Jenkinsfile —
  *    Jenkins overwrites Jenkinsfile defaults on every run):
- *      CONFIG_REPO_URL       — URL of this vendor config repository
- *      CONFIG_REPO_BRANCH    — Branch of this vendor config repository (e.g. main)
- *      PIPELINE_BASE_FOLDER  — (optional) Jenkins folder path under which all generated
- *                              jobs and views are placed (e.g. "MyOrg/OpenJDK").
- *                              Omit or leave blank to generate at the Jenkins root.
- *                              The same seed job can be run multiple times with different
- *                              values to populate independent installations in one Jenkins.
+ *
+ *    Mandatory (must be set and non-empty on every job):
+ *      CONFIG_REPO_URL    — URL of the vendor config repository to seed from.
+ *                          The config repo is explicitly checked out from this URL
+ *                          at runtime, so the dev job can point at a fork without
+ *                          reconfiguring the Jenkins job's SCM definition.
+ *      CONFIG_REPO_BRANCH — Branch of the vendor config repository (e.g. main)
+ *
+ *    Optional (leave blank / omit on the production job; set on the development job):
+ *      PIPELINE_BASE_FOLDER  — Override the Jenkins folder under which all generated
+ *                              jobs and views are placed.  When non-empty, takes
+ *                              precedence over pipelineBaseFolder in
+ *                              jenkins_job_config.json.  Use this on the development
+ *                              job to seed into a personal sandbox folder (e.g.
+ *                              "dev/my-sandbox") without editing the config file.
+ *                              Leave blank on the production job — it will use
+ *                              pipelineBaseFolder from jenkins_job_config.json.
+ *                              The safety guard (see below) enforces that this value
+ *                              is non-empty and differs from the production folder
+ *                              whenever the parameter is defined on the job.
+ *      PIPELINES_REPO_URL    — Override the ci-adoptium-pipelines repo URL.  When
+ *                              non-empty, takes precedence over repository.url in
+ *                              adoptium_pipeline_config.json.  Use this on the
+ *                              development job to test a pipeline fork without editing
+ *                              the config file.  Leave blank on the production job.
+ *      PIPELINES_REPO_BRANCH — Override the ci-adoptium-pipelines branch.  When
+ *                              non-empty, takes precedence over repository.branch in
+ *                              adoptium_pipeline_config.json.  Leave blank on the
+ *                              production job.
  *
  * 5. Run the seed job with those parameters set.  It will:
- *      - Read PIPELINES_REPO_URL and PIPELINES_REPO_BRANCH from
- *        adoptium_pipeline_config.json (repository.url / repository.branch)
- *      - Check out ci-adoptium-pipelines into a 'pipelines/' subdirectory
- *      - Run the Job DSL script to create all launch jobs, reading all
- *        configuration directly from the workspace
+ *      - Validate that CONFIG_REPO_URL and CONFIG_REPO_BRANCH are non-empty
+ *      - Explicitly check out the config repo from CONFIG_REPO_URL/BRANCH into
+ *        config-repo/ in the workspace — this is the config that drives seeding
+ *      - Read repository.url and repository.branch from
+ *        config-repo/adoptium_pipeline_config.json, then apply
+ *        PIPELINES_REPO_URL / PIPELINES_REPO_BRANCH overrides if set
+ *      - Check out ci-adoptium-pipelines into pipelines/
+ *      - Run the Job DSL script to create all launch jobs
  *
  * CUSTOMISATION
  * -------------
  * - Set repository.url and repository.branch in adoptium_pipeline_config.json
- *   to pin to a specific fork or branch of ci-adoptium-pipelines.
- * - The Job DSL script reads vendor-scripts/*.params.json from this repo's
- *   workspace (already checked out by the Pipeline SCM step) — no extra
- *   checkout is needed for vendor stage parameter overrides.
+ *   to pin to a specific fork or branch of ci-adoptium-pipelines for all runs.
+ * - For temporary, per-run overrides (pipeline fork testing, sandbox folder) use
+ *   the optional Jenkins job parameters on the development seed job — no config
+ *   file edits or revert commits required.
+ * - The Job DSL script reads vendor-scripts/*.params.json from the checked-out
+ *   config-repo/ directory.
+ *
+ * SAFETY GUARD (PIPELINE_BASE_FOLDER)
+ * ------------------------------------
+ * When PIPELINE_BASE_FOLDER is defined as a parameter on the job:
+ *   - It must not be blank.
+ *   - It must differ from pipelineBaseFolder in jenkins_job_config.json.
+ * This prevents a developer accidentally seeding a fork into the production
+ * Jenkins folder.  The production job simply does not have the parameter
+ * defined, so it can never trigger either check.
  */
 
 // ---------------------------------------------------------------------------
@@ -70,10 +127,13 @@ limitations under the License.
 pipeline {
     agent any
 
-    // NOTE: Do NOT declare CONFIG_REPO_URL / CONFIG_REPO_BRANCH / PIPELINE_BASE_FOLDER here.
-    // A parameters{} block in the Jenkinsfile causes Jenkins to reset parameter
-    // values to the Jenkinsfile defaults on every run, wiping the operator's values.
-    // Define these String Parameters in the Jenkins job configuration UI instead.
+    // NOTE: Do NOT declare any of the seed parameters in a parameters{} block here.
+    // A parameters{} block causes Jenkins to reset values to Jenkinsfile defaults on
+    // every run, wiping values the operator set in the UI.  Define all of the following
+    // as String Parameters in the Jenkins job configuration UI instead:
+    //   Mandatory : CONFIG_REPO_URL, CONFIG_REPO_BRANCH
+    //   Optional  : PIPELINE_BASE_FOLDER, PIPELINES_REPO_URL, PIPELINES_REPO_BRANCH
+    //   (leave the optional ones blank / omit on the production job)
 
     options {
         timestamps()
@@ -81,26 +141,93 @@ pipeline {
     }
 
     stages {
+        stage('Validate parameters') {
+            steps {
+                script {
+                    // CONFIG_REPO_URL and CONFIG_REPO_BRANCH are mandatory on every seed job
+                    // (both production and development).  Fail immediately if either is missing
+                    // or blank — a silent empty value would cause git checkout failures or seed
+                    // the wrong repo, which is much harder to diagnose than a fast early error.
+                    if (!params.CONFIG_REPO_URL?.toString()?.trim()) {
+                        error("CONFIG_REPO_URL is not set or is blank.\n" +
+                              "Add CONFIG_REPO_URL as a String Parameter on this Jenkins job and set it to\n" +
+                              "the URL of the vendor config repository to seed from.")
+                    }
+                    if (!params.CONFIG_REPO_BRANCH?.toString()?.trim()) {
+                        error("CONFIG_REPO_BRANCH is not set or is blank.\n" +
+                              "Add CONFIG_REPO_BRANCH as a String Parameter on this Jenkins job and set it\n" +
+                              "to the branch of the vendor config repository (e.g. main).")
+                    }
+                    echo "✓ CONFIG_REPO_URL    : ${params.CONFIG_REPO_URL.trim()}"
+                    echo "✓ CONFIG_REPO_BRANCH : ${params.CONFIG_REPO_BRANCH.trim()}"
+                }
+            }
+        }
+
+        stage('Checkout config repo') {
+            steps {
+                script {
+                    // Explicitly check out the config repo from CONFIG_REPO_URL/BRANCH into
+                    // config-repo/ so that all downstream stages read from a known, parameter-
+                    // controlled source rather than the implicit Phase-1 SCM checkout.
+                    // This is what makes the dev job work: it can point CONFIG_REPO_URL at a
+                    // fork without reconfiguring the Jenkins job's Pipeline SCM definition.
+                    String configRepoCredentialsId = ''
+                    if (fileExists('jenkins_credential_config.json')) {
+                        Map credCfg = readJSON(file: 'jenkins_credential_config.json')
+                        configRepoCredentialsId = credCfg.configRepoCredentialsId ?: ''
+                    }
+                    dir('config-repo') {
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: "*/${params.CONFIG_REPO_BRANCH.trim()}"]],
+                            userRemoteConfigs: [[
+                                url: params.CONFIG_REPO_URL.trim(),
+                                credentialsId: configRepoCredentialsId
+                            ]]
+                        ])
+                    }
+                    echo "✓ Config repo checked out: ${params.CONFIG_REPO_URL.trim()} @ ${params.CONFIG_REPO_BRANCH.trim()}"
+                }
+            }
+        }
+
         stage('Read pipeline config') {
             steps {
                 script {
-                    // The config repo is already checked out in the workspace root by the
-                    // Pipeline SCM step.  Read the pipelines repo coordinates from it so
-                    // that no hardcoded values need to exist in this Jenkinsfile.
-                    Map cfg = readJSON(file: 'adoptium_pipeline_config.json')
-                    env.PIPELINES_REPO_URL    = cfg.repository.url
-                    env.PIPELINES_REPO_BRANCH = cfg.repository.branch
+                    // All config files are now under config-repo/ — the explicit checkout above
+                    // is the authoritative source; the Phase-1 workspace root SCM checkout is
+                    // not used for config after this point.
+                    Map cfg = readJSON(file: 'config-repo/adoptium_pipeline_config.json')
+
+                    // Optional overrides: when PIPELINES_REPO_URL / PIPELINES_REPO_BRANCH are
+                    // set on the development seed job they shadow the checked-in config values,
+                    // allowing pipeline fork testing without editing adoptium_pipeline_config.json.
+                    // On the production seed job these parameters are left blank and have no effect.
+                    String repoUrlOverride    = (params.PIPELINES_REPO_URL    ?: '').toString().trim()
+                    String repoBranchOverride = (params.PIPELINES_REPO_BRANCH ?: '').toString().trim()
+                    env.PIPELINES_REPO_URL    = repoUrlOverride    ?: cfg.repository.url
+                    env.PIPELINES_REPO_BRANCH = repoBranchOverride ?: cfg.repository.branch
+                    if (repoUrlOverride || repoBranchOverride) {
+                        echo "⚠ Pipelines repo overridden via job parameters (development seed)"
+                    }
                     echo "✓ Pipelines repo : ${env.PIPELINES_REPO_URL} @ ${env.PIPELINES_REPO_BRANCH}"
 
                     // Read the Jenkins credential ID for the pipelines repo from
                     // jenkins_credential_config.json (optional — absent when no credentials are required).
                     // Keeping credential IDs out of the CI-agnostic adoptium_pipeline_config.json.
-                    if (fileExists('jenkins_credential_config.json')) {
-                        Map credCfg = readJSON(file: 'jenkins_credential_config.json')
+                    if (fileExists('config-repo/jenkins_credential_config.json')) {
+                        Map credCfg = readJSON(file: 'config-repo/jenkins_credential_config.json')
                         env.PIPELINES_REPO_CREDENTIALS_ID = credCfg.pipelineRepoCredentialsId ?: ''
                     } else {
                         env.PIPELINES_REPO_CREDENTIALS_ID = ''
                     }
+
+                    // Read and stash the production base folder from jenkins_job_config.json so
+                    // that the 'Generate jobs' stage can validate the PIPELINE_BASE_FOLDER override
+                    // against it without re-reading the file.
+                    Map jobCfg = readJSON(file: 'config-repo/jenkins_job_config.json')
+                    env.PRODUCTION_BASE_FOLDER = (jobCfg.pipelineBaseFolder ?: '').toString().trim().replaceAll(/\/+$/, '')
                 }
             }
         }
@@ -109,8 +236,6 @@ pipeline {
             steps {
                 // Check out ci-adoptium-pipelines into pipelines/ so that the
                 // Job DSL script and stage *.params.json files are available.
-                // The vendor config repo is already in the workspace root
-                // (checked out by the Pipeline SCM step above).
                 dir('pipelines') {
                     checkout([
                         $class: 'GitSCM',
@@ -138,10 +263,53 @@ pipeline {
             steps {
                 script {
                     Object seedHelper = load('pipelines/ci/jenkins/lib/SeedHelper.groovy')
+
+                    // ── PIPELINE_BASE_FOLDER safety guard ──────────────────────────────────
+                    // params.PIPELINE_BASE_FOLDER is null  → parameter not defined on this job
+                    //                              (production seed job path: use config file).
+                    // params.PIPELINE_BASE_FOLDER is ""    → parameter exists but was left blank
+                    //                              (misconfigured development job: fail fast).
+                    // params.PIPELINE_BASE_FOLDER is "…"  → development override: must differ
+                    //                              from the production value in jenkins_job_config.json.
+                    //
+                    // This prevents a developer accidentally seeding their fork into the
+                    // production folder: the dev job *must* carry the parameter and *must*
+                    // provide a value that is distinct from the checked-in production folder.
+                    // The only way to bypass the guard is to deliberately put the production
+                    // folder value into PIPELINE_BASE_FOLDER — a knowing act, not a mistake.
+                    String pipelineBaseFolder
+                    if (params.PIPELINE_BASE_FOLDER == null) {
+                        // Parameter not present on this job — production seed job.
+                        // Use the value from jenkins_job_config.json (already in env).
+                        pipelineBaseFolder = ''
+                        echo "✓ Production seed job — using pipelineBaseFolder from jenkins_job_config.json (${env.PRODUCTION_BASE_FOLDER ?: '(root)'})"
+                    } else {
+                        // Parameter is present — development seed job.
+                        String folderOverride = params.PIPELINE_BASE_FOLDER.toString().trim().replaceAll(/\/+$/, '')
+                        if (!folderOverride) {
+                            error("PIPELINE_BASE_FOLDER is defined on this job but is empty.\n" +
+                                  "The development seed job requires a non-empty sandbox folder to prevent\n" +
+                                  "accidental deployment to the production folder.\n" +
+                                  "Set PIPELINE_BASE_FOLDER to a value that differs from the production\n" +
+                                  "folder '${env.PRODUCTION_BASE_FOLDER ?: '(root)'}' and re-run.")
+                        }
+                        if (folderOverride == env.PRODUCTION_BASE_FOLDER) {
+                            error("PIPELINE_BASE_FOLDER '${folderOverride}' matches the production folder\n" +
+                                  "defined in jenkins_job_config.json.\n" +
+                                  "The development seed job must target a different folder to avoid\n" +
+                                  "overwriting production jobs.  Choose a distinct sandbox folder and re-run.")
+                        }
+                        pipelineBaseFolder = folderOverride
+                        echo "✓ Development seed job — overriding base folder to '${pipelineBaseFolder}' (production is '${env.PRODUCTION_BASE_FOLDER ?: '(root)'}')"
+                    }
+                    // ── end guard ──────────────────────────────────────────────────────────
+
                     seedHelper.generateJobs(
-                        params.CONFIG_REPO_URL,
-                        params.CONFIG_REPO_BRANCH,
-                        env.PIPELINES_COMMIT_SHA
+                        params.CONFIG_REPO_URL.trim(),
+                        params.CONFIG_REPO_BRANCH.trim(),
+                        env.PIPELINES_COMMIT_SHA,
+                        pipelineBaseFolder,
+                        'config-repo'
                     )
                 }
             }
