@@ -244,10 +244,11 @@ pipeline {
                         env.VERSION_CONFIG = configText
                         Map parsedConfig   = new JsonSlurper().parseText(configText)
                         // targetConfigurations (array) is the active subset of buildConfigurations.
-                        // Fall back to all keys only when targetConfigurations is absent.
+                        // Fall back to all keys only when targetConfigurations is absent (null).
+                        // An explicitly-empty list is intentionally left empty so the error below fires.
                         List targetList = parsedConfig.targetConfigurations as List
                         List allKeys    = parsedConfig.buildConfigurations?.keySet() as List ?: []
-                        List active     = (targetList != null && !targetList.isEmpty())
+                        List active     = (targetList != null)
                             ? targetList.findAll { allKeys.contains(it) }
                             : allKeys
                         if (active.isEmpty()) {

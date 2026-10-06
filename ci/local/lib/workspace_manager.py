@@ -230,7 +230,8 @@ class WorkspaceManager:
             target_dir:      Path to the stage's TARGET_DIR.  Defaults to
                              stage_workspace/target/ when not specified.
             output_patterns: List of glob patterns relative to TARGET_DIR.
-                             Defaults to ["**/*"] if None.
+                             Defaults to ["**/*"] if None. An explicitly empty
+                             list means "archive nothing" and is respected as-is.
         """
         target = Path(target_dir) if target_dir else self.stage_workspace / "target"
         if not target.exists():
@@ -252,7 +253,10 @@ class WorkspaceManager:
             print(f"ℹ️  Archive ({stage_name}): {rel} is empty — nothing to archive")
             return
 
-        patterns = [_expand_pattern(p) for p in output_patterns] if output_patterns else ["**/*"]
+        patterns = [_expand_pattern(p) for p in output_patterns] if output_patterns is not None else ["**/*"]
+        if not patterns:
+            print(f"ℹ️  Archive ({stage_name}): stageOutputArtifacts is empty — nothing to archive")
+            return
         self.build_artifacts_dir.mkdir(parents=True, exist_ok=True)
 
         archived = 0
