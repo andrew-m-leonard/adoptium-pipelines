@@ -648,6 +648,22 @@ execute_build() {
 	log_info "Build execution complete"
 }
 
+# Escape a string for safe embedding inside a JSON double-quoted value.
+# Handles the six characters that RFC 8259 §7 requires to be escaped:
+#   backslash, double-quote, and the C0 control characters most likely to
+#   appear in real build paths/UIDs (tab, newline, carriage-return).
+# No external tools beyond sed are needed.
+# Usage: escaped=$(json_escape "raw value")
+json_escape() {
+	printf '%s' "$1" |
+		sed \
+			-e 's/\\/\\\\/g' \
+			-e 's/"/\\"/g' \
+			-e 's/\t/\\t/g' \
+			-e 's/\r/\\r/g' \
+			-e 's/\n/\\n/g'
+}
+
 # Extract build metadata
 # $1  build_repo_url  - the temurin-build repository URL actually used
 # $2  build_ref       - the temurin-build ref actually used (may differ from the
@@ -666,25 +682,44 @@ extract_build_metadata() {
 
 	log_info "Writing build metadata with jdk_version='${jdk_version}', releaseType='${release_type}', build_number='${BUILD_NUMBER}', stage='${STAGE_NAME}'"
 
-	# Write build-metadata.json directly in shell — no Python dependency.
-	# Values are single-quoted in the JSON via printf %s with backslash escaping.
+	# Escape every string value before interpolating into JSON.
+	local j_jdk_version j_release_type j_build_number j_build_uid j_group_uid
+	local j_timestamp_iso j_stage j_workspace j_java_version j_target_os
+	local j_architecture j_variant j_build_ref j_build_repo_url
+	j_jdk_version=$(json_escape "${jdk_version}")
+	j_release_type=$(json_escape "${release_type}")
+	j_build_number=$(json_escape "${BUILD_NUMBER:-}")
+	j_build_uid=$(json_escape "${BUILD_UID:-}")
+	j_group_uid=$(json_escape "${GROUP_UID:-}")
+	j_timestamp_iso=$(json_escape "${timestamp_iso}")
+	j_stage=$(json_escape "${STAGE_NAME:-}")
+	j_workspace=$(json_escape "${WORKSPACE}")
+	j_java_version=$(json_escape "${CONFIG_JAVA_TO_BUILD:-}")
+	j_target_os=$(json_escape "${CONFIG_TARGET_OS:-}")
+	j_architecture=$(json_escape "${CONFIG_ARCHITECTURE:-}")
+	j_variant=$(json_escape "${CONFIG_VARIANT:-}")
+	j_build_ref=$(json_escape "${build_ref}")
+	j_build_repo_url=$(json_escape "${build_repo_url}")
+
+	# Write build-metadata.json directly in shell — no Python/jq dependency.
+	# timestamp is an integer (epoch seconds) so it is not quoted in JSON.
 	# shellcheck disable=SC2059
 	printf '{\n  "jdk_version": "%s",\n  "releaseType": "%s",\n  "buildNumber": "%s",\n  "buildUid": "%s",\n  "groupUid": "%s",\n  "timestamp": %s,\n  "timestampISO": "%s",\n  "stage": "%s",\n  "workspace": "%s",\n  "javaVersion": "%s",\n  "targetOS": "%s",\n  "architecture": "%s",\n  "variant": "%s",\n  "buildRef": "%s",\n  "buildRepoUrl": "%s"\n}\n' \
-		"${jdk_version}" \
-		"${release_type}" \
-		"${BUILD_NUMBER:-}" \
-		"${BUILD_UID:-}" \
-		"${GROUP_UID:-}" \
+		"${j_jdk_version}" \
+		"${j_release_type}" \
+		"${j_build_number}" \
+		"${j_build_uid}" \
+		"${j_group_uid}" \
 		"${timestamp}" \
-		"${timestamp_iso}" \
-		"${STAGE_NAME:-}" \
-		"${WORKSPACE}" \
-		"${CONFIG_JAVA_TO_BUILD:-}" \
-		"${CONFIG_TARGET_OS:-}" \
-		"${CONFIG_ARCHITECTURE:-}" \
-		"${CONFIG_VARIANT:-}" \
-		"${build_ref}" \
-		"${build_repo_url}" \
+		"${j_timestamp_iso}" \
+		"${j_stage}" \
+		"${j_workspace}" \
+		"${j_java_version}" \
+		"${j_target_os}" \
+		"${j_architecture}" \
+		"${j_variant}" \
+		"${j_build_ref}" \
+		"${j_build_repo_url}" \
 		>"${WORKSPACE}/build-metadata.json"
 
 	log_info "Build metadata saved to build-metadata.json"
