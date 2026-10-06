@@ -113,7 +113,7 @@ main() {
 	if [ -z "${latest_tag}" ]; then
 		log_warn "No build tag found matching '${build_tag_pattern}' on ${monitor_repo}"
 		${TRIGGER_UTILS} write-trigger-result "${TARGET_DIR}" \
-			"shouldTrigger=false" "scmRef=" "publishName=" "releaseType=WEEKLY"
+			"shouldTrigger=false" "scmRef=" "publishName=" "releaseType=WEEKLY" "dedupBuildType=NONE"
 		log_section "detect-build-tag-for-github-release — Complete (no tag found)"
 		return 0
 	fi
