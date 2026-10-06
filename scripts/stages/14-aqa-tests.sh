@@ -311,12 +311,16 @@ collect_results() {
 
 	mkdir -p "${TARGET_DIR}"
 
-	local tkg_output="${aqa_dir}/TKG/output"
-	if [[ -d "${tkg_output}" ]]; then
-		cp -r "${tkg_output}/." "${TARGET_DIR}/"
-		log_info "TKG results copied to ${TARGET_DIR}"
-	else
-		log_warn "TKG output directory not found: ${tkg_output}"
+	# TKG names each run directory output_<UNIQUEID> (see TKG/settings.mk).
+	local found=0
+	for tkg_output in "${aqa_dir}/TKG/output_"*/; do
+		[[ -d "${tkg_output}" ]] || continue
+		cp -r "${tkg_output}" "${TARGET_DIR}/"
+		log_info "TKG results copied: $(basename "${tkg_output}") → ${TARGET_DIR}"
+		found=1
+	done
+	if [[ ${found} -eq 0 ]]; then
+		log_warn "No TKG output_* directories found under ${aqa_dir}/TKG/"
 	fi
 
 	cat >"${TARGET_DIR}/aqa-test-summary.json" <<EOF
