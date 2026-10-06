@@ -334,7 +334,7 @@ private void _archiveStageOutputs(String scriptStem, String targetDir) {
     List outputPatterns = _resolveOutputArtifacts(scriptStem)
     // null  → key absent → default ['**/*'] was applied inside _resolveOutputArtifacts().
     // []    → stageOutputArtifacts explicitly empty → "archive nothing".
-    if (outputPatterns != null && outputPatterns.isEmpty()) {
+    if (outputPatterns?.isEmpty()) {
         return
     }
 

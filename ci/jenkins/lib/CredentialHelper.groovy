@@ -226,7 +226,7 @@ Map<String, Map<String, String>> credentialDefs(List<String> names, String credD
 String findCredentialIdForEnvVar(String targetEnvVar, String credDefsJson) {
     Map parsed = new JsonSlurper().parseText(credDefsJson ?: '{}')
     for (Map.Entry entry in parsed.entrySet()) {
-        String keyName = entry.key.toString()
+        String keyName = entry.key
         Map    cred    = entry.value as Map
         if (cred?.get('type') != 'string') { continue }
         String ev = cred.get('envVar')
