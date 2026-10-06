@@ -133,7 +133,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple  # Tuple used in all_param_names type
+from typing import Dict, List, Match, Optional, Set, Tuple  # Tuple used in all_param_names type
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -302,7 +302,7 @@ def _substitute_variables(pattern: str, constants: Dict[str, str]) -> str:
     Substitute ${VAR} and $VAR variable references in a pattern string.
     Checks constants first, then os.environ, falling back to the match if not found.
     """
-    def _repl_braced(match: re.Match) -> str:
+    def _repl_braced(match: Match) -> str:
         var_name = match.group(1)
         if var_name in constants:
             return constants[var_name]
@@ -310,7 +310,7 @@ def _substitute_variables(pattern: str, constants: Dict[str, str]) -> str:
             return os.environ[var_name]
         return match.group(0)
 
-    def _repl_simple(match: re.Match) -> str:
+    def _repl_simple(match: Match) -> str:
         var_name = match.group(1)
         if var_name in constants:
             return constants[var_name]
