@@ -121,6 +121,25 @@ main() {
 	log_info "TEST_JDK_HOME : ${test_jdk_home}"
 
 	# -----------------------------------------------------------------------
+	# Locate and extract the testimage artifact → TESTIMAGE_PATH
+	#
+	# Jenkins sets TESTIMAGE_PATH=$WORKSPACE/jdkbinary/openjdk-test-image after
+	# get.sh extracts the testimage tarball there.  Locally we already have the
+	# testimage archive in INPUT_ARTIFACTS_DIR/BUILD_OUTPUT_DIR; we extract it
+	# ourselves and export the same variable so openjdk.mk can build the
+	# -nativepath argument for jtreg.
+	# -----------------------------------------------------------------------
+	local testimage_extract_dir="${WORKSPACE}/testimage-aqa-extract"
+	local testimage_path
+	testimage_path=$(extract_testimage "${testimage_extract_dir}")
+	if [[ -n "${testimage_path}" ]]; then
+		export TESTIMAGE_PATH="${testimage_path}"
+		log_info "TESTIMAGE_PATH : ${TESTIMAGE_PATH}"
+	else
+		log_warn "No testimage artifact found — -nativepath will not be set (tests requiring native code may fail)"
+	fi
+
+	# -----------------------------------------------------------------------
 	# Clone aqa-tests
 	# -----------------------------------------------------------------------
 	local aqa_dir="${WORKSPACE}/aqa-tests"
@@ -167,6 +186,54 @@ main() {
 	fi
 
 	exit ${test_exit_code}
+}
+
+# ---------------------------------------------------------------------------
+# Find and extract the testimage archive; return the openjdk-test-image path.
+# Returns empty string (and a warning) when no testimage is present.
+# ---------------------------------------------------------------------------
+extract_testimage() {
+	local extract_dir="$1"
+	local artifacts_dir="${INPUT_ARTIFACTS_DIR}/${BUILD_OUTPUT_DIR}"
+
+	local archive
+	archive=$(find "${artifacts_dir}" \
+		\( -name "*testimage*.tar.gz" -o -name "*testimage*.zip" \) |
+		sort | head -n 1)
+
+	if [[ -z "${archive}" ]]; then
+		echo ""
+		return 0
+	fi
+
+	log_info "Extracting testimage $(basename "${archive}") to ${extract_dir}"
+	rm -rf "${extract_dir}"
+	mkdir -p "${extract_dir}"
+
+	if [[ "${archive}" == *.tar.gz ]]; then
+		tar -xzf "${archive}" -C "${extract_dir}"
+	elif [[ "${archive}" == *.zip ]]; then
+		unzip -q "${archive}" -d "${extract_dir}"
+	fi
+
+	# The tarball expands to a single top-level directory (e.g. jdk-21+35-test-image).
+	# Rename it to openjdk-test-image to match the path Jenkins uses, so that any
+	# relative references inside TKG that assume that name continue to work.
+	local top_dir
+	top_dir=$(find "${extract_dir}" -maxdepth 1 -mindepth 1 -type d | head -n 1)
+
+	if [[ -z "${top_dir}" ]]; then
+		log_warn "Testimage archive extracted but no top-level directory found under ${extract_dir}"
+		echo ""
+		return 0
+	fi
+
+	local test_image_dir="${extract_dir}/openjdk-test-image"
+	if [[ "${top_dir}" != "${test_image_dir}" ]]; then
+		mv "${top_dir}" "${test_image_dir}"
+	fi
+
+	echo "${test_image_dir}"
 }
 
 # ---------------------------------------------------------------------------
