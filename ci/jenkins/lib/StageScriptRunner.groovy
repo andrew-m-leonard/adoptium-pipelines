@@ -21,11 +21,11 @@ limitations under the License.
  * etc.) are called directly — no 'steps.' prefix, no init(this) delegation.
  *
  * Resolution order for run(stem):
- *   1. config-repo/vendor-scripts/<stem>.sh     ← vendor override (shell)
- *   2. config-repo/vendor-scripts/<stem>.groovy ← vendor override (Groovy)
+ *   1. config-repo/vendor-scripts/<stem>.groovy ← vendor override (Groovy)
+ *   2. config-repo/vendor-scripts/<stem>.sh     ← vendor override (shell)
  *   3. config-repo/vendor-scripts/<stem>.py     ← vendor override (Python)
- *   4. scripts/stages/<stem>.sh                 ← default (shell)
- *   5. scripts/stages/<stem>.groovy             ← default (Groovy)
+ *   4. scripts/stages/<stem>.groovy             ← default (Groovy)
+ *   5. scripts/stages/<stem>.sh                 ← default (shell)
  *   6. scripts/stages/<stem>.py                 ← default (Python)
  *   7. no-op → returns 0
  *
@@ -267,11 +267,11 @@ void setCredentialHelper(helper) {
 int run(String scriptStem, Map config = null) {
     final int EXIT_SUCCESS = 0
     List candidates = [
-        [path: "config-repo/vendor-scripts/${scriptStem}.sh",     type: 'sh'],
         [path: "config-repo/vendor-scripts/${scriptStem}.groovy", type: 'groovy'],
+        [path: "config-repo/vendor-scripts/${scriptStem}.sh",     type: 'sh'],
         [path: "config-repo/vendor-scripts/${scriptStem}.py",     type: 'py'],
-        [path: "scripts/stages/${scriptStem}.sh",                 type: 'sh'],
         [path: "scripts/stages/${scriptStem}.groovy",             type: 'groovy'],
+        [path: "scripts/stages/${scriptStem}.sh",                 type: 'sh'],
         [path: "scripts/stages/${scriptStem}.py",                 type: 'py'],
     ]
 
@@ -332,7 +332,9 @@ int run(String scriptStem, Map config = null) {
  */
 private void _archiveStageOutputs(String scriptStem, String targetDir) {
     List outputPatterns = _resolveOutputArtifacts(scriptStem)
-    if (!outputPatterns) {
+    // null  → key absent → default ['**/*'] was applied inside _resolveOutputArtifacts().
+    // []    → stageOutputArtifacts explicitly empty → "archive nothing".
+    if (outputPatterns != null && outputPatterns.isEmpty()) {
         return
     }
 
@@ -355,11 +357,13 @@ private List _resolveOutputArtifacts(String scriptStem) {
             Map outputMap = new groovy.json.JsonSlurper().parseText(env.COLLATED_STAGE_OUTPUT_ARTIFACTS)
             if (outputMap.containsKey(scriptStem)) {
                 List rawList = (List) outputMap[scriptStem]
+                // Preserve an explicitly-empty list — it means "archive nothing".
                 return rawList.collect { String pat -> _substituteEnvVars(pat) }
             }
         } catch (Exception ignored) {
         }
     }
+    // Key absent (or JSON unparseable): fall back to wildcard default.
     return ['**/*']
 }
 
