@@ -72,6 +72,8 @@ String containerEnvFlags() {
     // they arrive automatically via the STAGE_PARAM_NAMES dynamic block below.
     List vars = [
         'WORKSPACE',
+        'PIPELINE_ROOT',
+        'CONFIG_REPO_ROOT',
         'CONFIG_FILE',
         'TARGET_DIR',
         'INPUT_ARTIFACTS_DIR',

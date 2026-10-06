@@ -51,7 +51,7 @@ _load_properties_file "${_pipeline_root}/scripts/stages/stage-constants.properti
 # 2. Vendor overrides/additions (optional — absent when no config repo is used)
 # CONFIG_REPO_ROOT is set by both local runner and Jenkins to the checked-out
 # config repository path.
-_vendor_root="${CONFIG_REPO_ROOT}"
+_vendor_root="${CONFIG_REPO_ROOT:-}"
 _load_properties_file "${_vendor_root}/vendor-scripts/vendor-constants.properties"
 
 unset _load_properties_file _pipeline_root _vendor_root
