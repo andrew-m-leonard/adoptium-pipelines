@@ -90,7 +90,7 @@ main() {
 	# override, which may differ from what was supplied as a stage parameter.
 	# This ensures we test against the exact source that produced the artifact.
 	# -----------------------------------------------------------------------
-	local build_metadata_file="${INPUT_ARTIFACTS_DIR}/${BUILD_OUTPUT_DIR}/build-metadata.json"
+	local build_metadata_file="${INPUT_ARTIFACTS_DIR}/build-metadata.json"
 	if [[ -f "${build_metadata_file}" ]]; then
 		local meta_build_ref
 		meta_build_ref=$(get_config_value "${build_metadata_file}" ".buildRef" "")

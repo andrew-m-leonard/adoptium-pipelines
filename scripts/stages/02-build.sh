@@ -765,14 +765,11 @@ organize_build_outputs() {
 		log_info "Copied ${artifacts_found} artifact(s) to ${build_output_dir}"
 	fi
 
-	# Copy pipeline-level metadata and temurin-build info to build_output/ so they are archived
+	# Copy build-metadata.json to TARGET_DIR root — it is pipeline-level metadata,
+	# not a binary build output, so it lives at the artifact root, not in BUILD_OUTPUT_DIR.
 	if [[ -f "${WORKSPACE}/build-metadata.json" ]]; then
-		cp "${WORKSPACE}/build-metadata.json" "${build_output_dir}/"
 		cp "${WORKSPACE}/build-metadata.json" "${TARGET_DIR}/"
 	fi
-
-	find "${target_dir}" -type f \( -name "buildinfo.json" -o -name "release" \) -exec cp {} "${build_output_dir}/" \; 2>/dev/null || true
-	find "${target_dir}" -type f \( -name "buildinfo.json" -o -name "release" \) -exec cp {} "${TARGET_DIR}/" \; 2>/dev/null || true
 
 	log_info "Build outputs organized in: ${TARGET_DIR} (artifacts in ${BUILD_OUTPUT_DIR}/)"
 }
