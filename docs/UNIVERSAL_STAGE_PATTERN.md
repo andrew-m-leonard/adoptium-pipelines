@@ -182,7 +182,21 @@ mkdir -p "${TARGET_DIR}"
 
 ## Vendor Override
 
-The `StageScriptRunner` checks `config-repo/vendor-scripts/<stem>.sh` before `scripts/stages/<stem>.sh`. A vendor script placed in the config repository replaces the default implementation entirely — it should follow the same interface contract so the surrounding Jenkins/local infrastructure continues to work.
+The `StageScriptRunner` resolves stage scripts in this order (first match wins):
+
+| Priority | Path | Runs on |
+|---|---|---|
+| 1 | `config-repo/vendor-scripts/<stem>.groovy` | Jenkins only |
+| 2 | `config-repo/vendor-scripts/<stem>.sh`     | Jenkins + local |
+| 3 | `config-repo/vendor-scripts/<stem>.py`     | Jenkins + local |
+| 4 | `scripts/stages/<stem>.groovy`             | Jenkins only |
+| 5 | `scripts/stages/<stem>.sh`                 | Jenkins + local |
+| 6 | `scripts/stages/<stem>.py`                 | Jenkins + local |
+| 7 | built-in no-op                             | Jenkins + local |
+
+`.groovy` scripts are Jenkins-only — the local runner silently skips them and continues to the next candidate. Multiple implementations can coexist: for example, a stage with both a `.groovy` and a `.sh` file will use the `.groovy` on Jenkins and the `.sh` locally, with no special configuration required.
+
+A vendor script placed in the config repository replaces the default implementation — it should follow the same interface contract so the surrounding Jenkins/local infrastructure continues to work.
 
 ## Adding the Stage to Jenkins
 

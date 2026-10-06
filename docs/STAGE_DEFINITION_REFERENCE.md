@@ -8,12 +8,30 @@ Every pipeline stage is defined by four artefacts that must all be consistent wi
 
 | Artefact | Location | Purpose |
 |---|---|---|
-| Shell script | `scripts/stages/NN-stem.sh` | Actual build/sign/test logic — CI-agnostic |
+| Stage script(s) | `scripts/stages/NN-stem.sh` (and/or `.py`, `.groovy`) | Actual build/sign/test logic — one or more script implementations; see resolution order below |
 | Params sidecar | `scripts/stages/NN-stem.params.json` | Stage metadata, gate conditions, and Jenkins/local parameters |
 | Declarative stage block | `ci/jenkins/Jenkinsfile.declarative` | Jenkins stage definition, agent, `when{}` conditions |
 | Local runner entry | `ci/local/run-pipeline.py` | `_stage_condition_met()` guard + `_run_stage()` call |
 
 A stage is only fully functional when all four artefacts are present and consistent.
+
+### Stage script resolution order
+
+Both `StageScriptRunner` (Jenkins) and `StageResolver` (local) walk the following candidate list and execute the **first file that exists**:
+
+| Priority | Path | Runs on |
+|---|---|---|
+| 1 | `config-repo/vendor-scripts/<stem>.groovy` | Jenkins only |
+| 2 | `config-repo/vendor-scripts/<stem>.sh`     | Jenkins + local |
+| 3 | `config-repo/vendor-scripts/<stem>.py`     | Jenkins + local |
+| 4 | `scripts/stages/<stem>.groovy`             | Jenkins only |
+| 5 | `scripts/stages/<stem>.sh`                 | Jenkins + local |
+| 6 | `scripts/stages/<stem>.py`                 | Jenkins + local |
+| 7 | built-in no-op                             | Jenkins + local |
+
+`.groovy` scripts are Jenkins-only — the local runner silently skips them and continues to the next candidate rather than treating the stage as a no-op.
+
+**Multiple implementations can coexist.** A stage can carry both a `.groovy` and a `.sh` file. Jenkins selects the `.groovy` (higher precedence) while the local runner falls through to the `.sh` automatically. This is the standard pattern when a stage requires Jenkins pipeline features (credential binding, `archiveArtifacts`, etc.) but also needs a local equivalent.
 
 ---
 
@@ -206,6 +224,22 @@ Parameters from multiple stage files can share this group name — the collator 
 ---
 
 ## Vendor Override Rules
+
+A vendor supplies files in `config-repo/vendor-scripts/` to customise stages:
+
+### Script overrides
+
+Place a replacement script at `config-repo/vendor-scripts/NN-stem.<ext>`. The extension determines precedence and CI compatibility:
+
+| Extension | Precedence | Runs on |
+|---|---|---|
+| `.groovy` | Highest | Jenkins only |
+| `.sh`     | Middle  | Jenkins + local |
+| `.py`     | Lowest  | Jenkins + local |
+
+Multiple extensions can coexist in the same vendor-scripts directory — e.g. providing both `06-post-build-code-sign.groovy` (for Jenkins) and `06-post-build-code-sign.sh` (for local) is valid and intentional.
+
+### Params overrides
 
 A vendor supplies a `config-repo/vendor-scripts/NN-stem.params.json` to:
 

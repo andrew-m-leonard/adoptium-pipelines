@@ -303,10 +303,16 @@ config-repo/
 
 Resolution order (first match wins):
 
-1. `config-repo/vendor-scripts/<stem>.sh`
-1. `config-repo/vendor-scripts/<stem>.py`
-1. `scripts/stages/<stem>.sh`
-1. `scripts/stages/<stem>.py`
+1. `config-repo/vendor-scripts/<stem>.groovy` — vendor override (Jenkins only)
+1. `config-repo/vendor-scripts/<stem>.sh`     — vendor override (shell)
+1. `config-repo/vendor-scripts/<stem>.py`     — vendor override (Python)
+1. `scripts/stages/<stem>.groovy`             — default (Jenkins only)
+1. `scripts/stages/<stem>.sh`                 — default (shell)
+1. `scripts/stages/<stem>.py`                 — default (Python)
 1. built-in no-op (logs skip, returns 0)
+
+`.groovy` scripts are Jenkins-only — they are silently skipped by the local runner, which continues to the next candidate (`.sh` or `.py`).
+
+**Multiple implementations can coexist.** A stage can have both a `.groovy` and a `.sh` file: Jenkins will use the `.groovy` implementation (higher precedence) while the local runner will automatically fall through to the `.sh`. This is the recommended pattern when a stage requires Jenkins-specific pipeline features (e.g. `archiveArtifacts`, credential binding) but also needs to run locally.
 
 See [`ci/jenkins/lib/StageScriptRunner.groovy`](../ci/jenkins/lib/StageScriptRunner.groovy) (Jenkins) and [`ci/local/lib/stage_resolver.py`](../ci/local/lib/stage_resolver.py) (local) for the implementation.
