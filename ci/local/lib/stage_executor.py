@@ -230,7 +230,7 @@ class StageExecutor:
             target_dir=env.get("TARGET_DIR"),
             output_patterns=output_artifacts,
         )
-        self._workspace_mgr.cleanup_stage_workspace("post")
+        self._workspace_mgr.cleanup_stage_workspace("post", stage_failed=(exit_code > 1))
         return exit_code
 
     def run_initialize(self) -> None:

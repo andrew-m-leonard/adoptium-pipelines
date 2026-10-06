@@ -169,14 +169,18 @@ class WorkspaceManager:
             print(f"   Stage workspace:     {self.stage_workspace}")
             print(f"   Build artifacts:     {self.build_artifacts_dir}")
 
-    def cleanup_stage_workspace(self, cleanup_type):
+    def cleanup_stage_workspace(self, cleanup_type, stage_failed=False):
         """
         Clean the ephemeral stage_workspace directory.
 
         Args:
-            cleanup_type: Either 'pre' or 'post'
-                - 'pre': ALWAYS cleans stage_workspace (critical for restartability)
-                - 'post': Cleans stage_workspace if cleanWorkspaceAfterStage=true
+            cleanup_type:  Either 'pre' or 'post'
+                - 'pre':  ALWAYS cleans stage_workspace (critical for restartability)
+                - 'post': Cleans stage_workspace if cleanWorkspaceAfterStage=true,
+                          unless stage_failed=True (preserves workspace for diagnosis)
+            stage_failed:  When True, skip post-cleanup so the user can inspect the
+                           stage_workspace after a FAILURE or ABORT.  Has no effect
+                           on pre-cleanup.
         """
         if cleanup_type == "pre":
             # Pre-cleanup: ALWAYS clean stage_workspace
@@ -187,6 +191,15 @@ class WorkspaceManager:
             print(f"   ✅ Stage workspace cleaned: {self.stage_workspace}")
 
         elif cleanup_type == "post":
+            # Post-cleanup: skip entirely when the stage failed so the user can
+            # inspect what went wrong before the next run cleans it.
+            if stage_failed:
+                print(
+                    f"⚠️  Post-cleanup: Skipped — stage failed, preserving workspace for inspection:\n"
+                    f"   {self.stage_workspace}"
+                )
+                return
+
             # Post-cleanup: Clean if cleanWorkspaceAfterStage=true
             try:
                 # Read config to check cleanWorkspaceAfterStage setting

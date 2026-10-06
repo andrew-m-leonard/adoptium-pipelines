@@ -179,13 +179,28 @@ main() {
 	log_section "Collecting test results"
 	collect_results "${aqa_dir}" "${test_exit_code}"
 
-	if [[ ${test_exit_code} -eq 0 ]]; then
-		log_section "AQA Tests - PASSED"
-	else
-		log_section "AQA Tests - FAILED (exit code: ${test_exit_code})"
+	# -----------------------------------------------------------------------
+	# Map TKG/make exit codes to pipeline result codes.
+	#
+	# resultsSum.pl (called by the resultsSummary make target) always exits 2
+	# when test cases fail — this is the normal "some tests failed" signal,
+	# equivalent to what Jenkins marks UNSTABLE via its AQA test result
+	# publisher.  run-pipeline.py maps: 0 → SUCCESS, 1 → UNSTABLE, >1 → FAILURE.
+	# Translate any non-zero make exit to 1 (UNSTABLE) so the pipeline
+	# stage is marked unstable rather than failed when test cases fail.
+	# -----------------------------------------------------------------------
+	local final_exit_code=0
+	if [[ ${test_exit_code} -ne 0 ]]; then
+		final_exit_code=1
 	fi
 
-	exit ${test_exit_code}
+	if [[ ${final_exit_code} -eq 0 ]]; then
+		log_section "AQA Tests - PASSED"
+	else
+		log_section "AQA Tests - UNSTABLE (test case failures, make exit code: ${test_exit_code})"
+	fi
+
+	exit ${final_exit_code}
 }
 
 # ---------------------------------------------------------------------------
@@ -309,14 +324,18 @@ collect_results() {
 	local aqa_dir="$1"
 	local test_exit_code="$2"
 
-	mkdir -p "${TARGET_DIR}"
+	mkdir -p "${TARGET_DIR}/TKG"
 
 	# TKG names each run directory output_<UNIQUEID> (see TKG/settings.mk).
+	# Copy into TARGET_DIR/TKG/ so the path mirrors the original layout and
+	# makes it clear these are TKG outputs.
 	local found=0
 	for tkg_output in "${aqa_dir}/TKG/output_"*/; do
 		[[ -d "${tkg_output}" ]] || continue
-		cp -r "${tkg_output}" "${TARGET_DIR}/"
-		log_info "TKG results copied: $(basename "${tkg_output}") → ${TARGET_DIR}"
+		# Strip the trailing slash so cp -r copies the directory itself
+		# (output_xxxx/) rather than spilling its contents.
+		cp -r "${tkg_output%/}" "${TARGET_DIR}/TKG/"
+		log_info "TKG results copied: $(basename "${tkg_output}") → ${TARGET_DIR}/TKG"
 		found=1
 	done
 	if [[ ${found} -eq 0 ]]; then
@@ -328,7 +347,7 @@ collect_results() {
   "stage": "${STAGE_NAME}",
   "buildList": "${BUILD_LIST}",
   "targetSuite": "${TARGET_SUITE}",
-  "status": $([ "${test_exit_code}" -eq 0 ] && echo '"passed"' || echo '"failed"'),
+  "status": $([ "${test_exit_code}" -eq 0 ] && echo '"passed"' || echo '"unstable"'),
   "exitCode": ${test_exit_code},
   "timestamp": $(date +%s),
   "timestampISO": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
