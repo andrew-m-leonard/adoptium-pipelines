@@ -126,7 +126,9 @@ limitations under the License.
 
 pipeline {
     // Must have recent Python3
-    agent ci.role.worker
+    agent {
+        label ci.role.worker
+    }
 
     // NOTE: Do NOT declare any of the seed parameters in a parameters{} block here.
     // A parameters{} block causes Jenkins to reset values to Jenkinsfile defaults on
