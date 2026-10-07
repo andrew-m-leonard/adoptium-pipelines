@@ -497,6 +497,18 @@ def createLaunchJobParams = { Map dep, String version, List platforms, Map defau
             description('Deployment name — baked in at job-generation time. Used by platform build DSL to resolve jobConfiguration.')
             trim(true)
         }
+        stringParam {
+            name('PIPELINES_REPO_URL')
+            defaultValue(pipelineRepoUrl)
+            description('ci-adoptium-pipelines repo URL — baked in at job-generation time. Overrides repository.url in adoptium_pipeline_config.json when non-empty.')
+            trim(true)
+        }
+        stringParam {
+            name('PIPELINES_REPO_BRANCH')
+            defaultValue(pipelineRepoBranch)
+            description('ci-adoptium-pipelines branch — baked in at job-generation time. Overrides repository.branch in adoptium_pipeline_config.json when non-empty.')
+            trim(true)
+        }
     }
 }
 

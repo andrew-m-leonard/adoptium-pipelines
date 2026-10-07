@@ -366,7 +366,9 @@ pipeline {
                                     CONFIG_REPO_BRANCH:          params.CONFIG_REPO_BRANCH,
                                     CONFIG_REPO_CREDENTIALS_ID:  params.CONFIG_REPO_CREDENTIALS_ID ?: '',
                                     CONFIG_DEPLOYMENT_NAME:      params.CONFIG_DEPLOYMENT_NAME ?: '',
-                                    PIPELINE_BASE_FOLDER:        env.PIPELINE_BASE_FOLDER ?: ''
+                                    PIPELINE_BASE_FOLDER:        env.PIPELINE_BASE_FOLDER ?: '',
+                                    PIPELINES_REPO_URL:          params.PIPELINES_REPO_URL    ?: '',
+                                    PIPELINES_REPO_BRANCH:       params.PIPELINES_REPO_BRANCH ?: ''
                                 ]
                         )
                     }

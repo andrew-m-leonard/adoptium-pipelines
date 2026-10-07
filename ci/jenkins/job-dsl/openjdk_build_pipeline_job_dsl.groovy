@@ -64,6 +64,11 @@ def configRepoBranch        = binding.variables.get('CONFIG_REPO_BRANCH')       
 def configRepoCredentialsId = binding.variables.get('CONFIG_REPO_CREDENTIALS_ID') ?: ''
 def configDeploymentName    = binding.variables.get('CONFIG_DEPLOYMENT_NAME')     ?: ''
 def pipelineBaseFolder      = (binding.variables.get('PIPELINE_BASE_FOLDER') ?: '').toString().trim().replaceAll(/\/+$/, '')
+// PIPELINES_REPO_URL / PIPELINES_REPO_BRANCH: forwarded from Jenkinsfile.launch when
+// the development seed job overrides the pipeline fork.  Empty string → use the
+// values from adoptium_pipeline_config.json (production default).
+def pipelinesRepoUrlOverride    = (binding.variables.get('PIPELINES_REPO_URL')    ?: '').toString().trim()
+def pipelinesRepoBranchOverride = (binding.variables.get('PIPELINES_REPO_BRANCH') ?: '').toString().trim()
 
 final int SEPARATOR_WIDTH = 80
 final int DUPLICATE_ZERO  = 0
@@ -338,12 +343,12 @@ pipelineJob(jobName.replaceAll(/^\//, '')) {
             scm {
                 git {
                     remote {
-                        url(pipelineConfig.repository.url)
+                        url(pipelinesRepoUrlOverride    ?: pipelineConfig.repository.url)
                         if (credentialConfig.pipelineRepoCredentialsId) {
                             credentials(credentialConfig.pipelineRepoCredentialsId)
                         }
                     }
-                    branch("*/${pipelineConfig.repository.branch}")
+                    branch("*/${pipelinesRepoBranchOverride ?: pipelineConfig.repository.branch}")
                     extensions {
                         cleanBeforeCheckout()
                     }

@@ -81,14 +81,9 @@ from this repository into the **root of your vendor config repository** (or any 
     ...
 ```
 
-Open the file and adjust the two constants at the top if needed:
-
-```groovy
-def PIPELINES_REPO_URL    = 'https://github.com/adoptium/ci-adoptium-pipelines.git'
-def PIPELINES_REPO_BRANCH = 'main'
-```
-
-For a fork or a pinned branch, change these values. Commit and push.
+The default pipeline repository URL and branch are read from `repository.url` and
+`repository.branch` in `adoptium_pipeline_config.json`. No changes to `Jenkinsfile.seed`
+are needed for a standard production setup.
 
 ### Step 2: Create the Pipeline seed job in Jenkins
 
@@ -100,12 +95,13 @@ For a fork or a pinned branch, change these values. Commit and push.
    |---|---|---|---|
    | `CONFIG_REPO_URL` | ✅ required | *(your config repository URL)* | URL of your vendor config repository |
    | `CONFIG_REPO_BRANCH` | ✅ required | `main` | Branch of your vendor config repository |
+   | `PIPELINE_BASE_FOLDER` | development only | *(leave blank)* | Override the Jenkins folder under which all jobs are placed — see [Development Fork Workflow](#development-fork-workflow) |
+   | `PIPELINES_REPO_URL` | development only | *(leave blank)* | Override the `ci-adoptium-pipelines` repo URL — see [Development Fork Workflow](#development-fork-workflow) |
+   | `PIPELINES_REPO_BRANCH` | development only | *(leave blank)* | Override the `ci-adoptium-pipelines` branch — see [Development Fork Workflow](#development-fork-workflow) |
 
    > **Important**: do not declare these in `Jenkinsfile.seed`. A `parameters {}` block in a Jenkinsfile causes Jenkins to reset values to the Jenkinsfile defaults on every run, wiping whatever the operator set.
-
-   The folder layout (`pipelineBaseFolder`, deployment subfolders) is read from
-   `jenkins_job_config.json` in the config repository — no seed job parameter
-   controls it. Edit the config file to change folder names and re-run the seed.
+   >
+   > **Production jobs**: leave `PIPELINE_BASE_FOLDER`, `PIPELINES_REPO_URL`, and `PIPELINES_REPO_BRANCH` absent or blank. The production folder comes from `jenkins_job_config.json`; the pipeline repo comes from `adoptium_pipeline_config.json`.
 
 1. Under **Pipeline**:
    - **Definition**: `Pipeline script from SCM`
@@ -372,14 +368,90 @@ Changes to `Jenkinsfile` files or stage scripts in `ci-adoptium-pipelines` take 
 
 ### Pinning to a specific pipeline repository version
 
-Edit the constants in your `Jenkinsfile.seed`:
+Set `repository.url` and `repository.branch` in `adoptium_pipeline_config.json` in your config repository:
 
-```groovy
-def PIPELINES_REPO_URL    = 'https://github.com/adoptium/ci-adoptium-pipelines.git'
-def PIPELINES_REPO_BRANCH = 'v2.1.0'   // pin to a tag or branch
+```json
+{
+  "repository": {
+    "url": "https://github.com/adoptium/ci-adoptium-pipelines.git",
+    "branch": "v2.1.0"
+  }
+}
 ```
 
-Commit and push, then re-run the seed job.
+Commit and push to your config repository, then re-run the seed job. The new URL and branch are baked into all generated launch and platform build jobs automatically.
+
+---
+
+## Development Fork Workflow
+
+When developing changes to `ci-adoptium-pipelines` itself you need to test against
+your own fork without touching the production Jenkins jobs. The seed job supports
+three optional override parameters that together let you do this entirely through
+the Jenkins UI — no config file edits or revert commits required.
+
+### How it works
+
+The three parameters form a chain that propagates your fork URL/branch all the way
+down to every generated job:
+
+```
+Seed job parameters
+  PIPELINES_REPO_URL    → checkout your fork into pipelines/
+  PIPELINES_REPO_BRANCH → baked into every generated launch job SCM definition
+  PIPELINE_BASE_FOLDER  → all generated jobs land in a sandbox folder
+
+Launch job (generated)
+  PIPELINES_REPO_URL/BRANCH baked as job params
+    → forwarded to openjdk_build_pipeline_job_dsl.groovy
+      → baked into every generated platform build job SCM definition
+```
+
+### Setup: create a development seed job
+
+Create a **second** seed job (e.g. `openjdk-build-seed-job-dev`) pointing at the
+same `Jenkinsfile.seed`. In the Jenkins job configuration UI add **all five**
+String Parameters:
+
+| Parameter | Example value | Purpose |
+|---|---|---|
+| `CONFIG_REPO_URL` | `https://github.com/my-org/temurin-config.git` | Your config repo (can be same as production) |
+| `CONFIG_REPO_BRANCH` | `my-feature-branch` | Your config repo branch |
+| `PIPELINE_BASE_FOLDER` | `my-sandbox/dev` | Sandbox folder — **must differ from the production folder** |
+| `PIPELINES_REPO_URL` | `https://github.com/my-org/ci-adoptium-pipelines.git` | Your pipeline repo fork |
+| `PIPELINES_REPO_BRANCH` | `my-feature-branch` | Your pipeline fork branch |
+
+> **Safety guard**: `PIPELINE_BASE_FOLDER` is validated at runtime. If it is
+> blank, or matches the production folder defined in `jenkins_job_config.json`,
+> the seed job fails immediately. This prevents accidentally overwriting production
+> jobs with a fork build.
+
+### Running the development seed
+
+1. Click **Build with Parameters** on `openjdk-build-seed-job-dev`
+1. Fill in all five parameters
+1. Click **Build**
+
+The seed job will:
+- Check out your config repo fork/branch
+- Check out your pipeline repo fork/branch into `pipelines/`
+- Generate all launch and platform build jobs under `PIPELINE_BASE_FOLDER`
+- Bake `PIPELINES_REPO_URL` and `PIPELINES_REPO_BRANCH` into each generated
+  launch job as parameters **and** as its Pipeline SCM definition
+
+### What gets baked in
+
+After the seed run:
+
+- Each **launch job**'s Pipeline SCM definition points at your fork/branch, so
+  `Jenkinsfile.launch` is fetched from your fork on every run
+- Each **launch job** carries `PIPELINES_REPO_URL` and `PIPELINES_REPO_BRANCH`
+  as visible job parameters — these are forwarded to the `openjdk_build_pipeline_job_dsl`
+  step when platform build jobs are created/updated
+- Each **platform build job**'s Pipeline SCM definition points at your fork/branch,
+  so `Jenkinsfile.declarative` is fetched from your fork on every run
+
+The production jobs under the production folder are completely untouched.
 
 ## Troubleshooting
 
