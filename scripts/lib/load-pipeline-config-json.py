@@ -166,7 +166,7 @@ def resolve_label_placeholders(template, target_os, architecture):
 def build_node_label(build_label_template, additional_labels, target_os, architecture):
     """Build the fully-resolved Build-stage node label.
 
-    Resolves {os} and {arch} placeholders in the stageAgentLabels["02-build"]
+    Resolves {os} and {arch} placeholders in the stageAgentLabels["020-build"]
     template via the sw.os.* / hw.arch.* label schema, then appends any
     platform additionalNodeLabels with '&&'.
     """
@@ -322,7 +322,7 @@ def load_configuration(args):
     #                   not by stage scripts.
     #
     #   repoDefaults  — DEFAULT git refs from adoptium_pipeline_config.json that
-    #                   stage scripts (02-build.sh, 14-aqa-tests.sh, …) fall back
+    #                   stage scripts (020-build.sh, 140-aqa-tests.sh, …) fall back
     #                   to when their own stage params (BUILD_REF, AQA_REF) are
     #                   empty.  Exposed as CONFIG_BUILD_REF / CONFIG_AQA_REF env
     #                   vars.  Stage params always take precedence.

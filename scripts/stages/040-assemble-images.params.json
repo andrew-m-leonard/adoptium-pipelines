@@ -1,5 +1,5 @@
 {
-  "stageId": "04-assemble-images",
+  "stageId": "040-assemble-images",
   "stageDisabled": false,
   "stageTimeoutMinutes": 0,
   "stageCondition": [

@@ -47,21 +47,21 @@ Stage scripts are prefixed with a two-digit number that defines their execution 
 
 | # | Stage | Script |
 |---|---|---|
-| 02 | Build | `02-build.sh` |
-| 03 | Internal Code Sign | `03-internal-code-sign.sh` |
-| 04 | Assemble Images | `04-assemble-images.sh` |
-| 06 | Post-Build Code Sign | `06-post-build-code-sign.sh` |
-| 07 | Build Installer | `07-installer.sh` |
-| 08 | Code Sign Installer | `08-code-sign-installer.sh` |
-| 09 | SBOM Sign | `09-sbom-sign.sh` |
-| 10 | Digital Artifact Sign | `10-digital-artifact-sign.sh` |
-| 11 | Verify Signing | `11-verify-signing.sh` |
-| 12 | Validate SBOM | `12-validate-sbom.sh` |
-| 13 | Smoke Tests | `13-smoke-tests.sh` |
-| 14 | AQA Tests | `14-aqa-tests.sh` |
-| 15 | TCK Tests | `15-tck-tests.sh` |
-| 16 | Publish Artifacts | `16-publish.sh` |
-| 20 | Reproducible Compare | `20-reproducible-compare.sh` |
+| 02 | Build | `020-build.sh` |
+| 03 | Internal Code Sign | `030-internal-code-sign.sh` |
+| 04 | Assemble Images | `040-assemble-images.sh` |
+| 06 | Post-Build Code Sign | `060-post-build-code-sign.sh` |
+| 07 | Build Installer | `070-installer.sh` |
+| 08 | Code Sign Installer | `080-code-sign-installer.sh` |
+| 09 | SBOM Sign | `090-sbom-sign.sh` |
+| 10 | Digital Artifact Sign | `100-digital-artifact-sign.sh` |
+| 11 | Verify Signing | `110-verify-signing.sh` |
+| 12 | Validate SBOM | `120-validate-sbom.sh` |
+| 13 | Smoke Tests | `130-smoke-tests.sh` |
+| 14 | AQA Tests | `140-aqa-tests.sh` |
+| 15 | TCK Tests | `150-tck-tests.sh` |
+| 16 | Publish Artifacts | `190-publish.sh` |
+| 20 | Reproducible Compare | `200-reproducible-compare.sh` |
 
 ---
 
@@ -106,7 +106,7 @@ Every `scripts/stages/NN-stem.params.json` file follows this schema:
 
 #### `stageId` (string, required)
 
-Must exactly match the stem of this file (e.g. `"14-aqa-tests"` for `14-aqa-tests.params.json`). Used by the collator, Job DSL, and local runner to associate metadata with the correct stage.
+Must exactly match the stem of this file (e.g. `"140-aqa-tests"` for `140-aqa-tests.params.json`). Used by the collator, Job DSL, and local runner to associate metadata with the correct stage.
 
 #### `stageDisabled` (boolean, default `false`)
 
@@ -117,7 +117,7 @@ Controls whether this stage is active.
 
 **Convention:** any stage added to the core pipeline repository that is not intended for all vendors should ship with `"stageDisabled": true`. Vendors re-enable it by providing a `vendor-scripts/NN-stem.params.json` override with `"stageDisabled": false`.
 
-A vendor can also disable a core stage (e.g. `16-publish`) by supplying a `vendor-scripts/16-publish.params.json` with `"stageDisabled": true`.
+A vendor can also disable a core stage (e.g. `190-publish`) by supplying a `vendor-scripts/190-publish.params.json` with `"stageDisabled": true`.
 
 #### `stageCondition` (array, default `[]`)
 
@@ -135,7 +135,7 @@ A list of runtime conditions that must all be satisfied (AND) for the stage to e
 - If `stageDisabled: true`, the stage is always skipped regardless of conditions.
 - If `stageDisabled: false` but conditions are not met, the stage is skipped at runtime.
 
-**Gate-only files:** a `params.json` may contain only `stageId`, `stageDisabled`, `stageTimeoutMinutes`, and `stageCondition` with no `parameterGroups` (e.g. `08-code-sign-installer.params.json`). This is valid — it registers the gate condition without introducing any new parameters.
+**Gate-only files:** a `params.json` may contain only `stageId`, `stageDisabled`, `stageTimeoutMinutes`, and `stageCondition` with no `parameterGroups` (e.g. `080-code-sign-installer.params.json`). This is valid — it registers the gate condition without introducing any new parameters.
 
 #### `stageTimeoutMinutes` (integer, optional, default `0`)
 
@@ -152,7 +152,7 @@ A list of glob patterns declaring which artifacts this stage requires as inputs 
 - Supports variable substitution using `${VAR}` or `$VAR` syntax (e.g. `${BUILD_OUTPUT_DIR}`). Variables defined in `stage-constants.properties` / `vendor-constants.properties` or the environment are expanded during collation and at runtime.
 - In Jenkins, `PipelineHelper.initializeStage()` resolves these patterns from collated stage params and passes them to `copyArtifacts`.
 - In the local runner, `WorkspaceManager.restore_stage_inputs()` restores matching files from `build_artifacts/` into the stage workspace.
-- Patterns match files as they sit in the artifact store. Stages that need to read JDK binaries produced by `02-build` should use patterns like `${BUILD_OUTPUT_DIR}/*.tar.gz` or `${BUILD_OUTPUT_DIR}/*sbom*.json` so they target the `build_output/` sub-directory explicitly.
+- Patterns match files as they sit in the artifact store. Stages that need to read JDK binaries produced by `020-build` should use patterns like `${BUILD_OUTPUT_DIR}/*.tar.gz` or `${BUILD_OUTPUT_DIR}/*sbom*.json` so they target the `build_output/` sub-directory explicitly.
 
 #### `stageOutputArtifacts` (array of strings, optional, default `["**/*"]`)
 
@@ -161,7 +161,7 @@ A list of glob patterns declaring which output artifacts created by this stage i
 - Supports variable substitution using `${VAR}` or `$VAR` syntax (e.g. `${BUILD_OUTPUT_DIR}`).
 - In Jenkins, `StageScriptRunner._archiveStageOutputs()` automatically archives the entire `TARGET_DIR` into the artifact store after the stage script finishes according to matching patterns.
 - In the local runner, `WorkspaceManager.archive_stage_outputs()` automatically copies matching files under `TARGET_DIR` into `build_artifacts/`.
-- The `02-build` stage writes its JDK binaries into `${TARGET_DIR}/${BUILD_OUTPUT_DIR}` (i.e. a `build_output/` sub-directory of `TARGET_DIR`). Downstream stages that need those binaries should look for them under `${INPUT_ARTIFACTS_DIR}/${BUILD_OUTPUT_DIR}`.
+- The `020-build` stage writes its JDK binaries into `${TARGET_DIR}/${BUILD_OUTPUT_DIR}` (i.e. a `build_output/` sub-directory of `TARGET_DIR`). Downstream stages that need those binaries should look for them under `${INPUT_ARTIFACTS_DIR}/${BUILD_OUTPUT_DIR}`.
 
 #### `parameterGroups` (array, optional)
 
@@ -206,12 +206,12 @@ Some parameters (e.g. `BUILD_REF`, `AQA_REF`, `SIGN_ARTIFACTS`) are logically me
 
 | Parameter | Owned by | Referenced via stageCondition by |
 |---|---|---|
-| `SIGN_ARTIFACTS` | `03-internal-code-sign` | `06`, `08`, `09`, `10`, `11` |
-| `ENABLE_INSTALLERS` | `07-installer` | `08` |
-| `RUN_TESTS` | `14-aqa-tests` | `13-smoke-tests` (via stem `14-aqa-tests`) |
-| `ENABLE_TCK` | `15-tck-tests` | — |
-| `PUBLISH_ARTIFACTS` | `16-publish` | — |
-| `RUN_REPRODUCIBLE_COMPARE` | `20-reproducible-compare` | — |
+| `SIGN_ARTIFACTS` | `030-internal-code-sign` | `06`, `08`, `09`, `10`, `11` |
+| `ENABLE_INSTALLERS` | `070-installer` | `08` |
+| `RUN_TESTS` | `140-aqa-tests` | `130-smoke-tests` (via stem `140-aqa-tests`) |
+| `ENABLE_TCK` | `150-tck-tests` | — |
+| `PUBLISH_ARTIFACTS` | `190-publish` | — |
+| `RUN_REPRODUCIBLE_COMPARE` | `200-reproducible-compare` | — |
 
 ---
 
@@ -237,7 +237,7 @@ Place a replacement script at `config-repo/vendor-scripts/NN-stem.<ext>`. The ex
 | `.sh`     | Middle  | Jenkins + local |
 | `.py`     | Lowest  | Jenkins + local |
 
-Multiple extensions can coexist in the same vendor-scripts directory — e.g. providing both `06-post-build-code-sign.groovy` (for Jenkins) and `06-post-build-code-sign.sh` (for local) is valid and intentional.
+Multiple extensions can coexist in the same vendor-scripts directory — e.g. providing both `060-post-build-code-sign.groovy` (for Jenkins) and `060-post-build-code-sign.sh` (for local) is valid and intentional.
 
 ### Params overrides
 

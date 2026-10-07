@@ -1,5 +1,5 @@
 {
-  "stageId": "10-digital-artifact-sign",
+  "stageId": "100-digital-artifact-sign",
   "stageDisabled": false,
   "stageTimeoutMinutes": 0,
   "stageCondition": [

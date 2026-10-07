@@ -276,7 +276,7 @@ void withEnvVarCredential(String targetEnvVar, String credDefsJson, Closure body
  *   Clear → in finally, so a subsequent stage that has no credentials does not
  *           accidentally inherit the previous stage's var names.
  *
- * @param stageId  Stage ID string, e.g. '16-publish'
+ * @param stageId  Stage ID string, e.g. '190-publish'
  * @param body     Closure to execute — typically StageScriptRunner._dispatch()
  */
 void withStageCredentials(String stageId, Closure body) {

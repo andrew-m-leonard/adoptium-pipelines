@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-# DEFAULT STUB: 11-verify-signing
+# DEFAULT STUB: 110-verify-signing
 #
 # Verifies that all necessary signing has been completed successfully.
 # Checks that Windows and macOS executables are code-signed, installer packages
@@ -20,7 +20,7 @@
 # (.sig / .asc) are present for every distribution artifact.
 #
 # Override this stub by placing a script at:
-#   config-repo/vendor-scripts/11-verify-signing.{sh,groovy,py}
+#   config-repo/vendor-scripts/110-verify-signing.{sh,groovy,py}
 #
 # Required Environment Variables (for vendor implementations):
 #   WORKSPACE             - Stage workspace directory

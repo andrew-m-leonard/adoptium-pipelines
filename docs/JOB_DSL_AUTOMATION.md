@@ -77,7 +77,7 @@ from this repository into the **root of your vendor config repository** (or any 
   adoptium_pipeline_config.json
   jenkins_job_config.json
   vendor-scripts/
-    02-build.params.json
+    020-build.params.json
     ...
 ```
 

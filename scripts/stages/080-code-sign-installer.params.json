@@ -1,19 +1,18 @@
 {
-  "stageId": "06-post-build-code-sign",
+  "stageId": "080-code-sign-installer",
   "stageDisabled": false,
   "stageTimeoutMinutes": 0,
   "stageCondition": [
-    { "param": "SIGN_ARTIFACTS", "value": true }
+    { "param": "ENABLE_INSTALLERS", "value": true },
+    { "param": "SIGN_ARTIFACTS",    "value": true }
   ],
   "stageInputArtifacts": [
-    "**/*.tar.gz",
-    "**/*.zip",
-    "metadata/**/*"
+    "installers/**/*"
   ],
   "stageOutputArtifacts": [
-    "signed/**/*"
+    "signed-installers/**/*"
   ],
-  "description": "Gate-only params.json for the post-build-code-sign stage. Runs only when SIGN_ARTIFACTS is true.",
+  "description": "Gate-only params.json for the code-sign-installer stage. Runs only when both ENABLE_INSTALLERS and SIGN_ARTIFACTS are true.",
   "parameterGroups": [
     {
       "name": "Stage Selections",

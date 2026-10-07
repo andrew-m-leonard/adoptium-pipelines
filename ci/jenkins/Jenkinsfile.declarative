@@ -60,22 +60,22 @@ import groovy.transform.Field
 // These @Field finals cannot be replaced by a load() of PipelineStages.groovy
 // because declarative stage() names are evaluated at pipeline definition time —
 // before any script{} block runs — so the constants must exist at this scope.
-@Field final INITIALIZE            = '01-initialize'
-@Field final BUILD                 = '02-build'
-@Field final INTERNAL_CODE_SIGN    = '03-internal-code-sign'
-@Field final ASSEMBLE_IMAGES       = '04-assemble-images'
-@Field final POST_BUILD_CODE_SIGN  = '06-post-build-code-sign'
-@Field final BUILD_INSTALLERS      = '07-installer'
-@Field final CODE_SIGN_INSTALLER   = '08-code-sign-installer'
-@Field final SBOM_SIGN             = '09-sbom-sign'
-@Field final DIGITAL_ARTIFACT_SIGN = '10-digital-artifact-sign'
-@Field final VERIFY_SIGNING        = '11-verify-signing'
-@Field final VALIDATE_SBOM         = '12-validate-sbom'
-@Field final SMOKE_TESTS           = '13-smoke-tests'
-@Field final AQA_TESTS             = '14-aqa-tests'
-@Field final TCK_TESTS             = '15-tck-tests'
-@Field final PUBLISH_ARTIFACTS     = '16-publish'
-@Field final REPRODUCIBLE_COMPARE  = '20-reproducible-compare'
+@Field final INITIALIZE            = '010-initialize'
+@Field final BUILD                 = '020-build'
+@Field final INTERNAL_CODE_SIGN    = '030-internal-code-sign'
+@Field final ASSEMBLE_IMAGES       = '040-assemble-images'
+@Field final POST_BUILD_CODE_SIGN  = '060-post-build-code-sign'
+@Field final BUILD_INSTALLERS      = '070-installer'
+@Field final CODE_SIGN_INSTALLER   = '080-code-sign-installer'
+@Field final SBOM_SIGN             = '090-sbom-sign'
+@Field final DIGITAL_ARTIFACT_SIGN = '100-digital-artifact-sign'
+@Field final VERIFY_SIGNING        = '110-verify-signing'
+@Field final VALIDATE_SBOM         = '120-validate-sbom'
+@Field final SMOKE_TESTS           = '130-smoke-tests'
+@Field final AQA_TESTS             = '140-aqa-tests'
+@Field final TCK_TESTS             = '150-tck-tests'
+@Field final PUBLISH_ARTIFACTS     = '190-publish'
+@Field final REPRODUCIBLE_COMPARE  = '200-reproducible-compare'
 // ────────────────────────────────────────────────────────────────────────────
 
 /**

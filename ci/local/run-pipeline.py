@@ -48,22 +48,22 @@ from lib.workspace_manager import WorkspaceManager
 # ---------------------------------------------------------------------------
 # Stage ID constants — match the "id" fields in pipeline-stages.json exactly.
 # ---------------------------------------------------------------------------
-INITIALIZE = "01-initialize"
-BUILD = "02-build"
-INTERNAL_CODE_SIGN = "03-internal-code-sign"
-ASSEMBLE_IMAGES = "04-assemble-images"
-POST_BUILD_CODE_SIGN = "06-post-build-code-sign"
-BUILD_INSTALLERS = "07-installer"
-CODE_SIGN_INSTALLER = "08-code-sign-installer"
-SBOM_SIGN = "09-sbom-sign"
-DIGITAL_ARTIFACT_SIGN = "10-digital-artifact-sign"
-VERIFY_SIGNING = "11-verify-signing"
-VALIDATE_SBOM = "12-validate-sbom"
-SMOKE_TESTS = "13-smoke-tests"
-AQA_TESTS = "14-aqa-tests"
-TCK_TESTS = "15-tck-tests"
-PUBLISH_ARTIFACTS = "16-publish"
-REPRODUCIBLE_COMPARE = "20-reproducible-compare"
+INITIALIZE = "010-initialize"
+BUILD = "020-build"
+INTERNAL_CODE_SIGN = "030-internal-code-sign"
+ASSEMBLE_IMAGES = "040-assemble-images"
+POST_BUILD_CODE_SIGN = "060-post-build-code-sign"
+BUILD_INSTALLERS = "070-installer"
+CODE_SIGN_INSTALLER = "080-code-sign-installer"
+SBOM_SIGN = "090-sbom-sign"
+DIGITAL_ARTIFACT_SIGN = "100-digital-artifact-sign"
+VERIFY_SIGNING = "110-verify-signing"
+VALIDATE_SBOM = "120-validate-sbom"
+SMOKE_TESTS = "130-smoke-tests"
+AQA_TESTS = "140-aqa-tests"
+TCK_TESTS = "150-tck-tests"
+PUBLISH_ARTIFACTS = "190-publish"
+REPRODUCIBLE_COMPARE = "200-reproducible-compare"
 
 # Ordered list of stageIds that the local runner executes (subset of all pipeline
 # stages — CI-only stages such as code-signing and publishing are excluded).
@@ -165,41 +165,41 @@ class PipelineRunner:
 
         try:
             # #####################################################################
-            # Stage: 01-initialize
+            # Stage: 010-initialize
             # #####################################################################
             if not skip_initialize and INITIALIZE in self.stages_to_run:
                 self.executor.run_initialize()
 
             # #####################################################################
-            # Stage: 02-build
+            # Stage: 020-build
             # #####################################################################
             if BUILD in self.stages_to_run:
                 if not _run(BUILD):
                     raise _PipelineAbort()
 
             # #####################################################################
-            # Stage: 12-validate-sbom
+            # Stage: 120-validate-sbom
             # #####################################################################
             if VALIDATE_SBOM in self.stages_to_run:
                 if not _run(VALIDATE_SBOM):
                     raise _PipelineAbort()
 
             # #####################################################################
-            # Stage: 13-smoke-tests
+            # Stage: 130-smoke-tests
             # #####################################################################
             if SMOKE_TESTS in self.stages_to_run and self.executor.condition_met(SMOKE_TESTS):
                 if not _run(SMOKE_TESTS):
                     raise _PipelineAbort()
 
             # #####################################################################
-            # Stage: 14-aqa-tests
+            # Stage: 140-aqa-tests
             # #####################################################################
             if AQA_TESTS in self.stages_to_run and self.executor.condition_met(AQA_TESTS):
                 if not _run(AQA_TESTS):
                     raise _PipelineAbort()
 
             # #####################################################################
-            # Stage: 20-reproducible-compare
+            # Stage: 200-reproducible-compare
             # #####################################################################
             if REPRODUCIBLE_COMPARE in self.stages_to_run and self.executor.condition_met(REPRODUCIBLE_COMPARE):
                 _run(REPRODUCIBLE_COMPARE)

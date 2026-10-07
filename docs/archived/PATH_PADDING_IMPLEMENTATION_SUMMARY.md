@@ -8,7 +8,7 @@ Added automatic workspace path padding to the build stage to ensure reproducible
 
 ### Modified Files
 
-1. **`scripts/stages/02-build.sh`**
+1. **`scripts/stages/020-build.sh`**
    - Added `compareBuild` parameter extraction (line 57)
    - Added path padding setup call before workspace preparation (lines 88-90)
    - Added three new functions:
@@ -118,7 +118,7 @@ EOF
 export WORKSPACE=$(pwd)
 export CONFIG_FILE=pipeline-config.json
 export TARGET_DIR=$(pwd)/target
-./scripts/stages/02-build.sh
+./scripts/stages/020-build.sh
 
 # 3. Check logs for padding
 grep "Padded" build.log
@@ -197,9 +197,9 @@ else:
 
 ## Related Files
 
-- [`scripts/stages/02-build.sh`](../scripts/stages/02-build.sh) - Implementation
+- [`scripts/stages/020-build.sh`](../scripts/stages/020-build.sh) - Implementation
 - [`docs/REPRODUCIBLE_BUILD_PATH_PADDING.md`](./REPRODUCIBLE_BUILD_PATH_PADDING.md) - Full documentation
-- [`scripts/stages/20-reproducible-compare.sh`](../scripts/stages/20-reproducible-compare.sh) - Comparison stage
+- [`scripts/stages/200-reproducible-compare.sh`](../scripts/stages/200-reproducible-compare.sh) - Comparison stage
 
 ## References
 

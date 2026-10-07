@@ -158,8 +158,8 @@ Optionally, vendor-specific stage overrides:
 ```text
 <config-repo>/
 └── vendor-scripts/
-    ├── 02-build.sh                    # Replaces scripts/stages/02-build.sh for this vendor
-    └── 10-digital-artifact-sign.sh   # Replaces scripts/stages/10-digital-artifact-sign.sh
+    ├── 020-build.sh                    # Replaces scripts/stages/020-build.sh for this vendor
+    └── 100-digital-artifact-sign.sh   # Replaces scripts/stages/100-digital-artifact-sign.sh
 ```
 
 ## Troubleshooting

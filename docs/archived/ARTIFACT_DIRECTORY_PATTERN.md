@@ -53,7 +53,7 @@ steps {
             "${INPUT_ARTIFACTS_DIR}"  // Copy artifacts here
         )
     }
-    sh 'scripts/stages/12-validate-sbom.sh'
+    sh 'scripts/stages/120-validate-sbom.sh'
 }
 ```
 
@@ -127,11 +127,11 @@ env['CONFIG_FILE'] = str(self.artifacts_dir / 'pipeline-config.json')
 
 **Stages using this pattern**:
 
-- Validate SBOM ([`12-validate-sbom.sh`](../scripts/stages/12-validate-sbom.sh))
+- Validate SBOM ([`120-validate-sbom.sh`](../scripts/stages/120-validate-sbom.sh))
 - Sign ([`06-sign.sh`](../scripts/stages/06-sign.sh))
-- Installer ([`07-installer.sh`](../scripts/stages/07-installer.sh))
-- Smoke Tests ([`13-smoke-tests.sh`](../scripts/stages/13-smoke-tests.sh))
-- Reproducible Compare ([`20-reproducible-compare.sh`](../scripts/stages/20-reproducible-compare.sh))
+- Installer ([`070-installer.sh`](../scripts/stages/070-installer.sh))
+- Smoke Tests ([`130-smoke-tests.sh`](../scripts/stages/130-smoke-tests.sh))
+- Reproducible Compare ([`200-reproducible-compare.sh`](../scripts/stages/200-reproducible-compare.sh))
 
 ## Stage Script Implementation
 

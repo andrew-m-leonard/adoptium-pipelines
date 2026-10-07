@@ -202,7 +202,7 @@ stage('Reproducible Compare') {
                 export TARGET_DIR="${WORKSPACE}/workspace/target"
                 export SCM_REF="${params.SCM_REF}"
                 export RELEASE="${params.RELEASE}"
-                bash scripts/stages/20-reproducible-compare.sh
+                bash scripts/stages/200-reproducible-compare.sh
             """
         }
     }

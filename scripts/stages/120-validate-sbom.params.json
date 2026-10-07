@@ -1,5 +1,5 @@
 {
-  "stageId": "12-validate-sbom",
+  "stageId": "120-validate-sbom",
   "stageDisabled": false,
   "stageTimeoutMinutes": 0,
   "stageCondition": [
@@ -11,5 +11,5 @@
   "stageOutputArtifacts": [
     "sbom-validation.txt"
   ],
-  "description": "Gate-only params.json for the validate-sbom stage. Runs only when CREATE_SBOM is true. CREATE_SBOM is defined in 09-sbom-sign.params.json."
+  "description": "Gate-only params.json for the validate-sbom stage. Runs only when CREATE_SBOM is true. CREATE_SBOM is defined in 090-sbom-sign.params.json."
 }

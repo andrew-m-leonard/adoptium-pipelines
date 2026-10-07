@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 /**
- * Default Core Implementation: 14-aqa-tests
+ * Default Core Implementation: 140-aqa-tests
  *
  * Triggers the downstream AQA_Test_Pipeline job (or AQA_Test_Pipeline_RELEASE
  * for release builds) with the JDK archive URL and associated test-image and
@@ -26,7 +26,7 @@
  * trigger are caught and set the build result to FAILURE without throwing, so
  * the pipeline can continue to subsequent stages.
  *
- * Gate condition (enforced by stageCondition in 14-aqa-tests.params.json):
+ * Gate condition (enforced by stageCondition in 140-aqa-tests.params.json):
  *   - RUN_TESTS must be true
  *
  * Environment Variables (set by StageScriptRunner.run() via withEnv, and
@@ -55,7 +55,7 @@ int call(Map config) {
     // ── Gate check ────────────────────────────────────────────────────────────
     String runTests = env.RUN_TESTS ?: ''
     if (runTests.toLowerCase() != 'true') {
-        echo "ℹ️  14-aqa-tests: RUN_TESTS='${runTests}' is not true — skipping"
+        echo "ℹ️  140-aqa-tests: RUN_TESTS='${runTests}' is not true — skipping"
         return 0
     }
 
@@ -110,7 +110,7 @@ int call(Map config) {
     String jdkFileName = jdkFilePath ? jdkFilePath.tokenize('/').last() : ''
 
     if (!jdkFileName) {
-        echo "❌ 14-aqa-tests: no JDK archive (*jdk_*.${extension}) found in ${artifactsDir}"
+        echo "❌ 140-aqa-tests: no JDK archive (*jdk_*.${extension}) found in ${artifactsDir}"
         currentBuild.result = 'FAILURE'
         return 1
     }

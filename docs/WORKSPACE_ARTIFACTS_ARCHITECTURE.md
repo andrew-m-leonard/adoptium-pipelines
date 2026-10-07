@@ -17,7 +17,7 @@ Every stage script receives the same five environment variables regardless of wh
 | `WORKSPACE` | Ephemeral scratch directory for this stage | Jenkins workspace root | `<pipeline_workspace>/stage_workspace/` |
 | `CONFIG_FILE` | Path to `pipeline-config.json` | `${WORKSPACE}/pipeline-config.json` | `${WORKSPACE}/pipeline-config.json` |
 | `INPUT_ARTIFACTS_DIR` | Directory containing artifacts from previous stages | `${WORKSPACE}` | `${WORKSPACE}` |
-| `BUILD_OUTPUT_DIR` | Name of the sub-directory under `TARGET_DIR` where `02-build` places JDK binaries; downstream stages read from `${INPUT_ARTIFACTS_DIR}/${BUILD_OUTPUT_DIR}` | `'build_output'` (from `stage-constants.properties`) | same |
+| `BUILD_OUTPUT_DIR` | Name of the sub-directory under `TARGET_DIR` where `020-build` places JDK binaries; downstream stages read from `${INPUT_ARTIFACTS_DIR}/${BUILD_OUTPUT_DIR}` | `'build_output'` (from `stage-constants.properties`) | same |
 | `TARGET_DIR` | Directory where this stage writes its output artifacts | `${WORKSPACE}/<stage>_output/`; defaults to `${WORKSPACE}/target` | `${WORKSPACE}/<stage>_output/`; defaults to `${WORKSPACE}/target` |
 | `BUILD_NUMBER` | Build identifier | Jenkins build number | `local-<YYYYMMDD-HHMMSS>` |
 
@@ -68,10 +68,10 @@ Build stage (and every subsequent stage)
 
   env.INPUT_ARTIFACTS_DIR = "${WORKSPACE}"
   env.BUILD_OUTPUT_DIR    = "build_output"   # injected via loadStageConstants()
-  env.TARGET_DIR = "${WORKSPACE}/02-build-output"
-  stageRunner.run('02-build', config)
+  env.TARGET_DIR = "${WORKSPACE}/020-build-output"
+  stageRunner.run('020-build', config)
     ← stage script reads JDK binaries from INPUT_ARTIFACTS_DIR/BUILD_OUTPUT_DIR
-    ← 02-build writes binaries to TARGET_DIR/BUILD_OUTPUT_DIR
+    ← 020-build writes binaries to TARGET_DIR/BUILD_OUTPUT_DIR
     ← other stages write to TARGET_DIR directly
 
   StageScriptRunner._archiveStageOutputs()
@@ -148,8 +148,8 @@ Build stage (and every subsequent stage)
   env['BUILD_OUTPUT_DIR']    = 'build_output'   # injected from stage-constants.properties
   env['TARGET_DIR']          = stage_workspace/build_output/   # per-stage name
 
-  StageResolver.run('02-build', env)
-    ← 02-build writes JDK binaries to TARGET_DIR/BUILD_OUTPUT_DIR
+  StageResolver.run('020-build', env)
+    ← 020-build writes JDK binaries to TARGET_DIR/BUILD_OUTPUT_DIR
     ← downstream stages read from INPUT_ARTIFACTS_DIR/BUILD_OUTPUT_DIR
 
   workspace_mgr.archive_stage_outputs('Build', target_dir=stage_workspace/build_output/)
@@ -228,11 +228,11 @@ python3 ci/local/run-pipeline.py \
     --target-os mac \
     --architecture aarch64 \
     --config-repo-url https://github.com/adoptium/ci-temurin-config.git \
-    --start-from-stage 13-smoke-tests
+    --start-from-stage 130-smoke-tests
 
 # ERROR: these two flags are mutually exclusive
 python3 ci/local/run-pipeline.py \
-    --start-from-stage 13-smoke-tests \
+    --start-from-stage 130-smoke-tests \
     --clean-workspace   # ❌ option conflict
 ```
 
@@ -254,7 +254,7 @@ This ensures workspace cleanliness and prevents pollution from previous runs.
 **Restart but workspace missing:**
 
 ```text
-ERROR: Cannot restart from stage '13-smoke-tests' - workspace does not exist: /Users/user/openjdk-build
+ERROR: Cannot restart from stage '130-smoke-tests' - workspace does not exist: /Users/user/openjdk-build
 
 When restarting from a stage, the workspace must exist with artifacts from previous stages.
 Run a full build first (without --start-from-stage) to create the workspace.
@@ -263,7 +263,7 @@ Run a full build first (without --start-from-stage) to create the workspace.
 **Restart but `build_artifacts/` missing (older runner version):**
 
 ```text
-ERROR: Cannot restart from stage '13-smoke-tests' - build_artifacts/ does not exist: /Users/user/openjdk-build/build_artifacts
+ERROR: Cannot restart from stage '130-smoke-tests' - build_artifacts/ does not exist: /Users/user/openjdk-build/build_artifacts
 
 The build_artifacts/ directory is required for stage restarts — it holds outputs
 archived by previously completed stages.

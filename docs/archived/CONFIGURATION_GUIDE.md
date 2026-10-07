@@ -24,7 +24,7 @@ Input Parameters          Configuration Files              Generated Output
          │                                                          │
          │                                                          │
          └──────────────────────────────────────────────────────────┘
-                    01-initialize.sh processes inputs
+                    010-initialize.sh processes inputs
 ```
 
 ## Configuration Files
@@ -144,7 +144,7 @@ When a field contains an object with variant keys, the initialize script extract
 
 #### How the Initialize Script Handles Values
 
-The [`01-initialize.sh`](scripts/stages/01-initialize.sh:1) script automatically detects which format is used:
+The [`010-initialize.sh`](scripts/stages/010-initialize.sh:1) script automatically detects which format is used:
 
 1. **If the value is a string**: Uses that value for all variants
 1. **If the value is an object**: Extracts the variant-specific value
@@ -189,7 +189,7 @@ buildArgs: [
 
 ### Purpose
 
-The [`01-initialize.sh`](scripts/stages/01-initialize.sh:1) script:
+The [`010-initialize.sh`](scripts/stages/010-initialize.sh:1) script:
 
 1. Loads the appropriate `jdkNN_pipeline_config.json`
 1. Selects the platform configuration
@@ -207,7 +207,7 @@ export ARCHITECTURE=aarch64
 export VARIANT=temurin
 export CONFIG_DIR=${WORKSPACE}/configurations
 
-./scripts/stages/01-initialize.sh
+./scripts/stages/010-initialize.sh
 ```
 
 ### Required Environment Variables
@@ -378,7 +378,7 @@ export ARCHITECTURE=aarch64
 export VARIANT=temurin
 export CONFIG_DIR=./configurations
 
-./scripts/stages/01-initialize.sh
+./scripts/stages/010-initialize.sh
 ```
 
 ## Configuration Fields Reference
@@ -428,7 +428,7 @@ export ARCHITECTURE=aarch64
 export VARIANT=temurin
 export CONFIG_DIR=./configurations
 
-./scripts/stages/01-initialize.sh
+./scripts/stages/010-initialize.sh
 ```
 
 Generates configuration for building JDK 21 Temurin on Mac Apple Silicon.
@@ -445,7 +445,7 @@ export RELEASE=true
 export SCM_REF=jdk-17.0.10+7
 export CONFIG_DIR=./configurations
 
-./scripts/stages/01-initialize.sh
+./scripts/stages/010-initialize.sh
 ```
 
 Generates configuration for a JDK 17 HotSpot release build on Linux x64.
@@ -477,7 +477,7 @@ Generates configuration for a JDK 17 HotSpot release build on Linux x64.
 
 ```bash
 export VARIANT=temurin
-./scripts/stages/01-initialize.sh
+./scripts/stages/010-initialize.sh
 # Uses: buildArgs="--create-source-archive --create-jre-image --create-sbom"
 # Uses: dockerImage="adoptopenjdk/centos7_build_image"
 ```
@@ -486,7 +486,7 @@ export VARIANT=temurin
 
 ```bash
 export VARIANT=hotspot
-./scripts/stages/01-initialize.sh
+./scripts/stages/010-initialize.sh
 # Uses: buildArgs="--create-jre-image"
 # Uses: dockerImage="adoptopenjdk/centos7_build_image"
 ```
@@ -511,7 +511,7 @@ pipeline {
     stages {
         stage('Initialize') {
             steps {
-                sh './scripts/stages/01-initialize.sh'
+                sh './scripts/stages/010-initialize.sh'
             }
         }
 
@@ -519,7 +519,7 @@ pipeline {
             steps {
                 sh '''
                     export CONFIG_FILE=${WORKSPACE}/pipeline-config.json
-                    ./scripts/stages/02-build-corrected.sh
+                    ./scripts/stages/020-build-corrected.sh
                 '''
             }
         }
@@ -539,12 +539,12 @@ variables:
 
 initialize:
   script:
-    - ./scripts/stages/01-initialize.sh
+    - ./scripts/stages/010-initialize.sh
 
 build:
   script:
     - export CONFIG_FILE=${CI_PROJECT_DIR}/pipeline-config.json
-    - ./scripts/stages/02-build-corrected.sh
+    - ./scripts/stages/020-build-corrected.sh
   dependencies:
     - initialize
 ```
@@ -564,7 +564,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Initialize
-        run: ./scripts/stages/01-initialize.sh
+        run: ./scripts/stages/010-initialize.sh
 
       - name: Upload config
         uses: actions/upload-artifact@v3
@@ -586,7 +586,7 @@ jobs:
       - name: Build
         run: |
           export CONFIG_FILE=${GITHUB_WORKSPACE}/pipeline-config.json
-          ./scripts/stages/02-build-corrected.sh
+          ./scripts/stages/020-build-corrected.sh
 ```
 
 ## Troubleshooting
@@ -688,7 +688,7 @@ jobs:
 
 ## Resources
 
-- [Initialize Stage Script](scripts/stages/01-initialize.sh)
+- [Initialize Stage Script](scripts/stages/010-initialize.sh)
 - [Example Configuration](configurations/jdk21u_pipeline_config.json)
 - [Conversion Tool](tools/convert-groovy-config-to-json.sh)
 - [Original Groovy Configs](https://github.com/adoptium/ci-jenkins-pipelines/tree/master/pipelines/jobs/configurations)

@@ -399,22 +399,22 @@ def migrate_additional_node_labels(platform_config: Dict[str, Any]) -> None:
 # Placeholders {os} and {arch} are resolved at runtime to sw.os.* / hw.arch.*
 # schema tokens by load-jenkins-json-config.py.
 _STAGE_AGENT_LABEL_DEFAULTS: Dict[str, str] = {
-    "01-initialize": "ci.role.worker",
-    "02-build": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "03-internal-code-sign": "eclipse-codesign",
-    "04-assemble-images": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "06-post-build-code-sign": "ci.role.worker",
-    "07-installer": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "08-code-sign-installer": "ci.role.worker",
-    "09-sbom-sign": "ci.role.worker",
-    "10-digital-artifact-sign": "ci.role.worker",
-    "11-verify-signing": "ci.role.worker",
-    "12-validate-sbom": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "13-smoke-tests": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "14-aqa-tests": "ci.role.build&&hw.arch.{arch}",
-    "15-tck-tests": "ci.role.build&&hw.arch.{arch}",
-    "16-publish": "ci.role.worker",
-    "20-reproducible-compare": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "010-initialize": "ci.role.worker",
+    "020-build": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "030-internal-code-sign": "eclipse-codesign",
+    "040-assemble-images": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "060-post-build-code-sign": "ci.role.worker",
+    "070-installer": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "080-code-sign-installer": "ci.role.worker",
+    "090-sbom-sign": "ci.role.worker",
+    "100-digital-artifact-sign": "ci.role.worker",
+    "110-verify-signing": "ci.role.worker",
+    "120-validate-sbom": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "130-smoke-tests": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "140-aqa-tests": "ci.role.build&&hw.arch.{arch}",
+    "150-tck-tests": "ci.role.build&&hw.arch.{arch}",
+    "190-publish": "ci.role.worker",
+    "200-reproducible-compare": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
 }
 
 

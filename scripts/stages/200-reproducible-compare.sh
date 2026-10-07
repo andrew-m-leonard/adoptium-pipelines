@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-# DEFAULT STUB: 20-reproducible-compare
+# DEFAULT STUB: 200-reproducible-compare
 #
 # Compares a locally built JDK against the vendor's published production binary
 # to verify bit-for-bit reproducibility. The comparison tooling, the binary
@@ -21,7 +21,7 @@
 # temurin-build/tooling/reproducible/repro_compare.sh).
 #
 # Override this stub by placing a script at:
-#   config-repo/vendor-scripts/20-reproducible-compare.{sh,groovy,py}
+#   config-repo/vendor-scripts/200-reproducible-compare.{sh,groovy,py}
 #
 # Required Environment Variables (for vendor implementations):
 #   WORKSPACE            - Stage workspace directory

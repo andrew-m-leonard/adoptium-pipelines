@@ -173,20 +173,20 @@ Implement the four core pipeline stages as portable shell scripts that work in b
 
 **Tasks**:
 
-- [x] Create Initialize stage (01-initialize.sh)
+- [x] Create Initialize stage (010-initialize.sh)
   - [x] Load configuration from JSON
   - [x] Set up environment variables
   - [x] Validate prerequisites
-- [x] Create Build stage (02-build.sh)
+- [x] Create Build stage (020-build.sh)
   - [x] Clone temurin-build repository
   - [x] Execute make-adopt-build-farm.sh
   - [x] Archive build artifacts
   - [x] Generate SBOM
-- [x] Create Validate SBOM stage (12-validate-sbom.sh)
+- [x] Create Validate SBOM stage (120-validate-sbom.sh)
   - [x] Read SBOM from INPUT_ARTIFACTS_DIR
   - [x] Validate SBOM structure
   - [x] Check for required components
-- [x] Create Reproducible Compare stage (20-reproducible-compare.sh)
+- [x] Create Reproducible Compare stage (200-reproducible-compare.sh)
   - [x] Read built JDK from INPUT_ARTIFACTS_DIR
   - [x] Rebuild JDK with same parameters
   - [x] Compare builds byte-by-byte
@@ -299,11 +299,11 @@ Implement the artifact directory pattern that clearly separates stage inputs fro
 **Tasks**:
 
 - [x] Update all stage scripts to use INPUT_ARTIFACTS_DIR
-  - [x] 12-validate-sbom.sh
-  - [x] 13-smoke-tests.sh
-  - [x] 20-reproducible-compare.sh
+  - [x] 120-validate-sbom.sh
+  - [x] 130-smoke-tests.sh
+  - [x] 200-reproducible-compare.sh
   - [x] 06-sign.sh
-  - [x] 07-installer.sh
+  - [x] 070-installer.sh
 - [x] Update Jenkinsfile.declarative
   - [x] Set INPUT_ARTIFACTS_DIR per stage
   - [x] Set TARGET_DIR per stage
@@ -675,7 +675,7 @@ Implement the Build Installers stage that creates platform-specific installers (
 
 **Tasks**:
 
-- [ ] Create 07-installer.sh script (already exists, may need updates)
+- [ ] Create 070-installer.sh script (already exists, may need updates)
   - [ ] Read signed JDK from INPUT_ARTIFACTS_DIR
   - [ ] Build platform-specific installers
   - [ ] Write installers to TARGET_DIR
@@ -800,7 +800,7 @@ Implement the Verify Signing stage that validates all signatures are correct and
 
 **Tasks**:
 
-- [ ] Create 11-verify-signing.sh script
+- [ ] Create 110-verify-signing.sh script
   - [ ] Read signed artifacts from INPUT_ARTIFACTS_DIR
   - [ ] Verify artifact signatures
   - [ ] Verify installer signatures

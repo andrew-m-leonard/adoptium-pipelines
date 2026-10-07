@@ -1,27 +1,29 @@
 {
-  "stageId": "15-tck-tests",
+  "stageId": "060-post-build-code-sign",
   "stageDisabled": false,
   "stageTimeoutMinutes": 0,
   "stageCondition": [
-    { "param": "RUN_TESTS",  "value": true },
-    { "param": "ENABLE_TCK", "value": true }
+    { "param": "SIGN_ARTIFACTS", "value": true }
   ],
   "stageInputArtifacts": [
-    "${BUILD_OUTPUT_DIR}/*.tar.gz",
-    "${BUILD_OUTPUT_DIR}/*.zip"
+    "**/*.tar.gz",
+    "**/*.zip",
+    "metadata/**/*"
   ],
-  "stageOutputArtifacts": [],
-  "description": "Parameters consumed by the TCK test stage.",
+  "stageOutputArtifacts": [
+    "signed/**/*"
+  ],
+  "description": "Gate-only params.json for the post-build-code-sign stage. Runs only when SIGN_ARTIFACTS is true.",
   "parameterGroups": [
     {
       "name": "Stage Selections",
       "description": "Boolean flags that control which pipeline stages are enabled. All stage-gate parameters are collected here so operators can see and adjust the full execution plan in one place.",
       "parameters": [
         {
-          "name": "ENABLE_TCK",
+          "name": "SIGN_ARTIFACTS",
           "type": "boolean",
           "default": false,
-          "description": "Run TCK tests. Disabled by default — enable when TCK certification is required."
+          "description": "Enable artifact signing."
         }
       ]
     }

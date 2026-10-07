@@ -140,7 +140,7 @@ stage('Build') {
             cleanupWorkspace('build', 'pre')
 
             // Execute stage
-            def buildScript = load 'scripts/stages/02-build.groovy'
+            def buildScript = load 'scripts/stages/020-build.groovy'
             buildScript(config)
 
             // Post-stage cleanup

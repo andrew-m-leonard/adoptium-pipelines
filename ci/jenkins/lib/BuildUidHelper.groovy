@@ -92,7 +92,7 @@ void validatePrerequisites(String currentStage, List<String> requiredStages) {
 
     // Special case: If BUILD_STAGE_RESULTS is empty and we're not in Initialize stage,
     // this is likely a Rebuild of a restarted build. Fail with clear user error.
-    if (stageResults.empty && currentStage != '01-initialize') {
+    if (stageResults.empty && currentStage != '010-initialize') {
         String errorMsg = """
 ╔════════════════════════════════════════════════════════════════════════════╗
 ║                              USER ERROR                                    ║

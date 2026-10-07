@@ -80,7 +80,7 @@ parameters: [
 
 ### 4. Script Updates
 
-**File**: [`scripts/stages/01-initialize.sh`](../scripts/stages/01-initialize.sh)
+**File**: [`scripts/stages/010-initialize.sh`](../scripts/stages/010-initialize.sh)
 
 Updated hardcoded JSON examples to use the standardized parameter names:
 

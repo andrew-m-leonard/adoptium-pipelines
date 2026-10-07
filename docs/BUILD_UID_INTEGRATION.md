@@ -38,7 +38,7 @@ pipelineHelper.executeStageWithTracking('Smoke Tests') {  // (1)
     )
     env.TARGET_DIR = "${WORKSPACE}/smoke_test_output"
 
-    def exitCode = stageRunner.run('13-smoke-tests', config)
+    def exitCode = stageRunner.run('130-smoke-tests', config)
     env.SMOKE_TESTS_PASSED = (exitCode == 0).toString()
     if (exitCode != 0) {
         currentBuild.result = 'UNSTABLE'

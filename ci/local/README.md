@@ -25,7 +25,7 @@ python3 ci/local/run-pipeline.py \
   --jdk-version jdk21 \
   --target-os mac \
   --architecture aarch64 \
-  --start-from-stage 02-build
+  --start-from-stage 020-build
 ```
 
 ## Stage Parameters
@@ -38,10 +38,10 @@ Pass them as `--<lower-kebab-case-name> <value>`:
 
 | Example | params.json source |
 |---|---|
-| `--scm-ref jdk-21.0.7+6_adopt` | `02-build.params.json` `SCM_REF` |
-| `--create-sbom false` | `02-build.params.json` `CREATE_SBOM` |
-| `--run-tests false` | `13-smoke-tests.params.json` `RUN_TESTS` |
-| `--run-reproducible-compare true` | `20-reproducible-compare.params.json` `RUN_REPRODUCIBLE_COMPARE` |
+| `--scm-ref jdk-21.0.7+6_adopt` | `020-build.params.json` `SCM_REF` |
+| `--create-sbom false` | `020-build.params.json` `CREATE_SBOM` |
+| `--run-tests false` | `130-smoke-tests.params.json` `RUN_TESTS` |
+| `--run-reproducible-compare true` | `200-reproducible-compare.params.json` `RUN_REPRODUCIBLE_COMPARE` |
 
 Boolean params accept `true` or `false`. String params accept any value.
 
@@ -139,7 +139,7 @@ and `jdkNN_pipeline_config.json`. Contains **only** init-time derived values:
 stored in `pipeline-config.json`. They flow exclusively through the process environment —
 `StageExecutor._build_env()` injects them before each stage script runs.
 `repoDefaults` provides fallback values for stage scripts when their own stage param is empty
-(e.g. `02-build.sh` uses `$BUILD_REF` if set, otherwise falls back to `$CONFIG_BUILD_REF`).
+(e.g. `020-build.sh` uses `$BUILD_REF` if set, otherwise falls back to `$CONFIG_BUILD_REF`).
 
 ### Two-phase execution in main()
 

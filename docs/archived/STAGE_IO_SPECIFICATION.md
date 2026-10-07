@@ -42,7 +42,7 @@ archiveArtifacts
 
 ---
 
-### Build — `scripts/stages/02-build.sh`
+### Build — `scripts/stages/020-build.sh`
 
 **Prerequisites**: Initialize
 
@@ -113,7 +113,7 @@ archiveArtifacts
 
 ---
 
-### Build Installers — `scripts/stages/07-installer.sh`
+### Build Installers — `scripts/stages/070-installer.sh`
 
 **When**: installers enabled
 
@@ -155,7 +155,7 @@ Also invokes `scripts/stages/10-sbom-sign.sh` inline if `--create-sbom` is in bu
 
 ---
 
-### Verify Signing — `scripts/stages/11-verify-signing.sh`
+### Verify Signing — `scripts/stages/110-verify-signing.sh`
 
 **When**: Temurin variant, signing enabled, non-PR build
 
@@ -167,7 +167,7 @@ Also invokes `scripts/stages/10-sbom-sign.sh` inline if `--create-sbom` is in bu
 
 ---
 
-### Validate SBOM — `scripts/stages/12-validate-sbom.sh`
+### Validate SBOM — `scripts/stages/120-validate-sbom.sh`
 
 **When**: `--create-sbom` in build args
 
@@ -187,7 +187,7 @@ Also invokes `scripts/stages/10-sbom-sign.sh` inline if `--create-sbom` is in bu
 
 ---
 
-### Smoke Tests — `scripts/stages/13-smoke-tests.sh`
+### Smoke Tests — `scripts/stages/130-smoke-tests.sh`
 
 **When**: tests enabled
 
@@ -207,7 +207,7 @@ Also invokes `scripts/stages/10-sbom-sign.sh` inline if `--create-sbom` is in bu
 
 ---
 
-### Reproducible Compare Build — `scripts/stages/20-reproducible-compare.sh`
+### Reproducible Compare Build — `scripts/stages/200-reproducible-compare.sh`
 
 **When**: `REPRODUCIBLE_COMPARE_BUILD=true` + `SCM_REF` non-empty + build passing
 
@@ -236,7 +236,7 @@ Build set to UNSTABLE (not failed) on differences.
 
 ---
 
-### AQA Tests — `scripts/stages/14-aqa-tests.sh`
+### AQA Tests — `scripts/stages/140-aqa-tests.sh`
 
 **When**: tests enabled + smoke tests passed
 
@@ -248,7 +248,7 @@ Build set to UNSTABLE (not failed) on differences.
 
 ---
 
-### TCK Tests — `scripts/stages/15-tck-tests.sh`
+### TCK Tests — `scripts/stages/150-tck-tests.sh`
 
 **When**: Temurin variant, TCK enabled, smoke tests passed; excludes jdk8u/s390x/linux
 
@@ -260,7 +260,7 @@ Build set to UNSTABLE (not failed) on differences.
 
 ---
 
-### Publish Artifacts — `scripts/stages/16-publish.sh`
+### Publish Artifacts — `scripts/stages/190-publish.sh`
 
 **When**: `PUBLISH_ARTIFACTS=true`
 

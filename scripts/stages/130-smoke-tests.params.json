@@ -1,27 +1,30 @@
 {
-  "stageId": "03-internal-code-sign",
+  "stageId": "130-smoke-tests",
   "stageDisabled": false,
   "stageTimeoutMinutes": 0,
   "stageCondition": [
-    { "param": "SIGN_ARTIFACTS", "value": true }
+    { "param": "RUN_TESTS", "value": true }
   ],
   "stageInputArtifacts": [
-    "jmods/**/*"
+    "${BUILD_OUTPUT_DIR}/*.tar.gz",
+    "${BUILD_OUTPUT_DIR}/*.zip"
   ],
   "stageOutputArtifacts": [
-    "signed-jmods/**/*"
+    "*.txt",
+    "test-results/**/*",
+    "smoke-test-summary.json"
   ],
-  "description": "Parameters for the internal-code-sign stage.",
+  "description": "Gate-only params.json for the smoke-tests stage. Runs only when RUN_TESTS is true.",
   "parameterGroups": [
     {
       "name": "Stage Selections",
       "description": "Boolean flags that control which pipeline stages are enabled. All stage-gate parameters are collected here so operators can see and adjust the full execution plan in one place.",
       "parameters": [
         {
-          "name": "SIGN_ARTIFACTS",
+          "name": "RUN_TESTS",
           "type": "boolean",
-          "default": false,
-          "description": "Enable artifact signing."
+          "default": true,
+          "description": "Enable test stages."
         }
       ]
     }

@@ -28,7 +28,7 @@ The config repository is the single source of all externalized settings. It must
 │   ├── jdk21u_pipeline_config.json
 │   └── ...
 └── vendor-scripts/                        # Optional vendor-specific stage overrides
-    ├── 02-build.sh                        # Overrides scripts/stages/02-build.sh
+    ├── 020-build.sh                        # Overrides scripts/stages/020-build.sh
     └── ...
 ```
 
@@ -105,22 +105,22 @@ Contains two distinct groups of settings:
   "pipelineTimeoutHours": 8,
   "stageAgentLabels": {
     "__any__":               "ci.role.worker",
-    "01-initialize":         "ci.role.worker",
-    "02-build":              "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "03-internal-code-sign": "eclipse-codesign",
-    "04-assemble-images":    "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "06-post-build-code-sign": "ci.role.worker",
-    "07-installer":          "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "08-code-sign-installer": "ci.role.worker",
-    "09-sbom-sign":          "ci.role.worker",
-    "10-digital-artifact-sign": "ci.role.worker",
-    "11-verify-signing":     "ci.role.worker",
-    "12-validate-sbom":      "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "13-smoke-tests":        "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "14-aqa-tests":          "ci.role.build&&hw.arch.{arch}",
-    "15-tck-tests":          "ci.role.build&&hw.arch.{arch}",
-    "16-publish":            "ci.role.worker",
-    "20-reproducible-compare": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}"
+    "010-initialize":         "ci.role.worker",
+    "020-build":              "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "030-internal-code-sign": "eclipse-codesign",
+    "040-assemble-images":    "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "060-post-build-code-sign": "ci.role.worker",
+    "070-installer":          "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "080-code-sign-installer": "ci.role.worker",
+    "090-sbom-sign":          "ci.role.worker",
+    "100-digital-artifact-sign": "ci.role.worker",
+    "110-verify-signing":     "ci.role.worker",
+    "120-validate-sbom":      "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "130-smoke-tests":        "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "140-aqa-tests":          "ci.role.build&&hw.arch.{arch}",
+    "150-tck-tests":          "ci.role.build&&hw.arch.{arch}",
+    "190-publish":            "ci.role.worker",
+    "200-reproducible-compare": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}"
   },
   "deployments": [
     {
@@ -301,15 +301,15 @@ This file is Jenkins-specific and has no equivalent in the local runner. It is a
 {
   "stageAgentLabels": {
     "__any__":        "ci.role.worker",
-    "01-initialize":  "ci.role.worker",
-    "02-build":       "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "13-smoke-tests": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}"
+    "010-initialize":  "ci.role.worker",
+    "020-build":       "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "130-smoke-tests": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}"
   },
   "resolvedStageAgentLabels": {
     "__any__":        "ci.role.worker",
-    "01-initialize":  "ci.role.worker",
-    "02-build":       "ci.role.build&&sw.os.mac&&hw.arch.aarch64",
-    "13-smoke-tests": "ci.role.build&&sw.os.mac&&hw.arch.aarch64"
+    "010-initialize":  "ci.role.worker",
+    "020-build":       "ci.role.build&&sw.os.mac&&hw.arch.aarch64",
+    "130-smoke-tests": "ci.role.build&&sw.os.mac&&hw.arch.aarch64"
   },
   "buildNodeLabel": "ci.role.build&&sw.os.mac&&hw.arch.aarch64"
 }

@@ -56,7 +56,7 @@ archiveArtifacts artifacts: "${env.TARGET_DIR.replace(env.WORKSPACE + '/', '')}/
 - Strips workspace prefix to get relative path: `workspace/target/**/*`
 - All build outputs (tar.gz, ZIP, JSON, SBOM files) are in this directory
 
-**Script Reference:** [`scripts/stages/02-build.sh`](../scripts/stages/02-build.sh)
+**Script Reference:** [`scripts/stages/020-build.sh`](../scripts/stages/020-build.sh)
 
 - Line 534: Copies artifacts to `${TARGET_DIR}` using `organize_build_outputs()`
 
@@ -111,7 +111,7 @@ env.TARGET_DIR = "${WORKSPACE}"
 - Artifact filter uses flattened paths: `*sbom*.json` not `workspace/target/**/*sbom*.json`
 - No archiving needed as SBOM files were already archived in Build stage
 
-**Script Reference:** [`scripts/stages/12-validate-sbom.sh`](../scripts/stages/12-validate-sbom.sh)
+**Script Reference:** [`scripts/stages/120-validate-sbom.sh`](../scripts/stages/120-validate-sbom.sh)
 
 - Line 99: Validates SBOM files in `${TARGET_DIR}` (workspace root after copyArtifacts flattening)
 
@@ -142,7 +142,7 @@ env.TARGET_DIR = "${WORKSPACE}"
 - Test results are logged but not archived separately
 - Jenkins `copyArtifacts` flattens directory structure, so files appear in workspace root
 
-**Script Reference:** [`scripts/stages/13-smoke-tests.sh`](../scripts/stages/13-smoke-tests.sh)
+**Script Reference:** [`scripts/stages/130-smoke-tests.sh`](../scripts/stages/130-smoke-tests.sh)
 
 - Extracts and tests JDK from `${TARGET_DIR}` (workspace root)
 
@@ -182,7 +182,7 @@ archiveArtifacts artifacts: 'reproducible-compare/comparison-report.txt,reproduc
 - This is intentional: comparison results are separate from build artifacts
 - The script creates its own output directory structure
 
-**Script Reference:** [`scripts/stages/20-reproducible-compare.sh`](../scripts/stages/20-reproducible-compare.sh)
+**Script Reference:** [`scripts/stages/200-reproducible-compare.sh`](../scripts/stages/200-reproducible-compare.sh)
 
 - Line 54: Creates `COMPARE_WORKSPACE="${WORKSPACE}/reproducible-compare"`
 - Reads build artifacts from `${TARGET_DIR}` (workspace root)

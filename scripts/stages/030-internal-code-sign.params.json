@@ -1,18 +1,17 @@
 {
-  "stageId": "09-sbom-sign",
+  "stageId": "030-internal-code-sign",
   "stageDisabled": false,
   "stageTimeoutMinutes": 0,
   "stageCondition": [
-    { "param": "SIGN_ARTIFACTS", "value": true },
-    { "param": "CREATE_SBOM",    "value": true }
+    { "param": "SIGN_ARTIFACTS", "value": true }
   ],
   "stageInputArtifacts": [
-    "${BUILD_OUTPUT_DIR}/*sbom*.json"
+    "jmods/**/*"
   ],
   "stageOutputArtifacts": [
-    "${BUILD_OUTPUT_DIR}/*sbom*.json"
+    "signed-jmods/**/*"
   ],
-  "description": "Gate-only params.json for the SBOM sign stage. Runs only when SIGN_ARTIFACTS and CREATE_SBOM are both true.",
+  "description": "Parameters for the internal-code-sign stage.",
   "parameterGroups": [
     {
       "name": "Stage Selections",

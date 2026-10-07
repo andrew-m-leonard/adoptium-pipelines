@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-# Core Local Implementation: 14-aqa-tests
+# Core Local Implementation: 140-aqa-tests
 #
 # Runs the Adoptium aqa-tests sanity.openjdk suite against the freshly built
 # JDK.  This script is the local equivalent of the Jenkins-only
-# scripts/stages/14-aqa-tests.groovy (which fires an asynchronous
+# scripts/stages/140-aqa-tests.groovy (which fires an asynchronous
 # AQA_Test_Pipeline job).  It provides a synchronous local quality gate so
 # that `run-pipeline.py` produces meaningful results rather than silently
 # skipping the stage.
@@ -86,7 +86,7 @@ main() {
 
 	# -----------------------------------------------------------------------
 	# Override build repo/ref from build-metadata.json when available.
-	# The 02-build stage records the *actual* ref used after any SBOM-driven
+	# The 020-build stage records the *actual* ref used after any SBOM-driven
 	# override, which may differ from what was supplied as a stage parameter.
 	# This ensures we test against the exact source that produced the artifact.
 	# -----------------------------------------------------------------------

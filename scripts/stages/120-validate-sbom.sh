@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-# DEFAULT STUB: 12-validate-sbom
+# DEFAULT STUB: 120-validate-sbom
 #
 # Validates SBOM (Software Bill of Materials) files produced during the Build
 # stage. Only applicable when SBOMs are generated (CREATE_SBOM=true).
@@ -21,7 +21,7 @@
 # Temurin uses temurin-build/tooling/validateSBOM.sh).
 #
 # Override this stub by placing a script at:
-#   config-repo/vendor-scripts/12-validate-sbom.{sh,groovy,py}
+#   config-repo/vendor-scripts/120-validate-sbom.{sh,groovy,py}
 #
 # Required Environment Variables (for vendor implementations):
 #   WORKSPACE            - Stage workspace directory

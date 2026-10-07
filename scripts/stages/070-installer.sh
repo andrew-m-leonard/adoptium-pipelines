@@ -12,19 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-# DEFAULT STUB: 16-publish
+# DEFAULT STUB: 070-installer
 #
-# Publishing artifacts to a release repository is vendor-specific.
+# Building platform-specific installers is vendor-specific.
 # Override this stub by placing a script at:
-#   config-repo/vendor-scripts/16-publish.{sh,groovy,py}
+#   config-repo/vendor-scripts/070-installer.{sh,groovy,py}
 #
 # Required Environment Variables (set by initializeStage):
 #   WORKSPACE             - Stage workspace directory
 #   CONFIG_FILE           - Path to pipeline-config.json
-#   INPUT_ARTIFACTS_DIR   - Directory containing artifacts to publish
+#   INPUT_ARTIFACTS_DIR   - Directory containing signed artifacts
 #   BUILD_NUMBER          - Build number
 #
-# Stage-specific Environment Variables (set by Publish Artifacts stage):
-#   TARGET_DIR            - Directory for publish output/receipts
-echo "ℹ️  Publish Artifacts: no vendor implementation configured — skipping"
+# Stage-specific Environment Variables (set by Build Installers stage):
+#   TARGET_DIR            - Directory for installer output
+echo "ℹ️  Build Installers: no vendor implementation configured — skipping"
 exit 0

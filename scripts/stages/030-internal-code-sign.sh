@@ -12,16 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-# DEFAULT STUB: 15-tck-tests
+# DEFAULT STUB: 030-internal-code-sign
 #
-# TCK test execution is vendor-specific.
+# Code signs internal EXEs/DLLs and dylibs of jdk11+ JMODs, prior to build
+# image assembly. Required because JMOD contents must be signed before the
+# final JDK image is linked by the Assemble Images stage.
+# Windows & Mac only. Not applicable to jdk8.
+#
 # Override this stub by placing a script at:
-#   config-repo/vendor-scripts/15-tck-tests.{sh,groovy,py}
+#   config-repo/vendor-scripts/030-internal-code-sign.{sh,groovy,py}
 #
 # Required Environment Variables (for vendor implementations):
 #   WORKSPACE             - Stage workspace directory
 #   CONFIG_FILE           - Path to pipeline-config.json
-#   INPUT_ARTIFACTS_DIR   - Directory containing JDK artifacts to test
-#   TARGET_DIR            - Directory for test results output
-echo "ℹ️  TCK Tests: no vendor implementation configured — skipping"
+#   INPUT_ARTIFACTS_DIR   - Directory containing jmods from Build stage
+#   TARGET_DIR            - Directory for signed jmod output
+echo "ℹ️  Internal Code Sign: no vendor implementation configured — skipping"
 exit 0

@@ -56,22 +56,22 @@ List stageList() {
 // and the "id" fields in scripts/stages/pipeline-stages.json.
 @groovy.transform.Field
 final List JENKINS_STAGES = [
-    '01-initialize',
-    '02-build',
-    '03-internal-code-sign',
-    '04-assemble-images',
-    '06-post-build-code-sign',
-    '07-installer',
-    '08-code-sign-installer',
-    '09-sbom-sign',
-    '10-digital-artifact-sign',
-    '11-verify-signing',
-    '12-validate-sbom',
-    '13-smoke-tests',
-    '14-aqa-tests',
-    '15-tck-tests',
-    '16-publish',
-    '20-reproducible-compare',
+    '010-initialize',
+    '020-build',
+    '030-internal-code-sign',
+    '040-assemble-images',
+    '060-post-build-code-sign',
+    '070-installer',
+    '080-code-sign-installer',
+    '090-sbom-sign',
+    '100-digital-artifact-sign',
+    '110-verify-signing',
+    '120-validate-sbom',
+    '130-smoke-tests',
+    '140-aqa-tests',
+    '150-tck-tests',
+    '190-publish',
+    '200-reproducible-compare',
 ]
 
 return this

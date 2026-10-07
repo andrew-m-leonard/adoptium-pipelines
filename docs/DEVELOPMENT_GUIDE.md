@@ -75,7 +75,7 @@ export INPUT_ARTIFACTS_DIR="${WORKSPACE}/build_artifacts"
 export BUILD_NUMBER="local"
 # CONFIG_* vars depend on the stage — check the script header for what it reads
 
-./scripts/stages/02-build.sh
+./scripts/stages/020-build.sh
 echo $?  # 0 = success
 ```
 
@@ -161,7 +161,7 @@ fi
 
 | Thing | Convention | Example |
 |---|---|---|
-| Stage scripts | `NN-stage-name.sh` | `02-build.sh` |
+| Stage scripts | `NN-stage-name.sh` | `020-build.sh` |
 | Library scripts | `feature-utils.sh` | `logging-utils.sh` |
 | Environment variables | `UPPER_SNAKE_CASE` | `BUILD_UID`, `TARGET_DIR` |
 | Local shell variables | `lower_snake_case` | `jdk_home` |

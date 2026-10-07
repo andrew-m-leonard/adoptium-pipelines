@@ -4,9 +4,9 @@
 
 This document describes the reproducible build comparison capability in the CI Adoptium Pipelines. The system validates build reproducibility by comparing locally built JDKs against production binaries.
 
-**Key Principle**: The comparison logic is **CI-agnostic** — the stage contract (`scripts/stages/20-reproducible-compare.sh`) defines the interface; the vendor-specific implementation (comparison tooling, binary source, acceptance criteria) lives in the config repository.
+**Key Principle**: The comparison logic is **CI-agnostic** — the stage contract (`scripts/stages/200-reproducible-compare.sh`) defines the interface; the vendor-specific implementation (comparison tooling, binary source, acceptance criteria) lives in the config repository.
 
-**Temurin implementation**: `ci-temurin-config/vendor-scripts/20-reproducible-compare.sh` — downloads from `api.adoptium.net` and delegates to `temurin-build/tooling/reproducible/repro_compare.sh`.
+**Temurin implementation**: `ci-temurin-config/vendor-scripts/200-reproducible-compare.sh` — downloads from `api.adoptium.net` and delegates to `temurin-build/tooling/reproducible/repro_compare.sh`.
 
 ---
 
@@ -14,18 +14,18 @@ This document describes the reproducible build comparison capability in the CI A
 
 ### Core Component: Stage Script
 
-**Default stub**: [`scripts/stages/20-reproducible-compare.sh`](../scripts/stages/20-reproducible-compare.sh) — no-op, exits 0.
+**Default stub**: [`scripts/stages/200-reproducible-compare.sh`](../scripts/stages/200-reproducible-compare.sh) — no-op, exits 0.
 
-**Temurin vendor override**: `ci-temurin-config/vendor-scripts/20-reproducible-compare.sh` — provides the full implementation. The vendor script is resolved at runtime via [`StageScriptRunner`](../ci/jenkins/lib/StageScriptRunner.groovy) (Jenkins) or [`stage_resolver.py`](../ci/local/stage_resolver.py) (local).
+**Temurin vendor override**: `ci-temurin-config/vendor-scripts/200-reproducible-compare.sh` — provides the full implementation. The vendor script is resolved at runtime via [`StageScriptRunner`](../ci/jenkins/lib/StageScriptRunner.groovy) (Jenkins) or [`stage_resolver.py`](../ci/local/stage_resolver.py) (local).
 
 ### Stage Gate
 
-The stage is controlled by parameters defined in [`scripts/stages/20-reproducible-compare.params.json`](../scripts/stages/20-reproducible-compare.params.json):
+The stage is controlled by parameters defined in [`scripts/stages/200-reproducible-compare.params.json`](../scripts/stages/200-reproducible-compare.params.json):
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `RUN_REPRODUCIBLE_COMPARE` | boolean | `false` | Enable the reproducible compare stage |
-| `SCM_REF` | string (from `02-build.params.json`) | `""` | OpenJDK source tag/ref — must be non-empty for the stage to run |
+| `SCM_REF` | string (from `020-build.params.json`) | `""` | OpenJDK source tag/ref — must be non-empty for the stage to run |
 
 Both conditions must be satisfied for the stage to execute:
 
@@ -108,7 +108,7 @@ The script uses `${WORKSPACE}/reproducible-compare/` as a scratch area during ex
 
 #### Enablement
 
-The stage runs when `stageConditionMet('20-reproducible-compare')` returns true, which evaluates the conditions from `20-reproducible-compare.params.json` against the current Jenkins build parameters:
+The stage runs when `stageConditionMet('200-reproducible-compare')` returns true, which evaluates the conditions from `200-reproducible-compare.params.json` against the current Jenkins build parameters:
 
 - `RUN_REPRODUCIBLE_COMPARE == true`
 - `SCM_REF` is non-empty
@@ -121,7 +121,7 @@ Both must be satisfied; if either is missing the `when {}` block skips the stage
 1. `env.TARGET_DIR = "${WORKSPACE}/reproducible_compare_output"`
 1. `env.SCM_REF = params.SCM_REF`
 1. `env.RELEASE = (params.RELEASE_TYPE == 'RELEASE') ? 'true' : 'false'`
-1. `stageRunner.run('20-reproducible-compare', config)`
+1. `stageRunner.run('200-reproducible-compare', config)`
 1. `archiveArtifacts artifacts: '**/*'` from `reproducible_compare_output/`
 1. **Non-zero exit code calls `error()`** — fails the build (does **not** mark UNSTABLE)
 1. `finalizeStage()` — optional `cleanWs()`
@@ -142,7 +142,7 @@ Jenkins archives the contents of `reproducible_compare_output/` flat:
 
 #### Enabling the stage
 
-The stage is enabled via stage parameters loaded from `scripts/stages/20-reproducible-compare.params.json`. Pass them after all fixed arguments:
+The stage is enabled via stage parameters loaded from `scripts/stages/200-reproducible-compare.params.json`. Pass them after all fixed arguments:
 
 ```bash
 python3 ci/local/run-pipeline.py \
@@ -155,7 +155,7 @@ python3 ci/local/run-pipeline.py \
     --run-reproducible-compare true
 ```
 
-`--scm-ref` is defined in `scripts/stages/02-build.params.json` and is also the `SCM_REF` condition checked by the stage gate.
+`--scm-ref` is defined in `scripts/stages/020-build.params.json` and is also the `SCM_REF` condition checked by the stage gate.
 
 #### Restart from this stage
 
@@ -165,7 +165,7 @@ python3 ci/local/run-pipeline.py \
     --target-os mac \
     --architecture aarch64 \
     --config-repo-url https://github.com/adoptium/ci-temurin-config.git \
-    --start-from-stage 20-reproducible-compare \
+    --start-from-stage 200-reproducible-compare \
     --scm-ref jdk-21.0.2+13 \
     --run-reproducible-compare true
 ```
@@ -174,12 +174,12 @@ python3 ci/local/run-pipeline.py \
 
 The stage is orchestrated generically by `PipelineRunner.run()` — there is no dedicated method. The flow is:
 
-1. `_stage_condition_met('20-reproducible-compare')` — checks `RUN_REPRODUCIBLE_COMPARE=true` and `SCM_REF` non-empty; skips silently if either fails
-1. `_run_stage('20-reproducible-compare', 'pipeline-config.json,*.tar.gz,*.zip', extra_env={TARGET_DIR=..., RELEASE=...})`
+1. `_stage_condition_met('200-reproducible-compare')` — checks `RUN_REPRODUCIBLE_COMPARE=true` and `SCM_REF` non-empty; skips silently if either fails
+1. `_run_stage('200-reproducible-compare', 'pipeline-config.json,*.tar.gz,*.zip', extra_env={TARGET_DIR=..., RELEASE=...})`
    - `cleanup_stage_workspace('pre')` — wipes `stage_workspace/`
    - `restore_stage_inputs(...)` — copies `pipeline-config.json`, tarballs from `build_artifacts/`
    - Builds env: `WORKSPACE`, `CONFIG_FILE`, `INPUT_ARTIFACTS_DIR`, `TARGET_DIR`, `RELEASE`, `SCM_REF` (injected via `_stage_param_values`)
-   - `StageResolver.run('20-reproducible-compare', env)`
+   - `StageResolver.run('200-reproducible-compare', env)`
    - `archive_stage_outputs(...)` — copies `stage_workspace/target/**` → `build_artifacts/`
    - `cleanup_stage_workspace('post')`
 
@@ -233,8 +233,8 @@ For a build to be considered reproducible:
 
 ## References
 
-- **Stage Parameters**: [`scripts/stages/20-reproducible-compare.params.json`](../scripts/stages/20-reproducible-compare.params.json)
-- **Stage Script**: [`scripts/stages/20-reproducible-compare.sh`](../scripts/stages/20-reproducible-compare.sh)
+- **Stage Parameters**: [`scripts/stages/200-reproducible-compare.params.json`](../scripts/stages/200-reproducible-compare.params.json)
+- **Stage Script**: [`scripts/stages/200-reproducible-compare.sh`](../scripts/stages/200-reproducible-compare.sh)
 - **Comparison Tool**: `temurin-build/tooling/reproducible/repro_compare.sh`
 - **Jenkins Implementation**: [`ci/jenkins/Jenkinsfile.declarative`](../ci/jenkins/Jenkinsfile.declarative) (`Reproducible Compare Build` stage)
 - **Local Runner**: [`ci/local/run-pipeline.py`](../ci/local/run-pipeline.py)

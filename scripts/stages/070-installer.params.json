@@ -1,28 +1,29 @@
 {
-  "stageId": "08-code-sign-installer",
+  "stageId": "070-installer",
   "stageDisabled": false,
   "stageTimeoutMinutes": 0,
   "stageCondition": [
-    { "param": "ENABLE_INSTALLERS", "value": true },
-    { "param": "SIGN_ARTIFACTS",    "value": true }
+    { "param": "ENABLE_INSTALLERS", "value": true }
   ],
   "stageInputArtifacts": [
-    "installers/**/*"
+    "**/*.tar.gz",
+    "**/*.zip",
+    "metadata/**/*"
   ],
   "stageOutputArtifacts": [
-    "signed-installers/**/*"
+    "installers/**/*"
   ],
-  "description": "Gate-only params.json for the code-sign-installer stage. Runs only when both ENABLE_INSTALLERS and SIGN_ARTIFACTS are true.",
+  "description": "Parameters consumed by the installer build stage.",
   "parameterGroups": [
     {
       "name": "Stage Selections",
       "description": "Boolean flags that control which pipeline stages are enabled. All stage-gate parameters are collected here so operators can see and adjust the full execution plan in one place.",
       "parameters": [
         {
-          "name": "SIGN_ARTIFACTS",
+          "name": "ENABLE_INSTALLERS",
           "type": "boolean",
-          "default": false,
-          "description": "Enable artifact signing."
+          "default": true,
+          "description": "Build platform-specific installer packages (.msi on Windows, .pkg on macOS, .deb/.rpm on Linux)."
         }
       ]
     }

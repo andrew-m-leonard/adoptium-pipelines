@@ -106,7 +106,7 @@ For path padding to work, the following must be configured:
 
 ### Code Location
 
-The path padding implementation is in [`scripts/stages/02-build.sh`](../scripts/stages/02-build.sh):
+The path padding implementation is in [`scripts/stages/020-build.sh`](../scripts/stages/020-build.sh):
 
 - **`resolve_path()`** (lines 197-221): Resolves canonical paths by handling `.` and `..` components
 - **`pad_build_dir_to_same_length()`** (lines 223-247): Calculates and creates padded directory
@@ -244,7 +244,7 @@ To test path padding locally:
    export TARGET_DIR=$(pwd)/target
    export BUILD_NUMBER=local
 
-   ./scripts/stages/02-build.sh
+   ./scripts/stages/020-build.sh
    ```
 
 1. Verify padding in logs:

@@ -15,7 +15,7 @@
 """
 StageResolver — local pipeline equivalent of Jenkinsfile runStageScript().
 
-Resolution order for a given stem (e.g. '14-aqa-tests'):
+Resolution order for a given stem (e.g. '140-aqa-tests'):
   1. <config_repo_root>/vendor-scripts/<stem>.groovy — vendor override (Jenkins only)
   2. <config_repo_root>/vendor-scripts/<stem>.sh     — vendor override (sh)
   3. <config_repo_root>/vendor-scripts/<stem>.py     — vendor override (python)
@@ -27,8 +27,8 @@ Resolution order for a given stem (e.g. '14-aqa-tests'):
 .groovy candidates are recorded in the resolution walk but silently skipped
 when running locally — the resolver continues to the next candidate rather
 than treating the stage as a no-op.  This means a stage whose only core
-implementation is a .groovy file (e.g. 14-aqa-tests) will use a .sh fallback
-if one exists (e.g. scripts/stages/14-aqa-tests.sh) when run locally.
+implementation is a .groovy file (e.g. 140-aqa-tests) will use a .sh fallback
+if one exists (e.g. scripts/stages/140-aqa-tests.sh) when run locally.
 
 Stage enablement is driven by stageCondition entries in each stage's
 *.params.json sidecar file, collated by collect-stage-params.py and loaded

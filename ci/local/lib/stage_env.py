@@ -78,7 +78,7 @@ def resolve_target_dir(stage_workspace: Path, stage_id: str) -> Path:
 
     Args:
         stage_workspace: Ephemeral per-stage workspace directory.
-        stage_id:        Stage stem e.g. '02-build'.
+        stage_id:        Stage stem e.g. '020-build'.
 
     Returns:
         Absolute Path: <stage_workspace>/<stage_id>-output
@@ -127,7 +127,7 @@ def build_stage_env(
                              explicitly accessible in the local runner.
 
     CONFIG_* variables are populated from pipeline-config.json so that
-    stage scripts (e.g. 02-build.sh) can read them without needing jq.
+    stage scripts (e.g. 020-build.sh) can read them without needing jq.
 
     Stage param values are injected last so vendor stage scripts can read
     them as environment variables without needing any other mechanism.
@@ -145,7 +145,7 @@ def build_stage_env(
         release_type:        Release type string (e.g. 'NIGHTLY').
         clean_workspace:     Whether --clean-workspace was requested.
         stage_param_values:  Dict of PARAM_NAME → value from collated stage params.
-        stage_id:            Stage stem e.g. '02-build' — used to derive TARGET_DIR.
+        stage_id:            Stage stem e.g. '020-build' — used to derive TARGET_DIR.
         config_repo_root:    Path to the checked-out config repo, or None.
         extra:               Additional env vars to merge in last (highest priority).
 

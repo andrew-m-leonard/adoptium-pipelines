@@ -77,22 +77,22 @@ Jenkins-specific configuration. Contains two groups: **job-creation settings** (
   "pipelineTimeoutHours": 8,
   "stageAgentLabels": {
     "__any__":               "ci.role.worker",
-    "01-initialize":         "ci.role.worker",
-    "02-build":              "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "03-internal-code-sign": "eclipse-codesign",
-    "04-assemble-images":    "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "06-post-build-code-sign": "ci.role.worker",
-    "07-installer":          "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "08-code-sign-installer": "ci.role.worker",
-    "09-sbom-sign":          "ci.role.worker",
-    "10-digital-artifact-sign": "ci.role.worker",
-    "11-verify-signing":     "ci.role.worker",
-    "12-validate-sbom":      "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "13-smoke-tests":        "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
-    "14-aqa-tests":          "ci.role.build&&hw.arch.{arch}",
-    "15-tck-tests":          "ci.role.build&&hw.arch.{arch}",
-    "16-publish":            "ci.role.worker",
-    "20-reproducible-compare": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}"
+    "010-initialize":         "ci.role.worker",
+    "020-build":              "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "030-internal-code-sign": "eclipse-codesign",
+    "040-assemble-images":    "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "060-post-build-code-sign": "ci.role.worker",
+    "070-installer":          "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "080-code-sign-installer": "ci.role.worker",
+    "090-sbom-sign":          "ci.role.worker",
+    "100-digital-artifact-sign": "ci.role.worker",
+    "110-verify-signing":     "ci.role.worker",
+    "120-validate-sbom":      "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "130-smoke-tests":        "ci.role.build&&sw.os.{os}&&hw.arch.{arch}",
+    "140-aqa-tests":          "ci.role.build&&hw.arch.{arch}",
+    "150-tck-tests":          "ci.role.build&&hw.arch.{arch}",
+    "190-publish":            "ci.role.worker",
+    "200-reproducible-compare": "ci.role.build&&sw.os.{os}&&hw.arch.{arch}"
   },
   "deployments": [
     {
@@ -129,7 +129,7 @@ Jenkins-specific configuration. Contains two groups: **job-creation settings** (
 |---|---|---|---|
 | `jenkinsfilePath` | string | ✅ | Relative path within the pipeline repository to the Jenkinsfile |
 | `pipelineTimeoutHours` | integer | ☑️ default `8` | Maximum wall-clock hours a platform build pipeline run is allowed before Jenkins aborts it. Applied as a job-level `buildTimeoutWrapper` (Build Timeout plugin) by the Job DSL when the platform build job is created or regenerated. |
-| `stageAgentLabels` | object | ✅ | Map of **stage ID** → label template. Keys must match stage IDs from `scripts/stages/pipeline-stages.json` (e.g. `"02-build"`, `"13-smoke-tests"`). `{os}` and `{arch}` placeholders are resolved at build runtime to `sw.os.*` / `hw.arch.*` values. The special key `__any__` sets the fallback label for any stage not explicitly listed; also used for launch-pipeline worker stages that require `python3`; defaults to `ci.role.worker` if absent. |
+| `stageAgentLabels` | object | ✅ | Map of **stage ID** → label template. Keys must match stage IDs from `scripts/stages/pipeline-stages.json` (e.g. `"020-build"`, `"130-smoke-tests"`). `{os}` and `{arch}` placeholders are resolved at build runtime to `sw.os.*` / `hw.arch.*` values. The special key `__any__` sets the fallback label for any stage not explicitly listed; also used for launch-pipeline worker stages that require `python3`; defaults to `ci.role.worker` if absent. |
 | `deployments` | array | ☑️ | List of deployment descriptors. Each deployment gets its own Jenkins folder with independent jobs, triggers, and security. When absent the seed job creates a single set of jobs directly under `pipelineBaseFolder`. |
 | `deployments[].name` | string | ✅ | Logical name for the deployment (e.g. `"release"`, `"beta"`). Used in job descriptions and trigger parameter values. |
 | `deployments[].folder` | string | ✅ | Subfolder name created under `pipelineBaseFolder` (e.g. `"release"` → `pipelineBaseFolder/release/`). |
@@ -177,7 +177,7 @@ CI-agnostic `adoptium_pipeline_config.json`.
   },
   "stageCredentials": {
     "ALL_STAGES": ["GITHUB_TOKEN"],
-    "02-build":   ["DOCKER_REGISTRY_CREDENTIAL"]
+    "020-build":   ["DOCKER_REGISTRY_CREDENTIAL"]
   }
 }
 ```
@@ -204,7 +204,7 @@ CI-agnostic `adoptium_pipeline_config.json`.
 
 When multiple credentials resolve to the same `envVar` name for a single stage:
 
-- **Stage-specific beats ALL_STAGES** — if a credential listed directly under a stage ID (e.g. `"16-publish"`) resolves to the same `envVar` as one listed under `ALL_STAGES`, the stage-specific credential wins. The `ALL_STAGES` entry is silently suppressed for that stage only; other stages still receive it normally.
+- **Stage-specific beats ALL_STAGES** — if a credential listed directly under a stage ID (e.g. `"190-publish"`) resolves to the same `envVar` as one listed under `ALL_STAGES`, the stage-specific credential wins. The `ALL_STAGES` entry is silently suppressed for that stage only; other stages still receive it normally.
 - **Two stage-specific entries with the same `envVar` is an error** — `load-jenkins-credential-config.py` will reject this at config-load time with a clear error message. This prevents ambiguous bindings.
 
 Example — use a higher-privilege PAT only in the publish stage:
@@ -225,12 +225,12 @@ Example — use a higher-privilege PAT only in the publish stage:
   },
   "stageCredentials": {
     "ALL_STAGES":   ["GENERAL_PAT"],
-    "16-publish":   ["PUBLISH_PAT"]
+    "190-publish":   ["PUBLISH_PAT"]
   }
 }
 ```
 
-In this config: every stage receives `GITHUB_TOKEN` from `general-github-pat`, except `16-publish` which receives `GITHUB_TOKEN` from `publish-github-pat` (`GENERAL_PAT` is suppressed for that stage).
+In this config: every stage receives `GITHUB_TOKEN` from `general-github-pat`, except `190-publish` which receives `GITHUB_TOKEN` from `publish-github-pat` (`GENERAL_PAT` is suppressed for that stage).
 
 ---
 

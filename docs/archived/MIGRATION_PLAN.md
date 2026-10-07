@@ -98,11 +98,11 @@ ci-jenkins-pipelines/
 │   │   └── modular/                                    # NEW
 │   │       ├── scripts/
 │   │       │   ├── stages/
-│   │       │   │   ├── 01-initialize.sh
-│   │       │   │   ├── 02-build.sh
+│   │       │   │   ├── 010-initialize.sh
+│   │       │   │   ├── 020-build.sh
 │   │       │   │   ├── 06-sign.sh
-│   │       │   │   ├── 07-installer.sh
-│   │       │   │   └── 13-smoke-tests.sh
+│   │       │   │   ├── 070-installer.sh
+│   │       │   │   └── 130-smoke-tests.sh
 │   │       │   └── lib/
 │   │       │       ├── logging-utils.sh
 │   │       │       ├── config-utils.sh
@@ -178,10 +178,10 @@ Rationale:
 │     └──► NEW Pipeline (openjdk_build_pipeline_v2.groovy)        │
 │            │                                                     │
 │            ├─ Initialize (convert config)                        │
-│            ├─ Build JDK (02-build.sh)                           │
+│            ├─ Build JDK (020-build.sh)                           │
 │            ├─ Sign artifacts (06-sign.sh)                        │
-│            ├─ Create installers (07-installer.sh)               │
-│            ├─ Run tests (13-smoke-tests.sh)                     │
+│            ├─ Create installers (070-installer.sh)               │
+│            ├─ Run tests (130-smoke-tests.sh)                     │
 │            └─ Store artifacts → /new-builds/                     │
 │                                                                  │
 │  Compare Results:                                                │

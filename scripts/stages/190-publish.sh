@@ -12,20 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-# DEFAULT STUB: 03-internal-code-sign
+# DEFAULT STUB: 190-publish
 #
-# Code signs internal EXEs/DLLs and dylibs of jdk11+ JMODs, prior to build
-# image assembly. Required because JMOD contents must be signed before the
-# final JDK image is linked by the Assemble Images stage.
-# Windows & Mac only. Not applicable to jdk8.
-#
+# Publishing artifacts to a release repository is vendor-specific.
 # Override this stub by placing a script at:
-#   config-repo/vendor-scripts/03-internal-code-sign.{sh,groovy,py}
+#   config-repo/vendor-scripts/190-publish.{sh,groovy,py}
 #
-# Required Environment Variables (for vendor implementations):
+# Required Environment Variables (set by initializeStage):
 #   WORKSPACE             - Stage workspace directory
 #   CONFIG_FILE           - Path to pipeline-config.json
-#   INPUT_ARTIFACTS_DIR   - Directory containing jmods from Build stage
-#   TARGET_DIR            - Directory for signed jmod output
-echo "ℹ️  Internal Code Sign: no vendor implementation configured — skipping"
+#   INPUT_ARTIFACTS_DIR   - Directory containing artifacts to publish
+#   BUILD_NUMBER          - Build number
+#
+# Stage-specific Environment Variables (set by Publish Artifacts stage):
+#   TARGET_DIR            - Directory for publish output/receipts
+echo "ℹ️  Publish Artifacts: no vendor implementation configured — skipping"
 exit 0

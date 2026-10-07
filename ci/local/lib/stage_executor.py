@@ -235,7 +235,7 @@ class StageExecutor:
 
     def run_initialize(self) -> None:
         """
-        Stage 01-initialize: clone the config repo and generate pipeline-config.json.
+        Stage 010-initialize: clone the config repo and generate pipeline-config.json.
 
         Unique logic that is not reducible to run_stage() because it drives the
         workspace setup and config-repo clone that every subsequent stage depends on.

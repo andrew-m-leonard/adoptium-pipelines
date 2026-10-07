@@ -50,7 +50,7 @@ class WorkspaceManager:
     - stage_workspace/  : Ephemeral workspace cleaned before/after each stage.
                           WORKSPACE env var points here.  Stage scripts clone
                           repos, do work, and write outputs to TARGET_DIR
-                          (a stage-specific sub-directory, e.g. 02-build-output/).
+                          (a stage-specific sub-directory, e.g. 020-build-output/).
     - build_artifacts/  : Durable archive store — the local equivalent of the
                           Jenkins artifact store.  restore_stage_inputs() copies
                           files from here into stage_workspace/ before a stage

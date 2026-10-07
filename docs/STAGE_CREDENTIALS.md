@@ -37,8 +37,8 @@ Placed at the config repository root alongside `jenkins_job_config.json`. Entire
     }
   },
   "stageCredentials": {
-    "16-publish":              ["PUBLISH_API_KEY", "RELEASE_SSH_KEY"],
-    "06-post-build-code-sign": ["SIGNING_CERT"]
+    "190-publish":              ["PUBLISH_API_KEY", "RELEASE_SSH_KEY"],
+    "060-post-build-code-sign": ["SIGNING_CERT"]
   }
 }
 ```
@@ -141,13 +141,13 @@ vars = vars + credEnvVarNames
 ### Call sequence for a containerised stage
 
 ```text
-stageRunner.run('16-publish', config)
+stageRunner.run('190-publish', config)
   env.STAGE_CREDENTIAL_ENV_VARS = 'PUBLISH_API_KEY,RELEASE_SSH_KEYFILE'
   withCredentials([string(...), sshUserPrivateKey(...)]) {
     containerEnvFlags()
       vars += ['PUBLISH_API_KEY', 'RELEASE_SSH_KEYFILE']
       → "-e 'PUBLISH_API_KEY=****'" "-e 'RELEASE_SSH_KEYFILE=/tmp/key123'"
-    docker exec -e 'PUBLISH_API_KEY=s3cr3t' -e 'RELEASE_SSH_KEYFILE=/tmp/key123' ... bash '16-publish.sh'
+    docker exec -e 'PUBLISH_API_KEY=s3cr3t' -e 'RELEASE_SSH_KEYFILE=/tmp/key123' ... bash '190-publish.sh'
   }
   env.STAGE_CREDENTIAL_ENV_VARS = ''   // cleared in finally
 ```

@@ -86,12 +86,12 @@ Valid `--start-from-stage` values (exact stage IDs from `pipeline-stages.json`):
 
 | Stage ID | Stage |
 |---|---|
-| `01-initialize` | Initialize |
-| `02-build` | Build |
-| `12-validate-sbom` | Validate SBOM |
-| `13-smoke-tests` | Smoke Tests |
-| `14-aqa-tests` | AQA Tests |
-| `20-reproducible-compare` | Reproducible Compare |
+| `010-initialize` | Initialize |
+| `020-build` | Build |
+| `120-validate-sbom` | Validate SBOM |
+| `130-smoke-tests` | Smoke Tests |
+| `140-aqa-tests` | AQA Tests |
+| `200-reproducible-compare` | Reproducible Compare |
 
 Stage enable/disable is controlled via **stage parameters**, not dedicated CLI flags. See **Stage Parameters** below.
 
@@ -242,7 +242,7 @@ python3 ci/local/run-pipeline.py \
     --target-os mac \
     --architecture aarch64 \
     --config-repo-url https://github.com/adoptium/ci-temurin-config.git \
-    --start-from-stage 13-smoke-tests
+    --start-from-stage 130-smoke-tests
 ```
 
 The workspace and `build_artifacts/` from the previous run must exist.

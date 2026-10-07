@@ -123,7 +123,7 @@ pipeline {
                     }
 
                     // Run initialization script
-                    sh 'bash scripts/stages/01-initialize.sh'
+                    sh 'bash scripts/stages/010-initialize.sh'
                 }
             }
             post {
@@ -143,7 +143,7 @@ pipeline {
         stage('Build JDK') {
             steps {
                 script {
-                    sh 'bash scripts/stages/02-build.sh'
+                    sh 'bash scripts/stages/020-build.sh'
                 }
             }
             post {
@@ -178,7 +178,7 @@ pipeline {
                             -O legacy_jdk.tar.gz
 
                         # Run reproducible comparison
-                        bash scripts/stages/20-reproducible-compare.sh
+                        bash scripts/stages/200-reproducible-compare.sh
                     """
                 }
             }
@@ -597,11 +597,11 @@ Implement Windows x64 build pipeline with two-phase build process including inte
   "stages": {
     "initialize": {
       "enabled": true,
-      "script": "scripts/stages/01-initialize.sh"
+      "script": "scripts/stages/010-initialize.sh"
     },
     "build_phase1": {
       "enabled": true,
-      "script": "scripts/stages/02-build-phase1.sh",
+      "script": "scripts/stages/020-build-phase1.sh",
       "description": "Build JDK up to signing point"
     },
     "internal_sign": {
@@ -626,7 +626,7 @@ Implement Windows x64 build pipeline with two-phase build process including inte
 
 #### 3.2 Implement Build Phase Scripts
 
-**Create**: `scripts/stages/02-build-phase1.sh`
+**Create**: `scripts/stages/020-build-phase1.sh`
 
 ```bash
 #!/bin/bash
@@ -857,7 +857,7 @@ Add installer creation and package generation stages to all platforms.
 
 #### 5.1 Installer Stage Implementation
 
-**Create**: `scripts/stages/07-installer.sh`
+**Create**: `scripts/stages/070-installer.sh`
 
 ```bash
 #!/bin/bash
@@ -903,7 +903,7 @@ Add installer stage to all platform configurations:
     ...
     "installer": {
       "enabled": true,
-      "script": "scripts/stages/07-installer.sh",
+      "script": "scripts/stages/070-installer.sh",
       "description": "Create platform-specific installer"
     }
   }

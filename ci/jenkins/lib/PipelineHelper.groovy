@@ -136,12 +136,12 @@ Map initializeStage(String stageName, List<String> prerequisites = [], String ar
     buildUidHelper.initializeBuildContext(stageName)
 
     // Validate prerequisites (skip for Initialize stage)
-    if (stageName != '01-initialize') {
+    if (stageName != '010-initialize') {
         buildUidHelper.validatePrerequisites(stageName, prerequisites)
     }
 
     // Retrieve artifacts into WORKSPACE root (skip for Initialize stage)
-    if (stageName != '01-initialize') {
+    if (stageName != '010-initialize') {
         // Resolve artifactFilter: combine pipeline-config.json with stage's stageInputArtifacts.
         // Patterns are relative to the Jenkins artifact store root (i.e. relative to TARGET_DIR
         // of the producing stage) — no subfolder prefix is applied.
@@ -177,7 +177,7 @@ Map initializeStage(String stageName, List<String> prerequisites = [], String ar
     }
 
     // Return config for convenience (empty for Initialize stage)
-    if (stageName == '01-initialize') {
+    if (stageName == '010-initialize') {
         return [:]
     }
     env.INPUT_ARTIFACTS_DIR = "${env.WORKSPACE}"

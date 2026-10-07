@@ -228,7 +228,7 @@ Map<String, String> loadStageConstants() {
  * The Jenkinsfile can call this to obtain the value for post-run archive blocks
  * without duplicating the derivation logic.
  *
- * @param scriptStem  Stage stem e.g. '02-build'
+ * @param scriptStem  Stage stem e.g. '020-build'
  * @return Absolute path: <WORKSPACE>/<scriptStem>-output
  */
 String resolveTargetDir(String scriptStem) {
@@ -238,7 +238,7 @@ String resolveTargetDir(String scriptStem) {
 /**
  * Resolve and execute a stage script, returning an exit code.
  *
- * @param scriptStem  Script stem e.g. '13-smoke-tests'
+ * @param scriptStem  Script stem e.g. '130-smoke-tests'
  * @param config      Pipeline config map — forwarded to .groovy scripts as the call() argument.
  *                    .sh and .py scripts receive config via environment variables.
  * @return int exit code — 0 = success, non-zero = failure.
@@ -261,7 +261,7 @@ void setCredentialHelper(helper) {
  * jenkins_credential_config.json without any change to call sites in
  * Jenkinsfile.declarative.
  *
- * @param scriptStem  Script stem e.g. '13-smoke-tests'
+ * @param scriptStem  Script stem e.g. '130-smoke-tests'
  * @param config      Pipeline config map — forwarded to .groovy scripts as the call() argument.
  *                    .sh and .py scripts receive config via environment variables.
  * @return int exit code — 0 = success, non-zero = failure.

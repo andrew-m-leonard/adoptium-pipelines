@@ -12,21 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-# DEFAULT STUB: 06-post-build-code-sign
+# DEFAULT STUB: 040-assemble-images
 #
-# Code signs EXEs/DLLs and dylibs that were not signed during the internal
-# signing stage (03-internal-code-sign). This covers all binaries for jdk8
-# (which has no internal signing stage), and the limited set of jdk11+
-# binaries that exist outside of JMODs.
-# Windows & Mac only.
+# Runs the final OpenJDK make image processing to assemble signed JMODs into
+# a complete JDK image. Must run after 030-internal-code-sign so that the
+# resulting image contains only signed internal binaries.
+# Windows & Mac only. Not applicable to jdk8.
 #
 # Override this stub by placing a script at:
-#   config-repo/vendor-scripts/06-post-build-code-sign.{sh,groovy,py}
+#   config-repo/vendor-scripts/040-assemble-images.{sh,groovy,py}
 #
 # Required Environment Variables (for vendor implementations):
 #   WORKSPACE             - Stage workspace directory
 #   CONFIG_FILE           - Path to pipeline-config.json
-#   INPUT_ARTIFACTS_DIR   - Directory containing the assembled JDK image
-#   TARGET_DIR            - Directory for code-signed output
-echo "ℹ️  Post-Build Code Sign: no vendor implementation configured — skipping"
+#   INPUT_ARTIFACTS_DIR   - Directory containing signed jmods
+#   TARGET_DIR            - Directory for assembled JDK image output
+echo "ℹ️  Assemble Images: no vendor implementation configured — skipping"
 exit 0

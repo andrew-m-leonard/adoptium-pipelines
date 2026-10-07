@@ -46,7 +46,7 @@ TARGET_DIR=/workspace/target  # Shared artifact directory
 
 All stage scripts now use `TARGET_DIR` instead of `INPUT_DIR`/`OUTPUT_DIR`:
 
-1. **[`02-build-corrected.sh`](scripts/stages/02-build-corrected.sh)** - Build stage
+1. **[`020-build-corrected.sh`](scripts/stages/020-build-corrected.sh)** - Build stage
    - Writes JDK artifacts to `${TARGET_DIR}/`
 
 1. **[`06-sign.sh`](scripts/stages/06-sign.sh)** - Sign stage
@@ -54,11 +54,11 @@ All stage scripts now use `TARGET_DIR` instead of `INPUT_DIR`/`OUTPUT_DIR`:
    - Signs them in place
    - Writes signed artifacts back to `${TARGET_DIR}/`
 
-1. **[`07-installer.sh`](scripts/stages/07-installer.sh)** - Installer stage
+1. **[`070-installer.sh`](scripts/stages/070-installer.sh)** - Installer stage
    - Reads signed JDK artifacts from `${TARGET_DIR}/`
    - Creates installers in `${TARGET_DIR}/installers/`
 
-1. **[`13-smoke-tests.sh`](scripts/stages/13-smoke-tests.sh)** - Smoke test stage
+1. **[`130-smoke-tests.sh`](scripts/stages/130-smoke-tests.sh)** - Smoke test stage
    - Reads JDK artifacts from `${TARGET_DIR}/`
    - Writes test results to `${TARGET_DIR}/test-results/`
 

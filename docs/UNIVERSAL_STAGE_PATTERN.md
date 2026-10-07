@@ -24,7 +24,7 @@ When adding or modifying a stage, ensure all four artefacts are present and cons
 #   CONFIG_FILE         - Path to pipeline-config.json
 #   TARGET_DIR          - Where to write output artifacts
 #   INPUT_ARTIFACTS_DIR - Where to read input artifacts from (if needed)
-#   BUILD_OUTPUT_DIR    - Sub-directory name where 02-build places JDK binaries.
+#   BUILD_OUTPUT_DIR    - Sub-directory name where 020-build places JDK binaries.
 #                         Read from stage-constants.properties via load-stage-constants.sh.
 #                         Downstream stages: read from ${INPUT_ARTIFACTS_DIR}/${BUILD_OUTPUT_DIR}
 #   BUILD_NUMBER        - Build identifier (optional, defaults to 'local')
@@ -134,7 +134,7 @@ Every stage that introduces new parameters or has runtime gate conditions needs 
 
 ```json
 {
-  "stageId": "12-validate-sbom",
+  "stageId": "120-validate-sbom",
   "stageDisabled": false,
   "stageCondition": [
     { "param": "CREATE_SBOM", "value": true }

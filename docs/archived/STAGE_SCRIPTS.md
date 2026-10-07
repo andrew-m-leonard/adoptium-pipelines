@@ -36,21 +36,21 @@ lower-cased hyphenated description:
 
 | Stage Name             | Script Stem              | Default in this repository           |
 |------------------------|--------------------------|--------------------------------|
-| Build                  | `02-build`               | Full implementation (`.sh`)    |
+| Build                  | `020-build`               | Full implementation (`.sh`)    |
 | Internal Sign          | `03-internal-sign`       | No-op stub (`.sh`)             |
 | Assemble               | `04-assemble`            | No-op stub (`.sh`)             |
 | Sign Artifacts         | `06-sign`                | No-op stub (`.sh`)             |
-| Build Installers       | `07-installer`           | No-op stub (`.sh`)             |
+| Build Installers       | `070-installer`           | No-op stub (`.sh`)             |
 | Sign Installers        | `08-sign-installer`      | No-op stub (`.sh`)             |
 | GPG Sign               | `09-gpg-sign`            | No-op stub (`.sh`)             |
 | SBOM Sign              | `10-sbom-sign`           | No-op stub (`.sh`)             |
-| Verify Signing         | `11-verify-signing`      | No-op stub (`.sh`)             |
-| Validate SBOM          | `12-validate-sbom`       | Full implementation (`.sh`)    |
-| Smoke Tests            | `13-smoke-tests`         | Full implementation (`.sh`)    |
-| AQA Tests              | `14-aqa-tests`           | No-op stub (`.sh`)             |
-| TCK Tests              | `15-tck-tests`           | No-op stub (`.sh`)             |
-| Publish Artifacts      | `16-publish`             | No-op stub (`.sh`)             |
-| Reproducible Compare   | `20-reproducible-compare`| Full implementation (`.sh`)    |
+| Verify Signing         | `110-verify-signing`      | No-op stub (`.sh`)             |
+| Validate SBOM          | `120-validate-sbom`       | Full implementation (`.sh`)    |
+| Smoke Tests            | `130-smoke-tests`         | Full implementation (`.sh`)    |
+| AQA Tests              | `140-aqa-tests`           | No-op stub (`.sh`)             |
+| TCK Tests              | `150-tck-tests`           | No-op stub (`.sh`)             |
+| Publish Artifacts      | `190-publish`             | No-op stub (`.sh`)             |
+| Reproducible Compare   | `200-reproducible-compare`| Full implementation (`.sh`)    |
 
 **Full implementation** — a working default used by all vendors unless overridden.  
 **No-op stub** — an echo-only placeholder; vendors must supply an override for the
@@ -172,7 +172,7 @@ config-repo/                          ← checked out by Initialize stage
   vendor-scripts/                     ← vendor override scripts go here
     03-internal-sign.sh               ← vendor's own signing impl
     09-gpg-sign.groovy                ← vendor's GPG sign (groovy)
-    14-aqa-tests.sh                   ← vendor's AQA test runner
+    140-aqa-tests.sh                   ← vendor's AQA test runner
 ```
 
 The `vendor-scripts/` path must be included in the sparse checkout performed
@@ -200,7 +200,7 @@ def signScript = load 'scripts/stages/03-internal-sign.groovy'
 signScript(config)
 
 // sh stage
-sh 'bash scripts/stages/12-validate-sbom.sh'
+sh 'bash scripts/stages/120-validate-sbom.sh'
 ```
 
 After (uniform, vendor-aware):
@@ -208,7 +208,7 @@ After (uniform, vendor-aware):
 ```groovy
 runStageScript('03-internal-sign', config)
 
-runStageScript('12-validate-sbom')
+runStageScript('120-validate-sbom')
 ```
 
 The Jenkinsfile no longer cares what the implementation language is.
@@ -280,12 +280,12 @@ run.  This is the single source of truth — the same file that
 | Stage stem                | Parameter key             | Default |
 |---------------------------|---------------------------|---------|
 | `06-sign`                 | `parameters.enableSigner`     | `true`  |
-| `07-installer`            | `parameters.enableInstallers` | `true`  |
-| `13-smoke-tests`          | `parameters.enableTests`      | `true`  |
-| `20-reproducible-compare` | `parameters.compareBuild`     | `false` |
+| `070-installer`            | `parameters.enableInstallers` | `true`  |
+| `130-smoke-tests`          | `parameters.enableTests`      | `true`  |
+| `200-reproducible-compare` | `parameters.compareBuild`     | `false` |
 
-Stages without an entry in this table are always enabled (e.g. `02-build`,
-`12-validate-sbom`).
+Stages without an entry in this table are always enabled (e.g. `020-build`,
+`120-validate-sbom`).
 
 When a stage is disabled, `StageResolver.run()` prints a message indicating
 which parameter caused the skip and returns exit code 0 without executing any
@@ -372,16 +372,16 @@ class StageResolver:
 Before (hardcoded path per stage method):
 
 ```python
-cmd = [str(self.script_dir / 'scripts' / 'stages' / '02-build.sh')]
+cmd = [str(self.script_dir / 'scripts' / 'stages' / '020-build.sh')]
 subprocess.run(cmd, env=env, check=True)
 ```
 
 After (uniform resolver call):
 
 ```python
-exit_code = self._make_resolver().run('02-build', env)
+exit_code = self._make_resolver().run('020-build', env)
 if exit_code != 0:
-    raise subprocess.CalledProcessError(exit_code, '02-build')
+    raise subprocess.CalledProcessError(exit_code, '020-build')
 ```
 
 The `stage_*()` methods shrink to just building the `env` dict and
@@ -424,7 +424,7 @@ config-repo/
   vendor-scripts/
     03-internal-sign.sh               ← vendor override (Jenkins + local)
     06-sign.sh                        ← vendor sign impl
-    13-smoke-tests.py                 ← vendor smoke tests (Python)
+    130-smoke-tests.py                 ← vendor smoke tests (Python)
 ```
 
 ### Implementation Checklist (Local)

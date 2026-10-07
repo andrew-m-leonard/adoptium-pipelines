@@ -12,20 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-# DEFAULT STUB: 10-digital-artifact-sign
+# DEFAULT STUB: 090-sbom-sign
 #
-# Applies detached GPG signatures (.sig / .asc) to all build artifacts for
-# public distribution verification. Covers code-signed JDK archives, installer
-# packages, and JSF-signed SBOMs. GPG armoring all artifacts including the
-# signed SBOM is why this stage runs after 09-sbom-sign.
+# JSF-signs the SBOM by embedding a JSON signature directly inside the SBOM
+# document. Must run before 100-digital-artifact-sign so that the signed SBOM
+# is included in the set of artifacts that receive a detached GPG signature.
+# Only applicable when SBOMs are generated (CREATE_SBOM=true).
 #
 # Override this stub by placing a script at:
-#   config-repo/vendor-scripts/10-digital-artifact-sign.{sh,groovy,py}
+#   config-repo/vendor-scripts/090-sbom-sign.{sh,groovy,py}
 #
 # Required Environment Variables (for vendor implementations):
 #   WORKSPACE             - Stage workspace directory
 #   CONFIG_FILE           - Path to pipeline-config.json
-#   INPUT_ARTIFACTS_DIR   - Directory containing signed artifacts and signed SBOMs
-#   TARGET_DIR            - Directory for GPG-signed output (.sig / .asc files)
-echo "ℹ️  Digital Artifact Sign: no vendor implementation configured — skipping"
+#   INPUT_ARTIFACTS_DIR   - Directory containing SBOM files
+#   TARGET_DIR            - Directory for JSF-signed SBOM output
+echo "ℹ️  SBOM Sign: no vendor implementation configured — skipping"
 exit 0

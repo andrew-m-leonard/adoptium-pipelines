@@ -12,19 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-# DEFAULT STUB: 07-installer
+# DEFAULT STUB: 080-code-sign-installer
 #
-# Building platform-specific installers is vendor-specific.
+# Code signs installer packages (.msi on Windows, .pkg on macOS).
+# On macOS, also submits the signed package to Apple for Notarization
+# and staples the notarization ticket to the installer.
+# Windows & Mac only.
+#
 # Override this stub by placing a script at:
-#   config-repo/vendor-scripts/07-installer.{sh,groovy,py}
+#   config-repo/vendor-scripts/080-code-sign-installer.{sh,groovy,py}
 #
-# Required Environment Variables (set by initializeStage):
+# Required Environment Variables (for vendor implementations):
 #   WORKSPACE             - Stage workspace directory
 #   CONFIG_FILE           - Path to pipeline-config.json
-#   INPUT_ARTIFACTS_DIR   - Directory containing signed artifacts
-#   BUILD_NUMBER          - Build number
-#
-# Stage-specific Environment Variables (set by Build Installers stage):
-#   TARGET_DIR            - Directory for installer output
-echo "ℹ️  Build Installers: no vendor implementation configured — skipping"
+#   INPUT_ARTIFACTS_DIR   - Directory containing installers from Build Installer stage
+#   TARGET_DIR            - Directory for signed installer output
+echo "ℹ️  Code Sign Installer: no vendor implementation configured — skipping"
 exit 0

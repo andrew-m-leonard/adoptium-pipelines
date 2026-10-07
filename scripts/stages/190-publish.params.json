@@ -1,30 +1,32 @@
 {
-  "stageId": "13-smoke-tests",
+  "stageId": "190-publish",
   "stageDisabled": false,
   "stageTimeoutMinutes": 0,
   "stageCondition": [
-    { "param": "RUN_TESTS", "value": true }
+    { "param": "PUBLISH_ARTIFACTS", "value": true }
   ],
   "stageInputArtifacts": [
     "${BUILD_OUTPUT_DIR}/*.tar.gz",
-    "${BUILD_OUTPUT_DIR}/*.zip"
+    "${BUILD_OUTPUT_DIR}/*.zip",
+    "${BUILD_OUTPUT_DIR}/*.msi",
+    "${BUILD_OUTPUT_DIR}/*.pkg",
+    "${BUILD_OUTPUT_DIR}/*.sig",
+    "${BUILD_OUTPUT_DIR}/*.asc",
+    "${BUILD_OUTPUT_DIR}/*sbom*.json"
   ],
   "stageOutputArtifacts": [
-    "*.txt",
-    "test-results/**/*",
-    "smoke-test-summary.json"
   ],
-  "description": "Gate-only params.json for the smoke-tests stage. Runs only when RUN_TESTS is true.",
+  "description": "Parameters consumed by the publish artifacts stage.",
   "parameterGroups": [
     {
       "name": "Stage Selections",
       "description": "Boolean flags that control which pipeline stages are enabled. All stage-gate parameters are collected here so operators can see and adjust the full execution plan in one place.",
       "parameters": [
         {
-          "name": "RUN_TESTS",
+          "name": "PUBLISH_ARTIFACTS",
           "type": "boolean",
-          "default": true,
-          "description": "Enable test stages."
+          "default": false,
+          "description": "Publish built artifacts to the release repository."
         }
       ]
     }

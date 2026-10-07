@@ -1,5 +1,5 @@
 {
-  "stageId": "02-build",
+  "stageId": "020-build",
   "stageDisabled": false,
   "stageTimeoutMinutes": 0,
   "stageCondition": [],
@@ -7,7 +7,7 @@
   "stageOutputArtifacts": [
     "**/*"
   ],
-  "description": "Parameters consumed by the build stage script. Vendor overrides may suppress, replace, or extend these via a vendor-scripts/02-build.params.json in the config repo.",
+  "description": "Parameters consumed by the build stage script. Vendor overrides may suppress, replace, or extend these via a vendor-scripts/020-build.params.json in the config repo.",
   "parameterGroups": [
     {
       "name": "Source Control",
