@@ -127,7 +127,7 @@ limitations under the License.
 pipeline {
     // Must have recent Python3
     agent {
-        label ci.role.worker
+        label "ci.role.worker"
     }
 
     // NOTE: Do NOT declare any of the seed parameters in a parameters{} block here.
