@@ -309,7 +309,9 @@ pipeline {
                         params.CONFIG_REPO_BRANCH.trim(),
                         env.PIPELINES_COMMIT_SHA,
                         pipelineBaseFolder,
-                        'config-repo'
+                        'config-repo',
+                        env.PIPELINES_REPO_URL    ?: '',
+                        env.PIPELINES_REPO_BRANCH ?: ''
                     )
                 }
             }

@@ -378,8 +378,16 @@ if (deployments) {
 // STEP 5: Create Launch Orchestrator Jobs
 // ============================================================================
 
-def pipelineRepoUrl           = pipelineConfig.repository?.url ?: 'https://github.com/adoptium/ci-adoptium-pipelines.git'
-def pipelineRepoBranch        = pipelineConfig.repository?.branch ?: 'main'
+// PIPELINES_REPO_URL / PIPELINES_REPO_BRANCH bindings are set by the development
+// seed job (via SeedHelper) to bake a fork URL/branch into generated jobs without
+// editing adoptium_pipeline_config.json.  Empty string → use the config-file value.
+def pipelinesRepoUrlOverride    = (binding.variables.get('PIPELINES_REPO_URL')    ?: '').toString().trim()
+def pipelinesRepoBranchOverride = (binding.variables.get('PIPELINES_REPO_BRANCH') ?: '').toString().trim()
+def pipelineRepoUrl           = pipelinesRepoUrlOverride    ?: (pipelineConfig.repository?.url    ?: 'https://github.com/adoptium/ci-adoptium-pipelines.git')
+def pipelineRepoBranch        = pipelinesRepoBranchOverride ?: (pipelineConfig.repository?.branch ?: 'main')
+if (pipelinesRepoUrlOverride || pipelinesRepoBranchOverride) {
+    println "⚠ Pipelines repo overridden via bindings (development seed): ${pipelineRepoUrl} @ ${pipelineRepoBranch}"
+}
 def pipelineRepoCredentialsId = credentialConfig.pipelineRepoCredentialsId ?: ''
 def configRepoCredentialsId   = credentialConfig.configRepoCredentialsId   ?: ''
 // Validate: reject old-format configs that still carry a top-level jobConfiguration.

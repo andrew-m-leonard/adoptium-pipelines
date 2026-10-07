@@ -55,19 +55,28 @@ limitations under the License.
  * @param configRepoPrefix   Workspace-relative path to the config repo root (e.g.
  *                           "config-repo").  Passed to the Job DSL script so that all
  *                           readFileFromWorkspace calls are correctly prefixed.
+ * @param pipelinesRepoUrl   (optional) Override for the ci-adoptium-pipelines repo URL.
+ *                           When non-empty, takes precedence over repository.url in
+ *                           adoptium_pipeline_config.json — used by the development seed
+ *                           job to bake a fork URL into generated jobs.
+ * @param pipelinesRepoBranch (optional) Override for the ci-adoptium-pipelines branch.
+ *                           When non-empty, takes precedence over repository.branch in
+ *                           adoptium_pipeline_config.json.
  */
-void generateJobs(String configRepoUrl, String configRepoBranch, String pipelineCommitSha, String pipelineBaseFolder = '', String configRepoPrefix = 'config-repo') {
+void generateJobs(String configRepoUrl, String configRepoBranch, String pipelineCommitSha, String pipelineBaseFolder = '', String configRepoPrefix = 'config-repo', String pipelinesRepoUrl = '', String pipelinesRepoBranch = '') {
     String vendorScriptsDir  = configRepoPrefix ? "${configRepoPrefix}/vendor-scripts"   : 'vendor-scripts'
     String triggerConfigFile = configRepoPrefix ? "${configRepoPrefix}/trigger_config.json" : 'trigger_config.json'
     _runSeedDsl(
-        configRepoUrl:       configRepoUrl,
-        configRepoBranch:    configRepoBranch,
-        pipelineCommitSha:   pipelineCommitSha,
-        pipelineBaseFolder:  pipelineBaseFolder,
-        pipelinesDir:        'pipelines',
-        configRepoPrefix:    configRepoPrefix,
-        vendorScriptsDir:    vendorScriptsDir,
-        triggerConfigFile:   triggerConfigFile,
+        configRepoUrl:        configRepoUrl,
+        configRepoBranch:     configRepoBranch,
+        pipelineCommitSha:    pipelineCommitSha,
+        pipelineBaseFolder:   pipelineBaseFolder,
+        pipelinesDir:         'pipelines',
+        configRepoPrefix:     configRepoPrefix,
+        vendorScriptsDir:     vendorScriptsDir,
+        triggerConfigFile:    triggerConfigFile,
+        pipelinesRepoUrl:     pipelinesRepoUrl,
+        pipelinesRepoBranch:  pipelinesRepoBranch,
     )
 }
 
@@ -154,13 +163,15 @@ private void _runSeedDsl(Map args) {
         removedViewAction:    'DELETE',
         additionalClasspath:  dslDir,
         additionalParameters: [
-            CONFIG_REPO_URL:      args.configRepoUrl,
-            CONFIG_REPO_BRANCH:   args.configRepoBranch,
-            COLLATED_PARAMS_JSON: collatedJson,
-            PIPELINE_COMMIT_SHA:  args.pipelineCommitSha,
-            TRIGGER_CONFIG_JSON:  triggerConfigJson,
-            CONFIG_REPO_PREFIX:   configRepoPrefix,
-            PIPELINE_BASE_FOLDER: pipelineBaseFolder,
+            CONFIG_REPO_URL:       args.configRepoUrl,
+            CONFIG_REPO_BRANCH:    args.configRepoBranch,
+            COLLATED_PARAMS_JSON:  collatedJson,
+            PIPELINE_COMMIT_SHA:   args.pipelineCommitSha,
+            TRIGGER_CONFIG_JSON:   triggerConfigJson,
+            CONFIG_REPO_PREFIX:    configRepoPrefix,
+            PIPELINE_BASE_FOLDER:  pipelineBaseFolder,
+            PIPELINES_REPO_URL:    args.pipelinesRepoUrl    ?: '',
+            PIPELINES_REPO_BRANCH: args.pipelinesRepoBranch ?: '',
         ]
     )
 }
