@@ -15,8 +15,9 @@ import importlib.util
 
 lib_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts", "lib", "api-metadata-generator.py"))
 spec = importlib.util.spec_from_file_location("api_metadata_generator", lib_path)
+assert spec is not None and spec.loader is not None
 api_metadata_generator = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(api_metadata_generator)
+spec.loader.exec_module(api_metadata_generator)  # type: ignore[union-attr]
 
 VersionInfo = api_metadata_generator.VersionInfo
 compute_sha256 = api_metadata_generator.compute_sha256

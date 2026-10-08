@@ -96,7 +96,7 @@ are needed for a standard production setup.
    | `CONFIG_REPO_URL` | ✅ required | *(your config repository URL)* | URL of your vendor config repository |
    | `CONFIG_REPO_BRANCH` | ✅ required | `main` | Branch of your vendor config repository |
    | `PIPELINE_BASE_FOLDER` | development only | *(leave blank)* | Override the Jenkins folder under which all jobs are placed — see [Development Fork Workflow](#development-fork-workflow) |
-   | `PIPELINES_REPO_URL` | development only | *(leave blank)* | Override the `ci-adoptium-pipelines` repo URL — see [Development Fork Workflow](#development-fork-workflow) |
+   | `PIPELINES_REPO_URL` | development only | *(leave blank)* | Override the `ci-adoptium-pipelines` repository URL — see [Development Fork Workflow](#development-fork-workflow) |
    | `PIPELINES_REPO_BRANCH` | development only | *(leave blank)* | Override the `ci-adoptium-pipelines` branch — see [Development Fork Workflow](#development-fork-workflow) |
 
    > **Important**: do not declare these in `Jenkinsfile.seed`. A `parameters {}` block in a Jenkinsfile causes Jenkins to reset values to the Jenkinsfile defaults on every run, wiping whatever the operator set.
@@ -395,7 +395,7 @@ the Jenkins UI — no config file edits or revert commits required.
 The three parameters form a chain that propagates your fork URL/branch all the way
 down to every generated job:
 
-```
+```text
 Seed job parameters
   PIPELINES_REPO_URL    → checkout your fork into pipelines/
   PIPELINES_REPO_BRANCH → baked into every generated launch job SCM definition
@@ -415,10 +415,10 @@ String Parameters:
 
 | Parameter | Example value | Purpose |
 |---|---|---|
-| `CONFIG_REPO_URL` | `https://github.com/my-org/temurin-config.git` | Your config repo (can be same as production) |
-| `CONFIG_REPO_BRANCH` | `my-feature-branch` | Your config repo branch |
+| `CONFIG_REPO_URL` | `https://github.com/my-org/temurin-config.git` | Your config repository (can be same as production) |
+| `CONFIG_REPO_BRANCH` | `my-feature-branch` | Your config repository branch |
 | `PIPELINE_BASE_FOLDER` | `my-sandbox/dev` | Sandbox folder — **must differ from the production folder** |
-| `PIPELINES_REPO_URL` | `https://github.com/my-org/ci-adoptium-pipelines.git` | Your pipeline repo fork |
+| `PIPELINES_REPO_URL` | `https://github.com/my-org/ci-adoptium-pipelines.git` | Your pipeline repository fork |
 | `PIPELINES_REPO_BRANCH` | `my-feature-branch` | Your pipeline fork branch |
 
 > **Safety guard**: `PIPELINE_BASE_FOLDER` is validated at runtime. If it is
@@ -433,8 +433,9 @@ String Parameters:
 1. Click **Build**
 
 The seed job will:
-- Check out your config repo fork/branch
-- Check out your pipeline repo fork/branch into `pipelines/`
+
+- Check out your config repository fork/branch
+- Check out your pipeline repository fork/branch into `pipelines/`
 - Generate all launch and platform build jobs under `PIPELINE_BASE_FOLDER`
 - Bake `PIPELINES_REPO_URL` and `PIPELINES_REPO_BRANCH` into each generated
   launch job as parameters **and** as its Pipeline SCM definition
