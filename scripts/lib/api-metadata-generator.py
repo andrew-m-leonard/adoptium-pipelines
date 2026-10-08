@@ -382,7 +382,7 @@ def generate_metadata(build_metadata_path, artifacts_dir, output_dir=None):
             "make_command_args": build_meta.get("make_command_args", ""),
             "BUILD_CONFIGURATION_param": build_meta.get("BUILD_CONFIGURATION_param", ""),
             "openjdk_built_config": build_meta.get("openjdk_built_config", ""),
-            "openjdk_source": build_meta.get("openjdk_source", ""),
+            "openjdk_source": build_meta.get("openjdk_source") or build_meta.get("openjdkSource") or "",
             "build_env_docker_image_digest": build_meta.get("build_env_docker_image_digest", ""),
             "dependency_version_alsa": build_meta.get("dependency_version_alsa", ""),
             "dependency_version_freetype": build_meta.get("dependency_version_freetype", ""),

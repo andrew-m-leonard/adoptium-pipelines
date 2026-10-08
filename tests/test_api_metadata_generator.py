@@ -151,11 +151,40 @@ class TestApiMetadataGenerator(unittest.TestCase):
             self.assertEqual(data["version"]["pre"], "beta")
             self.assertEqual(data["version"]["semver"], "21.0.13-beta+8.0.ea")
             self.assertEqual(data["sha256"], compute_sha256(jdk_archive))
+            self.assertEqual(data["openjdk_source"], "https://github.com/adoptium/jdk21u/commit/d6a2e06c2bce0268c601f3dc1b39f5d93721e605")
 
         with open(sbom_meta_path, "r") as f:
             data = json.load(f)
             self.assertEqual(data["binary_type"], "sbom")
             self.assertEqual(data["sha256"], compute_sha256(sbom_file))
+
+
+    def test_metadata_generation_with_openjdk_source_camelcase(self):
+        # Verify openjdkSource (as written by build-metadata-writer.py) maps to openjdk_source
+        jdk_archive = os.path.join(self.artifacts_dir, "OpenJDK21U-jdk_x64_alpine-linux_hotspot_21.0.13_8-ea.tar.gz")
+        with open(jdk_archive, "wb") as f:
+            f.write(b"dummy jdk content")
+
+        build_meta_path = os.path.join(self.test_dir, "build-metadata.json")
+        build_meta = {
+            "vendor": "Eclipse Adoptium",
+            "targetOS": "alpine-linux",
+            "architecture": "x64",
+            "variant": "temurin",
+            "scmRef": "jdk-21.0.13+8_adopt",
+            "buildRef": "https://github.com/adoptium/temurin-build/commit/cc31225e0aad72a5598d94e174cdd5c09e0d85a8",
+            "javaVersion": "jdk21u",
+            "full_version_output": 'openjdk version "21.0.13-beta" 2026-10-20\n',
+            "openjdkSource": "https://github.com/adoptium/jdk21u/commit/254494ad7d75b37f1c033245fb4dbd460d0347b5",
+        }
+        with open(build_meta_path, "w") as f:
+            json.dump(build_meta, f)
+
+        generated = generate_metadata(build_meta_path, self.artifacts_dir)
+        jdk_json_path = jdk_archive + ".json"
+        with open(jdk_json_path, "r") as f:
+            data = json.load(f)
+            self.assertEqual(data["openjdk_source"], "https://github.com/adoptium/jdk21u/commit/254494ad7d75b37f1c033245fb4dbd460d0347b5")
 
 
 if __name__ == "__main__":
