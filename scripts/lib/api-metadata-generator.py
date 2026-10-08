@@ -416,6 +416,17 @@ def generate_metadata(build_metadata_path, artifacts_dir, output_dir=None):
 
         generated_files.append(meta_filepath)
 
+        # For archive binaries (.tar.gz, .zip, .pkg, .msi), also write <filename>.sha256.txt
+        # Format matches sha256sum output: "<sha256>  <filename>\n" or "<sha256> *<filename>\n" or "<sha256>  <filename>"
+        # Legacy pipeline: sha256sum "$file" > $file.sha256.txt
+        if not (filename.endswith(".json")):
+            sha_txt_filename = filename + ".sha256.txt"
+            sha_txt_filepath = os.path.join(target_subfolder, sha_txt_filename)
+            with io.open(sha_txt_filepath, "w", encoding="utf-8") as fh:
+                fh.write(u"{0}  {1}\n".format(sha256_hash, filename))
+            generated_files.append(sha_txt_filepath)
+            print("Created SHA256 checksum file: {0}".format(sha_txt_filename))
+
         if first_output:
             print("=== SAMPLE METADATA OUTPUT ({0}) ===".format(meta_filename))
             print(json.dumps(metadata_record, indent=2))

@@ -12,7 +12,9 @@
     "${BUILD_OUTPUT_DIR}/*.pkg",
     "${BUILD_OUTPUT_DIR}/*.sig",
     "${BUILD_OUTPUT_DIR}/*.asc",
-    "${BUILD_OUTPUT_DIR}/*sbom*.json"
+    "${BUILD_OUTPUT_DIR}/*.sha256.txt",
+    "${BUILD_OUTPUT_DIR}/*.json",
+    "${BUILD_OUTPUT_DIR}/*-metadata.json"
   ],
   "stageOutputArtifacts": [
   ],

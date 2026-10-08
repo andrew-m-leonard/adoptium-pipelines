@@ -120,13 +120,21 @@ class TestApiMetadataGenerator(unittest.TestCase):
 
         # Generate metadata
         generated = generate_metadata(build_meta_path, self.artifacts_dir)
-        self.assertEqual(len(generated), 2)
+        self.assertEqual(len(generated), 3)
 
         jdk_json_path = jdk_archive + ".json"
+        jdk_sha_path = jdk_archive + ".sha256.txt"
         sbom_meta_path = os.path.join(self.artifacts_dir, "OpenJDK21U-sbom_x64_alpine-linux_hotspot_21.0.13_8-ea-metadata.json")
 
         self.assertTrue(os.path.exists(jdk_json_path))
+        self.assertTrue(os.path.exists(jdk_sha_path))
         self.assertTrue(os.path.exists(sbom_meta_path))
+
+        with open(jdk_sha_path, "r") as f:
+            content = f.read().strip()
+            expected_hash = compute_sha256(jdk_archive)
+            self.assertTrue(content.startswith(expected_hash))
+            self.assertTrue(os.path.basename(jdk_archive) in content)
 
         with open(jdk_json_path, "r") as f:
             data = json.load(f)

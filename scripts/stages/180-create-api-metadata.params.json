@@ -15,7 +15,8 @@
   ],
   "stageOutputArtifacts": [
     "${BUILD_OUTPUT_DIR}/*.json",
-    "${BUILD_OUTPUT_DIR}/*-metadata.json"
+    "${BUILD_OUTPUT_DIR}/*-metadata.json",
+    "${BUILD_OUTPUT_DIR}/*.sha256.txt"
   ],
   "description": "Generate API metadata JSON files for all release assets in BUILD_OUTPUT_DIR.",
   "parameterGroups": []

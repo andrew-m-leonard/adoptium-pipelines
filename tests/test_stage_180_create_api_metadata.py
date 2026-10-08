@@ -84,11 +84,12 @@ class TestCreateApiMetadataStage(unittest.TestCase):
 
         # Verify output files in target_dir/build_output
         expected_json = os.path.join(target_dir, "build_output", "OpenJDK27U-jdk_ppc64_aix_hotspot_27_35.tar.gz.json")
+        expected_sha = os.path.join(target_dir, "build_output", "OpenJDK27U-jdk_ppc64_aix_hotspot_27_35.tar.gz.sha256.txt")
         expected_sbom_meta = os.path.join(target_dir, "build_output", "OpenJDK27U-sbom_ppc64_aix_hotspot_27_35-metadata.json")
-        stage_meta = os.path.join(target_dir, "stage-metadata.json")
-
         stage_meta_ws = os.path.join(self.workspace, "stage-metadata.json")
+
         self.assertTrue(os.path.exists(expected_json))
+        self.assertTrue(os.path.exists(expected_sha))
         self.assertTrue(os.path.exists(expected_sbom_meta))
         self.assertTrue(os.path.exists(stage_meta_ws))
 
