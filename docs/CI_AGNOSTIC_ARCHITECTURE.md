@@ -170,7 +170,8 @@ Stage execution is controlled by `stageCondition` entries in each stage's `param
 | 13 | Smoke Tests | `130-smoke-tests.sh` | `RUN_TESTS` | `RUN_TESTS=true`, build succeeded | Build | Test results |
 | 14 | AQA Tests | `140-aqa-tests.sh` | `RUN_TESTS` | `RUN_TESTS=true`, smoke tests passed | Smoke Tests | AQA test results |
 | 15 | TCK Tests | `150-tck-tests.sh` | `ENABLE_TCK` | `ENABLE_TCK=true`, Temurin variant, smoke tests passed | Smoke Tests | TCK test results |
-| 16 | Publish Artifacts | `190-publish.sh` | `PUBLISH_ARTIFACTS` | `PUBLISH_ARTIFACTS=true` | Build | Publication confirmation |
+| 18 | Create API Metadata | `180-create-api-metadata.sh` | — | always | Build, Test Stages | `*.json`, `*-metadata.json`, `*.sha256.txt` |
+| 19 | Publish Artifacts | `190-publish.sh` | `PUBLISH_ARTIFACTS` | `PUBLISH_ARTIFACTS=true` | Create API Metadata | Publication confirmation |
 | 20 | Reproducible Compare | `200-reproducible-compare.sh` | `RUN_REPRODUCIBLE_COMPARE` | `RUN_REPRODUCIBLE_COMPARE=true`, `SCM_REF` set | Build | `comparison-report.txt`, `reprotest.diff` |
 
 ## Example: Build Stage

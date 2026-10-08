@@ -266,6 +266,15 @@ Runs the TCK (Technology Compatibility Kit). Vendor-specific. Skipped for `jdk8u
 
 ---
 
+### `180-create-api-metadata.sh` — Create API Metadata
+
+Generates metadata JSON files and `.sha256.txt` checksum files for all build output artifacts in `BUILD_OUTPUT_DIR`. Used by the Adoptium API service to query and index GitHub release assets.
+
+**Inputs:** `INPUT_ARTIFACTS_DIR` containing `build-metadata.json` and build artifacts in `BUILD_OUTPUT_DIR`
+**Outputs:** `${TARGET_DIR}/${BUILD_OUTPUT_DIR}/*.json`, `${TARGET_DIR}/${BUILD_OUTPUT_DIR}/*-metadata.json`, `${TARGET_DIR}/${BUILD_OUTPUT_DIR}/*.sha256.txt`
+
+---
+
 ### `190-publish.sh` — Publish Artifacts `STUB`
 
 Publishes artifacts to a release repository. Vendor-specific.

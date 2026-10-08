@@ -79,6 +79,7 @@ ci-adoptium-pipelines/
 │       ├── 130-smoke-tests.sh              # Smoke tests
 │       ├── 140-aqa-tests.sh                # AQA test suite
 │       ├── 150-tck-tests.sh                # TCK tests
+│       ├── 180-create-api-metadata.sh      # API metadata & checksum generation
 │       ├── 190-publish.sh                  # Artifact publication
 │       └── 200-reproducible-compare.sh     # Reproducible build comparison
 │       (each stage also has a corresponding NN-stem.params.json)
@@ -142,7 +143,8 @@ Stage execution is controlled by two mechanisms:
 | 13 | Smoke Tests | `130-smoke-tests.sh` | — | `RUN_TESTS=true`, build succeeded | false |
 | 14 | AQA Tests | `140-aqa-tests.sh` | `RUN_TESTS` | `RUN_TESTS=true`, smoke tests passed | false |
 | 15 | TCK Tests | `150-tck-tests.sh` | `ENABLE_TCK` | `ENABLE_TCK=true`, Temurin, smoke tests passed | false |
-| 16 | Publish Artifacts | `190-publish.sh` | `PUBLISH_ARTIFACTS` | `PUBLISH_ARTIFACTS=true` | false |
+| 18 | Create API Metadata | `180-create-api-metadata.sh` | — | always | false |
+| 19 | Publish Artifacts | `190-publish.sh` | `PUBLISH_ARTIFACTS` | `PUBLISH_ARTIFACTS=true` | false |
 | 20 | Reproducible Compare | `200-reproducible-compare.sh` | `RUN_REPRODUCIBLE_COMPARE` | `RUN_REPRODUCIBLE_COMPARE=true`, `SCM_REF` set | false |
 
 ### Vendor Script Override

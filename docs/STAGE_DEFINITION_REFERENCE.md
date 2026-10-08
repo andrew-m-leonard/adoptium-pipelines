@@ -60,7 +60,8 @@ Stage scripts are prefixed with a two-digit number that defines their execution 
 | 13 | Smoke Tests | `130-smoke-tests.sh` |
 | 14 | AQA Tests | `140-aqa-tests.sh` |
 | 15 | TCK Tests | `150-tck-tests.sh` |
-| 16 | Publish Artifacts | `190-publish.sh` |
+| 18 | Create API Metadata | `180-create-api-metadata.sh` |
+| 19 | Publish Artifacts | `190-publish.sh` |
 | 20 | Reproducible Compare | `200-reproducible-compare.sh` |
 
 ---
