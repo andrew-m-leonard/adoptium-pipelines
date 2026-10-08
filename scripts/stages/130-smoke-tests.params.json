@@ -2,9 +2,6 @@
   "stageId": "130-smoke-tests",
   "stageDisabled": false,
   "stageTimeoutMinutes": 0,
-  "stageCondition": [
-    { "param": "RUN_TESTS", "value": true }
-  ],
   "stageInputArtifacts": [
     "${BUILD_OUTPUT_DIR}/*.tar.gz",
     "${BUILD_OUTPUT_DIR}/*.zip"
@@ -14,19 +11,6 @@
     "test-results/**/*",
     "smoke-test-summary.json"
   ],
-  "description": "Gate-only params.json for the smoke-tests stage. Runs only when RUN_TESTS is true.",
-  "parameterGroups": [
-    {
-      "name": "Stage Selections",
-      "description": "Boolean flags that control which pipeline stages are enabled. All stage-gate parameters are collected here so operators can see and adjust the full execution plan in one place.",
-      "parameters": [
-        {
-          "name": "RUN_TESTS",
-          "type": "boolean",
-          "default": true,
-          "description": "Enable test stages."
-        }
-      ]
-    }
-  ]
+  "description": "Smoke-tests stage params. Runs unconditionally.",
+  "parameterGroups": []
 }
