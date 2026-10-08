@@ -84,22 +84,6 @@ main() {
 	local aqa_ref_source="default"
 	[[ -n "${AQA_REF:-}" ]] && aqa_ref_source="param"
 
-	# -----------------------------------------------------------------------
-	# Override build repo/ref from build-metadata.json when available.
-	# The 020-build stage records the *actual* ref used after any SBOM-driven
-	# override, which may differ from what was supplied as a stage parameter.
-	# This ensures we test against the exact source that produced the artifact.
-	# -----------------------------------------------------------------------
-	local build_metadata_file="${INPUT_ARTIFACTS_DIR}/build-metadata.json"
-	if [[ -f "${build_metadata_file}" ]]; then
-		local meta_build_ref
-		meta_build_ref=$(get_config_value "${build_metadata_file}" ".buildRef" "")
-		if [[ -n "${meta_build_ref}" ]]; then
-			aqa_tests_branch="${meta_build_ref}"
-			aqa_ref_source="build-metadata"
-		fi
-	fi
-
 	log_info "Test Configuration:"
 	log_info "  Java Version : ${java_version}"
 	log_info "  Target OS    : ${target_os}"
