@@ -1,0 +1,22 @@
+{
+  "stageId": "180-create-api-metadata",
+  "stageDisabled": false,
+  "stageTimeoutMinutes": 0,
+  "stageCondition": [],
+  "stageInputArtifacts": [
+    "${BUILD_OUTPUT_DIR}/*.tar.gz",
+    "${BUILD_OUTPUT_DIR}/*.zip",
+    "${BUILD_OUTPUT_DIR}/*.msi",
+    "${BUILD_OUTPUT_DIR}/*.pkg",
+    "${BUILD_OUTPUT_DIR}/*.deb",
+    "${BUILD_OUTPUT_DIR}/*.rpm",
+    "${BUILD_OUTPUT_DIR}/*sbom*.json",
+    "build-metadata.json"
+  ],
+  "stageOutputArtifacts": [
+    "${BUILD_OUTPUT_DIR}/*.json",
+    "${BUILD_OUTPUT_DIR}/*-metadata.json"
+  ],
+  "description": "Generate API metadata JSON files for all release assets in BUILD_OUTPUT_DIR.",
+  "parameterGroups": []
+}

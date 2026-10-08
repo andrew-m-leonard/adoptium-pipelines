@@ -70,6 +70,7 @@ final List JENKINS_STAGES = [
     '130-smoke-tests',
     '140-aqa-tests',
     '150-tck-tests',
+    '180-create-api-metadata',
     '190-publish',
     '200-reproducible-compare',
 ]

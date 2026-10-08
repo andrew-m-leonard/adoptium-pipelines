@@ -74,6 +74,7 @@ import groovy.transform.Field
 @Field final SMOKE_TESTS           = '130-smoke-tests'
 @Field final AQA_TESTS             = '140-aqa-tests'
 @Field final TCK_TESTS             = '150-tck-tests'
+@Field final CREATE_API_METADATA   = '180-create-api-metadata'
 @Field final PUBLISH_ARTIFACTS     = '190-publish'
 @Field final REPRODUCIBLE_COMPARE  = '200-reproducible-compare'
 // ────────────────────────────────────────────────────────────────────────────
@@ -667,6 +668,32 @@ pipeline {
         }
 
         // #########################################################################
+        // Stage: 18-create-api-metadata
+        // #########################################################################
+        stage(CREATE_API_METADATA) {
+            agent {
+                label getStageLabel(CREATE_API_METADATA)
+            }
+            when {
+                beforeAgent true
+                expression { stageConditionMet(CREATE_API_METADATA) }
+            }
+            steps {
+                script {
+                    ensureLibsLoaded(CREATE_API_METADATA)
+                    pipelineHelper.executeStageWithTracking(CREATE_API_METADATA) {
+                        Map config = pipelineHelper.initializeStage(CREATE_API_METADATA, [BUILD, VERIFY_SIGNING, VALIDATE_SBOM, SMOKE_TESTS, AQA_TESTS, TCK_TESTS])
+
+                        int metadataExitCode = stageRunner.run(CREATE_API_METADATA, config)
+                        if (metadataExitCode != 0) { error("Create API Metadata failed with exit code: ${metadataExitCode}") }
+
+                        pipelineHelper.finalizeStage(CREATE_API_METADATA)
+                    }
+                }
+            }
+        }
+
+        // #########################################################################
         // Stage: 16-publish
         // #########################################################################
         stage(PUBLISH_ARTIFACTS) {
@@ -681,7 +708,7 @@ pipeline {
                 script {
                     ensureLibsLoaded(PUBLISH_ARTIFACTS)
                     pipelineHelper.executeStageWithTracking(PUBLISH_ARTIFACTS) {
-                        Map config = pipelineHelper.initializeStage(PUBLISH_ARTIFACTS, [BUILD])
+                        Map config = pipelineHelper.initializeStage(PUBLISH_ARTIFACTS, [CREATE_API_METADATA, BUILD])
 
                         int publishExitCode = stageRunner.run(PUBLISH_ARTIFACTS, config)
                         if (publishExitCode != 0) { error("Publish Artifacts failed with exit code: ${publishExitCode}") }

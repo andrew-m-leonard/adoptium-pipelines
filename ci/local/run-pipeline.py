@@ -62,6 +62,7 @@ VALIDATE_SBOM = "120-validate-sbom"
 SMOKE_TESTS = "130-smoke-tests"
 AQA_TESTS = "140-aqa-tests"
 TCK_TESTS = "150-tck-tests"
+CREATE_API_METADATA = "180-create-api-metadata"
 PUBLISH_ARTIFACTS = "190-publish"
 REPRODUCIBLE_COMPARE = "200-reproducible-compare"
 
@@ -73,6 +74,7 @@ _LOCAL_STAGES = [
     VALIDATE_SBOM,
     SMOKE_TESTS,
     AQA_TESTS,
+    CREATE_API_METADATA,
     REPRODUCIBLE_COMPARE,
 ]
 
@@ -196,6 +198,13 @@ class PipelineRunner:
             # #####################################################################
             if AQA_TESTS in self.stages_to_run and self.executor.condition_met(AQA_TESTS):
                 if not _run(AQA_TESTS):
+                    raise _PipelineAbort()
+
+            # #####################################################################
+            # Stage: 180-create-api-metadata
+            # #####################################################################
+            if CREATE_API_METADATA in self.stages_to_run and self.executor.condition_met(CREATE_API_METADATA):
+                if not _run(CREATE_API_METADATA):
                     raise _PipelineAbort()
 
             # #####################################################################

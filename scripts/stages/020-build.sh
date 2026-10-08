@@ -664,6 +664,19 @@ json_escape() {
 			-e 's/\n/\\n/g'
 }
 
+# Read a file's content or return default value
+# $1  file_path
+# $2  default_value (optional)
+read_file_or_default() {
+	local file_path="$1"
+	local default_val="${2:-}"
+	if [[ -f "${file_path}" ]]; then
+		cat "${file_path}"
+	else
+		printf '%s' "${default_val}"
+	fi
+}
+
 # Extract build metadata
 # $1  build_repo_url  - the temurin-build repository URL actually used
 # $2  build_ref       - the temurin-build ref actually used (may differ from the
@@ -682,10 +695,76 @@ extract_build_metadata() {
 
 	log_info "Writing build metadata with jdk_version='${jdk_version}', releaseType='${release_type}', build_number='${BUILD_NUMBER}', stage='${STAGE_NAME}'"
 
+	local build_repo_dir="${WORKSPACE}/temurin-build"
+	local meta_dir="${build_repo_dir}/workspace/target/metadata"
+	local config_dir="${build_repo_dir}/workspace/config"
+
+	# Read temurin-build metadata files
+	local scm_ref_val="${SCM_REF:-}"
+	if [[ -z "${scm_ref_val}" && -f "${meta_dir}/scmref.txt" ]]; then
+		scm_ref_val=$(cat "${meta_dir}/scmref.txt" | tr -d '\r\n')
+	fi
+
+	local full_version_output
+	full_version_output=$(read_file_or_default "${meta_dir}/version.txt")
+
+	local configure_arguments
+	configure_arguments=$(read_file_or_default "${meta_dir}/configure.txt")
+
+	local make_command_args
+	make_command_args=$(read_file_or_default "${meta_dir}/makeCommandArg.txt")
+
+	local vendor_name
+	vendor_name=$(read_file_or_default "${meta_dir}/vendor.txt" "${VENDOR:-}")
+
+	local build_source
+	build_source=$(read_file_or_default "${meta_dir}/buildSource.txt" "${build_repo_url}")
+
+	local openjdk_source
+	openjdk_source=$(read_file_or_default "${meta_dir}/openjdkSource.txt")
+
+	local openjdk_built_config
+	openjdk_built_config=$(read_file_or_default "${config_dir}/built_config.cfg")
+
+	local makejdk_any_platform_args
+	makejdk_any_platform_args=$(read_file_or_default "${config_dir}/makejdk-any-platform.args")
+
+	local dep_alsa
+	dep_alsa=$(read_file_or_default "${meta_dir}/dependency_version_alsa.txt")
+
+	local dep_freetype
+	dep_freetype=$(read_file_or_default "${meta_dir}/dependency_version_freetype.txt")
+
+	local dep_freemarker
+	dep_freemarker=$(read_file_or_default "${meta_dir}/dependency_version_freemarker.txt")
+
+	local docker_image_digest="${CONFIG_DOCKER_IMAGE_DIGEST:-${BUILDIMAGESHA:-}}"
+
+	# Read variant_version if present
+	local var_major="" var_minor="" var_security="" var_tags=""
+	if [[ -d "${meta_dir}/variant_version" ]]; then
+		var_major=$(read_file_or_default "${meta_dir}/variant_version/major.txt")
+		var_minor=$(read_file_or_default "${meta_dir}/variant_version/minor.txt")
+		var_security=$(read_file_or_default "${meta_dir}/variant_version/security.txt")
+		var_tags=$(read_file_or_default "${meta_dir}/variant_version/tags.txt")
+	fi
+
+	# Pipeline parameters JSON (mirroring BUILD_CONFIGURATION_param)
+	local build_config_json=""
+	if [[ -n "${CONFIG_FILE:-}" && -f "${CONFIG_FILE}" ]]; then
+		build_config_json=$(cat "${CONFIG_FILE}")
+	fi
+
 	# Escape every string value before interpolating into JSON.
 	local j_jdk_version j_release_type j_build_number j_build_uid j_group_uid
 	local j_timestamp_iso j_stage j_workspace j_java_version j_target_os
 	local j_architecture j_variant j_build_ref j_build_repo_url
+	local j_vendor j_scm_ref j_build_source j_openjdk_source
+	local j_full_version_output j_configure_arguments j_make_command_args
+	local j_makejdk_args j_built_config j_docker_digest
+	local j_dep_alsa j_dep_freetype j_dep_freemarker
+	local j_var_major j_var_minor j_var_security j_var_tags j_build_config_json
+
 	j_jdk_version=$(json_escape "${jdk_version}")
 	j_release_type=$(json_escape "${release_type}")
 	j_build_number=$(json_escape "${BUILD_NUMBER:-}")
@@ -700,11 +779,29 @@ extract_build_metadata() {
 	j_variant=$(json_escape "${CONFIG_VARIANT:-}")
 	j_build_ref=$(json_escape "${build_ref}")
 	j_build_repo_url=$(json_escape "${build_repo_url}")
+	j_vendor=$(json_escape "${vendor_name}")
+	j_scm_ref=$(json_escape "${scm_ref_val}")
+	j_build_source=$(json_escape "${build_source}")
+	j_openjdk_source=$(json_escape "${openjdk_source}")
+	j_full_version_output=$(json_escape "${full_version_output}")
+	j_configure_arguments=$(json_escape "${configure_arguments}")
+	j_make_command_args=$(json_escape "${make_command_args}")
+	j_makejdk_args=$(json_escape "${makejdk_any_platform_args}")
+	j_built_config=$(json_escape "${openjdk_built_config}")
+	j_docker_digest=$(json_escape "${docker_image_digest}")
+	j_dep_alsa=$(json_escape "${dep_alsa}")
+	j_dep_freetype=$(json_escape "${dep_freetype}")
+	j_dep_freemarker=$(json_escape "${dep_freemarker}")
+	j_var_major=$(json_escape "${var_major}")
+	j_var_minor=$(json_escape "${var_minor}")
+	j_var_security=$(json_escape "${var_security}")
+	j_var_tags=$(json_escape "${var_tags}")
+	j_build_config_json=$(json_escape "${build_config_json}")
 
 	# Write build-metadata.json directly in shell — no Python/jq dependency.
 	# timestamp is an integer (epoch seconds) so it is not quoted in JSON.
 	# shellcheck disable=SC2059
-	printf '{\n  "jdk_version": "%s",\n  "releaseType": "%s",\n  "buildNumber": "%s",\n  "buildUid": "%s",\n  "groupUid": "%s",\n  "timestamp": %s,\n  "timestampISO": "%s",\n  "stage": "%s",\n  "workspace": "%s",\n  "javaVersion": "%s",\n  "targetOS": "%s",\n  "architecture": "%s",\n  "variant": "%s",\n  "buildRef": "%s",\n  "buildRepoUrl": "%s"\n}\n' \
+	printf '{\n  "jdk_version": "%s",\n  "releaseType": "%s",\n  "buildNumber": "%s",\n  "buildUid": "%s",\n  "groupUid": "%s",\n  "timestamp": %s,\n  "timestampISO": "%s",\n  "stage": "%s",\n  "workspace": "%s",\n  "javaVersion": "%s",\n  "targetOS": "%s",\n  "architecture": "%s",\n  "variant": "%s",\n  "buildRef": "%s",\n  "buildRepoUrl": "%s",\n  "vendor": "%s",\n  "scmRef": "%s",\n  "buildSource": "%s",\n  "openjdkSource": "%s",\n  "full_version_output": "%s",\n  "configure_arguments": "%s",\n  "make_command_args": "%s",\n  "makejdk_any_platform_args": "%s",\n  "openjdk_built_config": "%s",\n  "build_env_docker_image_digest": "%s",\n  "dependency_version_alsa": "%s",\n  "dependency_version_freetype": "%s",\n  "dependency_version_freemarker": "%s",\n  "variant_version": {\n    "major": "%s",\n    "minor": "%s",\n    "security": "%s",\n    "tags": "%s"\n  },\n  "BUILD_CONFIGURATION_param": "%s"\n}\n' \
 		"${j_jdk_version}" \
 		"${j_release_type}" \
 		"${j_build_number}" \
@@ -720,6 +817,24 @@ extract_build_metadata() {
 		"${j_variant}" \
 		"${j_build_ref}" \
 		"${j_build_repo_url}" \
+		"${j_vendor}" \
+		"${j_scm_ref}" \
+		"${j_build_source}" \
+		"${j_openjdk_source}" \
+		"${j_full_version_output}" \
+		"${j_configure_arguments}" \
+		"${j_make_command_args}" \
+		"${j_makejdk_args}" \
+		"${j_built_config}" \
+		"${j_docker_digest}" \
+		"${j_dep_alsa}" \
+		"${j_dep_freetype}" \
+		"${j_dep_freemarker}" \
+		"${j_var_major}" \
+		"${j_var_minor}" \
+		"${j_var_security}" \
+		"${j_var_tags}" \
+		"${j_build_config_json}" \
 		>"${WORKSPACE}/build-metadata.json"
 
 	log_info "Build metadata saved to build-metadata.json"

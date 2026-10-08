@@ -14,6 +14,7 @@
     { "id": "130-smoke-tests",          "label": "Smoke Tests",              "hasScript": true  },
     { "id": "140-aqa-tests",            "label": "AQA Tests",                "hasScript": true  },
     { "id": "150-tck-tests",            "label": "TCK Tests",                "hasScript": true  },
+    { "id": "180-create-api-metadata",  "label": "Create API Metadata",      "hasScript": true  },
     { "id": "190-publish",              "label": "Publish Artifacts",        "hasScript": true  },
     { "id": "200-reproducible-compare", "label": "Reproducible Compare Build","hasScript": true  }
   ]
