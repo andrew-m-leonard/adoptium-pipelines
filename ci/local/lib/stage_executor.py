@@ -205,7 +205,7 @@ class StageExecutor:
           6. Post-cleanup (≈ finalizeStage cleanWs)
 
         Returns:
-            Exit code — 0 = SUCCESS, 1 = UNSTABLE, >1 = FAILURE.
+            Exit code — 0 = SUCCESS, non-zero = FAILURE.
         """
         stage_label = self._stage_registry.get(stage_id, stage_id)
         print(f"\n{'=' * 80}")
@@ -230,7 +230,7 @@ class StageExecutor:
             target_dir=env.get("TARGET_DIR"),
             output_patterns=output_artifacts,
         )
-        self._workspace_mgr.cleanup_stage_workspace("post", stage_failed=(exit_code > 1))
+        self._workspace_mgr.cleanup_stage_workspace("post", stage_failed=(exit_code != 0))
         return exit_code
 
     def run_initialize(self) -> None:

@@ -94,8 +94,6 @@ class StageResult(enum.Enum):
     def from_exit_code(exit_code: int) -> "StageResult":
         if exit_code == 0:
             return StageResult.SUCCESS
-        if exit_code == 1:
-            return StageResult.UNSTABLE
         return StageResult.FAILURE
 
 
