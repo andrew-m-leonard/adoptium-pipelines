@@ -702,7 +702,7 @@ extract_build_metadata() {
 	# Read temurin-build metadata files
 	local scm_ref_val="${SCM_REF:-}"
 	if [[ -z "${scm_ref_val}" && -f "${meta_dir}/scmref.txt" ]]; then
-		scm_ref_val=$(tr -d '\r\n' < "${meta_dir}/scmref.txt")
+		scm_ref_val=$(tr -d '\r\n' <"${meta_dir}/scmref.txt")
 	fi
 
 	local full_version_output
