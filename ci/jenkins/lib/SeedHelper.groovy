@@ -107,9 +107,14 @@ void generateJobs(String configRepoUrl, String configRepoBranch, String pipeline
  *                           for Jenkins root). Same semantics as generateJobs().
  * @param deploymentName     Deployment name (DEPLOYMENT_NAME param) — passed as
  *                           DEPLOYMENT_FILTER so only this deployment is reseeded.
+ * @param pipelinesRepoUrl   (optional) ci-adoptium-pipelines repo URL baked into the
+ *                           trigger job. Must be forwarded so the reseed regenerates
+ *                           launch jobs with the same pipelines repo, not the config-file value.
+ * @param pipelinesRepoBranch (optional) ci-adoptium-pipelines branch, as above.
  */
 void reseedForTrigger(String configRepoUrl, String configRepoBranch, String pipelineCommitSha,
-                      String pipelineBaseFolder, String deploymentName) {
+                      String pipelineBaseFolder, String deploymentName,
+                      String pipelinesRepoUrl = '', String pipelinesRepoBranch = '') {
     _runSeedDsl(
         configRepoUrl:       configRepoUrl,
         configRepoBranch:    configRepoBranch,
@@ -120,6 +125,8 @@ void reseedForTrigger(String configRepoUrl, String configRepoBranch, String pipe
         configRepoPrefix:    'config-repo',
         vendorScriptsDir:    'config-repo/vendor-scripts',
         triggerConfigFile:   'config-repo/trigger_config.json',
+        pipelinesRepoUrl:    pipelinesRepoUrl,
+        pipelinesRepoBranch: pipelinesRepoBranch,
     )
 }
 

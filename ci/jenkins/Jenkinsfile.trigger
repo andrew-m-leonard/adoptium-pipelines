@@ -346,7 +346,9 @@ pipeline {
                         params.CONFIG_REPO_BRANCH,
                         env.GIT_COMMIT,          // SHA of the pipeline repo checked out above
                         params.PIPELINE_BASE_FOLDER ?: '',  // root folder — may be empty for Jenkins root
-                        params.DEPLOYMENT_NAME   // restrict reseed to this deployment only
+                        params.DEPLOYMENT_NAME,  // restrict reseed to this deployment only
+                        params.PIPELINES_REPO_URL    ?: '',  // keep launch jobs on the same pipelines repo/branch
+                        params.PIPELINES_REPO_BRANCH ?: ''
                     )
                     echo "✓ Launch jobs reseeded"
 

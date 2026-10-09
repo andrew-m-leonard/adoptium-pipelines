@@ -671,12 +671,6 @@ if (deployments && triggerConfig.triggers) {
                     textParam('TRIGGER_VERSIONS_JSON',
                         groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(versions)),
                         'JSON array of enabled version configs for this trigger type — baked in at generation time')
-                    stringParam {
-                        name('PIPELINE_BASE_FOLDER')
-                        defaultValue(pipelineBaseFolder)
-                        description('Jenkins root folder under which all generated jobs live — baked in at generation time. Empty string means Jenkins root.')
-                        trim(true)
-                    }
                     textParam('DEFAULT_PARAMETERS_JSON',
                         groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(effectiveDefaultParams)),
                         'Merged default parameters for this deployment — baked in at generation time')
@@ -696,6 +690,24 @@ if (deployments && triggerConfig.triggers) {
                         name('CONFIG_REPO_CREDENTIALS_ID')
                         defaultValue(configRepoCredentialsId)
                         description('Jenkins credential ID for the config repo — baked in at generation time')
+                        trim(true)
+                    }
+                    stringParam {
+                        name('PIPELINE_BASE_FOLDER')
+                        defaultValue(pipelineBaseFolder)
+                        description('Jenkins root folder under which all generated jobs live — baked in at generation time. Empty string means Jenkins root.')
+                        trim(true)
+                    }
+                    stringParam {
+                        name('PIPELINES_REPO_URL')
+                        defaultValue(pipelineRepoUrl)
+                        description('ci-adoptium-pipelines repo URL — baked in at generation time. Passed to the pre-trigger reseed so launch jobs keep the same pipelines repo.')
+                        trim(true)
+                    }
+                    stringParam {
+                        name('PIPELINES_REPO_BRANCH')
+                        defaultValue(pipelineRepoBranch)
+                        description('ci-adoptium-pipelines branch — baked in at generation time. Passed to the pre-trigger reseed so launch jobs keep the same pipelines branch.')
                         trim(true)
                     }
                 }
