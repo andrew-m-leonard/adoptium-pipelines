@@ -246,6 +246,7 @@ String checkExistingBuildForScmRef(String launchJobPath, String scmRef) {
  * ParametersAction in the order params were passed, not the declared order.
  *
  * Per-run overrides sent:
+ *   GROUP_UID              — deterministic trigger-sourced identifier (see buildTriggerGroupId)
  *   RELEASE_TYPE           — trigger-specific (WEEKLY / RELEASE)
  *   PLATFORMS              — always "all" from a trigger
  *   SCM_REF                — when provided by the trigger script
@@ -258,9 +259,11 @@ String checkExistingBuildForScmRef(String launchJobPath, String scmRef) {
  * @param versionConfig      Version entry from trigger_config.json (for suppressTestingConditions)
  * @param triggerResult      Parsed trigger-result.json Map from the trigger script
  * @param releaseType        RELEASE_TYPE value to forward, e.g. "WEEKLY" or "RELEASE"
+ * @param triggerType        Trigger type stem, e.g. "detect-ga-tag"
  */
 void triggerLaunchJob(String launchJobBase, String jdkVersion, Map deploymentDefaults,
-                      Map versionConfig, Map triggerResult, String releaseType) {
+                      Map versionConfig, Map triggerResult, String releaseType,
+                      String triggerType) {
     String vnum    = jdkVersion.replaceAll(/[^\d]/, '')
     String jobPath = "${launchJobBase}/Build_openjdk${vnum}_launch"
 
@@ -272,9 +275,15 @@ void triggerLaunchJob(String launchJobBase, String jdkVersion, Map deploymentDef
         enableTesting = false
     }
 
+    // Build a deterministic, human-readable GROUP_UID that encodes the trigger
+    // source so any downstream build job can be traced back to its origin.
+    // See docs/TRIGGER_ARCHITECTURE.md §"GROUP_UID for trigger-launched builds".
+    String groupId = buildTriggerGroupId(triggerType, jdkVersion, triggerResult.scmRef as String)
+
     // Send only the values that vary per trigger run.  All other parameters
     // retain their baked-in defaults, preserving declared order and grouping.
     List jobParams = [
+        string(name: 'GROUP_UID',    value: groupId),
         string(name: 'RELEASE_TYPE', value: releaseType),
         string(name: 'PLATFORMS',    value: 'all'),
         booleanParam(name: 'RUN_TESTS', value: enableTesting),
@@ -286,9 +295,49 @@ void triggerLaunchJob(String launchJobBase, String jdkVersion, Map deploymentDef
         jobParams << string(name: 'OVERRIDE_PUBLISH_NAME', value: triggerResult.publishName as String)
     }
 
-    echo "Triggering ${jobPath} | SCM_REF=${triggerResult.scmRef ?: '(HEAD)'} | RELEASE_TYPE=${releaseType} | RUN_TESTS=${enableTesting}"
+    echo "Triggering ${jobPath} | GROUP_UID=${groupId} | SCM_REF=${triggerResult.scmRef ?: '(HEAD)'} | RELEASE_TYPE=${releaseType} | RUN_TESTS=${enableTesting}"
     build(job: jobPath, parameters: jobParams, wait: false, propagate: false)
     echo "✓ Triggered ${jobPath}"
+}
+
+/**
+ * Build a deterministic, human-readable GROUP_UID for a trigger-launched build.
+ *
+ * Format: trigger-<type-slug>-<version>-<scmRef-or-date>
+ *
+ *   type-slug    — triggerType with the leading "detect-" stripped and any
+ *                  non-alphanumeric/dot/plus/hyphen characters replaced by "-"
+ *   version      — JDK version string, e.g. "jdk21"
+ *   scmRef       — the scmRef from trigger-result.json when non-empty (e.g.
+ *                  "jdk-21.0.13+7_adopt"), otherwise the UTC date "yyyyMMdd"
+ *
+ * Examples:
+ *   detect-ga-tag + jdk21 + jdk-21.0.13+7_adopt  → trigger-ga-tag-jdk21-jdk-21.0.13+7_adopt
+ *   detect-build-tag-for-github-release + jdk28   → trigger-build-tag-jdk28-jdk-28+5_adopt
+ *   weekly-head + jdk27 + (no scmRef)             → trigger-weekly-head-jdk27-20250601
+ *
+ * Using a deterministic ID (rather than a random UUID) means that if the same
+ * tag is re-detected, the same GROUP_UID is produced — making it trivially
+ * de-duplicatable at the group level without any extra state.
+ *
+ * @param triggerType  Trigger type stem, e.g. "detect-ga-tag"
+ * @param jdkVersion   Version string, e.g. "jdk21"
+ * @param scmRef       SCM reference from trigger-result.json (may be null/empty)
+ * @return             Deterministic GROUP_UID string
+ */
+@NonCPS
+String buildTriggerGroupId(String triggerType, String jdkVersion, String scmRef) {
+    // Strip the redundant "detect-" prefix; sanitise remaining chars.
+    String typeSlug = triggerType
+        .replaceFirst(/^detect-/, '')
+        .replaceAll(/[^a-zA-Z0-9._+\-]/, '-')
+
+    // Use scmRef when available; fall back to today's UTC date for HEAD builds.
+    String refSlug = scmRef?.trim()
+        ? scmRef.trim().replaceAll(/[^a-zA-Z0-9._+\-]/, '-')
+        : new Date().format('yyyyMMdd', TimeZone.getTimeZone('UTC'))
+
+    return "trigger-${typeSlug}-${jdkVersion}-${refSlug}"
 }
 
 // ---------------------------------------------------------------------------
@@ -409,7 +458,7 @@ pipeline {
 
                                 if (dedupBuildType == 'NONE') {
                                     triggerLaunchJob(launchJobBase, version, deploymentDefaults,
-                                        versionConfig, result, releaseType)
+                                        versionConfig, result, releaseType, triggerType)
 
                                 } else if (dedupBuildType == 'NOT_ALREADY_BUILT') {
                                     String scmRef = result.scmRef as String
@@ -445,7 +494,7 @@ pipeline {
                                     } else {
                                         // NOT_FOUND — trigger
                                         triggerLaunchJob(launchJobBase, version, deploymentDefaults,
-                                            versionConfig, result, releaseType)
+                                            versionConfig, result, releaseType, triggerType)
                                     }
                                 } else {
                                     error "Unknown dedupBuildType '${dedupBuildType}' returned in trigger-result.json"

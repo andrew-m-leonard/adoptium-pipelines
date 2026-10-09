@@ -142,6 +142,60 @@ ignored and testing is **not** suppressed (fail safe).
 
 ---
 
+## GROUP_UID for trigger-launched builds
+
+When a trigger fires the launch job it passes a **deterministic, human-readable
+`GROUP_UID`** that encodes the trigger source. Any downstream build job can
+therefore be traced back to exactly which trigger, version, and tag produced it
+without consulting Jenkins history.
+
+### Format
+
+```
+trigger-<type-slug>-<version>-<scmRef-or-date>
+```
+
+| Segment | Source | Notes |
+|---|---|---|
+| `trigger` | Literal prefix | Distinguishes trigger-sourced IDs from manually-launched ones (which auto-generate `group-<timestamp>-<random>`) |
+| `<type-slug>` | `TRIGGER_TYPE` parameter with the leading `detect-` stripped | `ga-tag`, `build-tag`, `weekly-head`; other chars → `-` |
+| `<version>` | `versionConfig.version` | e.g. `jdk21`, `jdk8` |
+| `<scmRef-or-date>` | `triggerResult.scmRef` when non-empty; otherwise UTC `yyyyMMdd` of the trigger run | Non-alphanumeric chars in scmRef → `-` |
+
+### Examples
+
+| Trigger type | Version | scmRef | GROUP_UID produced |
+|---|---|---|---|
+| `detect-ga-tag` | `jdk21` | `jdk-21.0.13+7_adopt` | `trigger-ga-tag-jdk21-jdk-21.0.13+7_adopt` |
+| `detect-ga-tag` | `jdk8` | `jdk8u452-b09_adopt` | `trigger-ga-tag-jdk8-jdk8u452-b09_adopt` |
+| `detect-build-tag-for-github-release` | `jdk21` | `jdk-21.0.13+7_adopt` | `trigger-build-tag-jdk21-jdk-21.0.13+7_adopt` |
+| `detect-build-tag-for-github-release` | `jdk28` | `jdk-28+5_adopt` | `trigger-build-tag-jdk28-jdk-28+5_adopt` |
+| `weekly-head` | `jdk27` | *(empty — HEAD build)* | `trigger-weekly-head-jdk27-20250601` |
+| Manual launch | any | any | *(not supplied; launcher auto-generates `group-<timestamp>-<random>`)* |
+
+### Design properties
+
+- **Deterministic** — re-detecting the same tag produces the same GROUP_UID,
+  making the group trivially de-duplicatable without extra state.
+- **Human-readable** — the trigger source and JDK version are immediately
+  visible in any build sidebar or log.
+- **Date fallback for HEAD builds** — `weekly-head` has no scmRef (it builds
+  HEAD); the UTC date gives a stable, readable identifier per calendar day.
+- **No collision with manual launches** — manual launches that do not supply
+  `GROUP_UID` keep their random `group-<timestamp>-<random>` form and are
+  clearly distinguishable from trigger-sourced IDs.
+
+### Implementation
+
+`GROUP_UID` is constructed by `buildTriggerGroupId()` in
+[`ci/jenkins/Jenkinsfile.trigger`](../ci/jenkins/Jenkinsfile.trigger) and
+forwarded as the `GROUP_UID` parameter when `triggerLaunchJob()` calls
+`build()`. The launch job's `resolveGroupUid()` function (in
+[`ci/jenkins/Jenkinsfile.launch`](../ci/jenkins/Jenkinsfile.launch)) already
+honours a supplied `GROUP_UID` parameter, so no changes are required there.
+
+---
+
 ## GitHub Enterprise Support
 
 The `check-github-release-asset` command in `trigger-utils.py` automatically
