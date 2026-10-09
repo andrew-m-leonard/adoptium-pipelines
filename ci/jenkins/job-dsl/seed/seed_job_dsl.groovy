@@ -658,9 +658,9 @@ if (deployments && triggerConfig.triggers) {
                         groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(versions)),
                         'JSON array of enabled version configs for this trigger type — baked in at generation time')
                     stringParam {
-                        name('LAUNCH_JOB_BASE_PATH')
-                        defaultValue(launchJobBasePath)
-                        description('Jenkins path to the Build_openjdk_launchers folder — baked in at generation time')
+                        name('TRIGGER_DEPLOYMENT_BASE_PATH')
+                        defaultValue(deploymentFolder(dep) as String)
+                        description('Jenkins path to the deployment folder (e.g. "myorg/release") — baked in at generation time; used to reseed and to locate the launch jobs')
                         trim(true)
                     }
                     textParam('DEFAULT_PARAMETERS_JSON',
