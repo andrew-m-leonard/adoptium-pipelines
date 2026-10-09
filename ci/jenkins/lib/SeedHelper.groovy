@@ -81,15 +81,14 @@ void generateJobs(String configRepoUrl, String configRepoBranch, String pipeline
 }
 
 /**
- * Re-seed all jobs from within a trigger job workspace.
+ * Re-seed jobs from within a trigger job workspace, scoped to a single deployment.
  *
  * Called by Jenkinsfile.trigger before firing any launch job to ensure every
  * launch job's parameter definitions match the config repo — correcting any
  * admin drift (e.g. a default value manually changed in the Jenkins UI).
  *
- * Identical reconciliation semantics to generateJobs() — the config repo is
- * always the source of truth, so removed versions delete their jobs just as
- * a scheduled seed run would.
+ * Only the named deployment is regenerated (via DEPLOYMENT_FILTER in the seed DSL)
+ * to prevent other deployments from being created or deleted mid-trigger.
  *
  * Workspace layout (Jenkinsfile.trigger):
  *   <workspace>/
@@ -104,15 +103,19 @@ void generateJobs(String configRepoUrl, String configRepoBranch, String pipeline
  * @param configRepoUrl      Vendor config repo URL — baked into generated jobs.
  * @param configRepoBranch   Vendor config repo branch — baked into generated jobs.
  * @param pipelineCommitSha  SHA of the ci-adoptium-pipelines checkout.
- * @param pipelineBaseFolder (optional) Same semantics as generateJobs() — passed through
- *                           so the trigger can reseed into the same folder the seed job used.
+ * @param pipelineBaseFolder Jenkins root folder (PIPELINE_BASE_FOLDER param, may be empty
+ *                           for Jenkins root). Same semantics as generateJobs().
+ * @param deploymentName     Deployment name (DEPLOYMENT_NAME param) — passed as
+ *                           DEPLOYMENT_FILTER so only this deployment is reseeded.
  */
-void reseedForTrigger(String configRepoUrl, String configRepoBranch, String pipelineCommitSha, String pipelineBaseFolder = '') {
+void reseedForTrigger(String configRepoUrl, String configRepoBranch, String pipelineCommitSha,
+                      String pipelineBaseFolder, String deploymentName) {
     _runSeedDsl(
         configRepoUrl:       configRepoUrl,
         configRepoBranch:    configRepoBranch,
         pipelineCommitSha:   pipelineCommitSha,
         pipelineBaseFolder:  pipelineBaseFolder,
+        deploymentFilter:    deploymentName,
         pipelinesDir:        '',
         configRepoPrefix:    'config-repo',
         vendorScriptsDir:    'config-repo/vendor-scripts',
@@ -125,11 +128,12 @@ void reseedForTrigger(String configRepoUrl, String configRepoBranch, String pipe
  * All paths are relative to the calling job's workspace root.
  */
 private void _runSeedDsl(Map args) {
-    String pipelinesDir      = args.pipelinesDir      ?: ''
-    String configRepoPrefix  = args.configRepoPrefix  ?: ''
-    String vendorScriptsDir  = args.vendorScriptsDir  ?: 'vendor-scripts'
-    String triggerConfigFile = args.triggerConfigFile ?: 'trigger_config.json'
+    String pipelinesDir       = args.pipelinesDir       ?: ''
+    String configRepoPrefix   = args.configRepoPrefix   ?: ''
+    String vendorScriptsDir   = args.vendorScriptsDir   ?: 'vendor-scripts'
+    String triggerConfigFile  = args.triggerConfigFile  ?: 'trigger_config.json'
     String pipelineBaseFolder = args.pipelineBaseFolder ?: ''
+    String deploymentFilter   = args.deploymentFilter   ?: ''
 
     String psPath    = pipelinesDir ? "${pipelinesDir}/ci/jenkins/lib/PipelineStages.groovy"
                                     : 'ci/jenkins/lib/PipelineStages.groovy'
@@ -170,6 +174,7 @@ private void _runSeedDsl(Map args) {
             TRIGGER_CONFIG_JSON:   triggerConfigJson,
             CONFIG_REPO_PREFIX:    configRepoPrefix,
             PIPELINE_BASE_FOLDER:  pipelineBaseFolder,
+            DEPLOYMENT_FILTER:     deploymentFilter,
             PIPELINES_REPO_URL:    args.pipelinesRepoUrl    ?: '',
             PIPELINES_REPO_BRANCH: args.pipelinesRepoBranch ?: '',
         ]

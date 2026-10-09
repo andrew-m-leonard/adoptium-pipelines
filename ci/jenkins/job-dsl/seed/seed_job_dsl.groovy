@@ -156,9 +156,23 @@ println '✓ Loaded jenkins_job_config.json'
 // The PIPELINE_BASE_FOLDER binding overrides it when set by the development seed job,
 // so developers can seed into a sandbox folder without touching the config file.
 def pipelineBaseFolder = pipelineBaseFolderOverride ?: (jenkinsConfig.pipelineBaseFolder ?: '').toString().trim().replaceAll(/\/+$/, '')
-def deployments        = jenkinsConfig.deployments ?: []
+
+// DEPLOYMENT_FILTER: when set (by reseedForTrigger), restrict processing to the single
+// named deployment.  This prevents the trigger reseed from generating all deployments
+// under the sandbox folder — only the deployment that owns the trigger is regenerated.
+def deploymentFilterName = (binding.variables.get('DEPLOYMENT_FILTER') ?: '').toString().trim()
+def deployments          = (jenkinsConfig.deployments ?: []) as List
+if (deploymentFilterName) {
+    deployments = deployments.findAll { it.name == deploymentFilterName }
+    if (!deployments) {
+        throw new IllegalStateException(
+            "DEPLOYMENT_FILTER='${deploymentFilterName}' did not match any deployment in jenkins_job_config.json. " +
+            "Available: ${(jenkinsConfig.deployments ?: []).collect { it.name }.join(', ')}"
+        )
+    }
+}
 println "  pipelineBaseFolder : ${pipelineBaseFolder ?: '(root)'}${pipelineBaseFolderOverride ? ' (overridden via PIPELINE_BASE_FOLDER parameter)' : ''}"
-println "  deployments        : ${deployments.collect { it.name }.join(', ') ?: '(none)'}"
+println "  deployments        : ${deployments.collect { it.name }.join(', ') ?: '(none)'}${deploymentFilterName ? ' (filtered to deployment: ' + deploymentFilterName + ')' : ''}"
 
 // jenkins_credential_config.json is optional — absent when no credentials (e.g. for private repos or authenticated GitHub API access) are needed.
 def credentialConfig = [:]
@@ -658,9 +672,9 @@ if (deployments && triggerConfig.triggers) {
                         groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(versions)),
                         'JSON array of enabled version configs for this trigger type — baked in at generation time')
                     stringParam {
-                        name('TRIGGER_DEPLOYMENT_BASE_PATH')
-                        defaultValue(deploymentFolder(dep) as String)
-                        description('Jenkins path to the deployment folder (e.g. "myorg/release") — baked in at generation time; used to reseed and to locate the launch jobs')
+                        name('PIPELINE_BASE_FOLDER')
+                        defaultValue(pipelineBaseFolder)
+                        description('Jenkins root folder under which all generated jobs live — baked in at generation time. Empty string means Jenkins root.')
                         trim(true)
                     }
                     textParam('DEFAULT_PARAMETERS_JSON',

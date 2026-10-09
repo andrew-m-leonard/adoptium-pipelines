@@ -24,10 +24,11 @@ limitations under the License.
  *   DEPLOYMENT_NAME          — deployment name from jenkins_job_config.json deployments[]
  *   TRIGGER_TYPE             — trigger type stem, e.g. 'detect-ga-tag'
  *   TRIGGER_VERSIONS_JSON    — JSON array of enabled version configs for this trigger type
- *   TRIGGER_DEPLOYMENT_BASE_PATH — Jenkins path to the deployment folder,
- *                              e.g. "temurin/release". Used to reseed that deployment's
- *                              jobs and to locate the launch jobs under
- *                              TRIGGER_DEPLOYMENT_BASE_PATH/Build_openjdk_launchers.
+ *   PIPELINE_BASE_FOLDER     — Jenkins root folder under which all generated jobs live,
+ *                              e.g. "pipeline-sandbox". Empty string means Jenkins
+ *                              root. Used to reseed the correct deployment folder and to
+ *                              locate launch jobs at PIPELINE_BASE_FOLDER/<deployment>/
+ *                              Build_openjdk_launchers.
  *   CONFIG_REPO_URL          — vendor config repo URL
  *   CONFIG_REPO_BRANCH       — vendor config repo branch
  *   CONFIG_REPO_CREDENTIALS_ID — Jenkins credential ID for config repo (optional)
@@ -343,8 +344,9 @@ pipeline {
                     seedHelper.reseedForTrigger(
                         params.CONFIG_REPO_URL,
                         params.CONFIG_REPO_BRANCH,
-                        env.GIT_COMMIT,  // SHA of the pipeline repo checked out above
-                        params.TRIGGER_DEPLOYMENT_BASE_PATH  // reseed only this deployment's folder
+                        env.GIT_COMMIT,          // SHA of the pipeline repo checked out above
+                        params.PIPELINE_BASE_FOLDER ?: '',  // root folder — may be empty for Jenkins root
+                        params.DEPLOYMENT_NAME   // restrict reseed to this deployment only
                     )
                     echo "✓ Launch jobs reseeded"
 
@@ -370,7 +372,10 @@ pipeline {
                     List versions           = new JsonSlurper().parseText(params.TRIGGER_VERSIONS_JSON) as List
                     Map  deploymentDefaults = new JsonSlurper().parseText(params.DEFAULT_PARAMETERS_JSON) as Map
                     String triggerType      = params.TRIGGER_TYPE
-                    String launchJobBase    = "${params.TRIGGER_DEPLOYMENT_BASE_PATH}/Build_openjdk_launchers"
+                    String deploymentBase   = params.PIPELINE_BASE_FOLDER?.trim()
+                        ? "${params.PIPELINE_BASE_FOLDER}/${params.DEPLOYMENT_NAME}"
+                        : params.DEPLOYMENT_NAME
+                    String launchJobBase    = "${deploymentBase}/Build_openjdk_launchers"
 
                     echo "=== Trigger: ${triggerType} | Deployment: ${params.DEPLOYMENT_NAME} ==="
                     echo "    Launch job base : ${launchJobBase}"
