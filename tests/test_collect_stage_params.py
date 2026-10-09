@@ -1206,8 +1206,8 @@ class TestStageSelectionsGroup(unittest.TestCase):
             "100-digital-artifact-sign",
         }
 
-        # RUN_TESTS must be defined on all test stages
-        test_stems = {"130-smoke-tests", "140-aqa-tests"}
+        # RUN_TESTS must be defined on gated test stages (smoke-tests runs unconditionally)
+        test_stems = {"140-aqa-tests"}
 
         # Merged Stage Selections group must list all contributing stems
         sel_group = result["groups"][0]
