@@ -151,7 +151,7 @@ without consulting Jenkins history.
 
 ### Format
 
-```
+```text
 trigger-<type-slug>-<version>-<scmRef-or-date>
 ```
 
