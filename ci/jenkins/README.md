@@ -98,6 +98,8 @@ Called by the launch pipeline (via `jobDsl()` step) to create or update a single
 
 The seed job creates all launch jobs. Running a launch job creates the platform build jobs.
 
+To keep the deployed jobs in step with the vendor config repository, enable **GitHub hook trigger for GITScm polling** and/or **Poll SCM** under **Build Triggers** on a seed job whose SCM is the vendor config repository (see the walkthrough in [docs/JOB_DSL_AUTOMATION.md](../../docs/JOB_DSL_AUTOMATION.md#step-2-create-the-pipeline-seed-job-in-jenkins)).
+
 See [docs/JOB_DSL_AUTOMATION.md](../../docs/JOB_DSL_AUTOMATION.md) for a complete walkthrough.
 
 ## Pipeline Parameters

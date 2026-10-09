@@ -111,6 +111,16 @@ are needed for a standard production setup.
    - **Branch Specifier**: your config repository branch (e.g. `main`)
    - **Script Path**: `Jenkinsfile.seed` *(or the path you chose in Step 1)*
 
+1. Under **Build Triggers**, enable automatic runs so the generated jobs stay in step with the vendor config repository:
+   - **GitHub hook trigger for GITScm polling** — the seed job runs as soon as GitHub delivers a push event for the config repository. Requires a GitHub webhook on the config repository pointing at `https://<your-jenkins>/github-webhook/` (content type `application/json`, *push* events).
+   - **Poll SCM** — Jenkins polls the config repository on a schedule (e.g. `H/15 * * * *`). Use this as a fallback if webhooks cannot reach Jenkins, or alongside the hook as a safety net for missed deliveries.
+
+   > **Parameters**: triggered runs use the *default* values of the job parameters. Set the defaults of `CONFIG_REPO_URL` and `CONFIG_REPO_BRANCH` (Step 2, *Add Parameters*) to your production values, otherwise triggered runs fail with "CONFIG_REPO_URL is required".
+   >
+   > **Scope**: the triggers watch the repository and branch configured under **Pipeline → SCM**, i.e. the vendor config repository. Changes to `ci-adoptium-pipelines` are not watched; see [Maintenance](#re-running-the-seed-job).
+   >
+   > **Development seed jobs**: do not enable these triggers on the development seed job — run it manually.
+
 1. Save the job.
 
 > **Note**: The Pipeline SCM step checks out the vendor config repository to the workspace
@@ -340,6 +350,8 @@ Run the seed job any time to pick up changes to:
 - Job DSL script changes (`ci/jenkins/job-dsl/`)
 
 The config repository is re-checked out by the Pipeline SCM step; `pipelines/` (ci-adoptium-pipelines) is re-checked out by the explicit `git` step in `Jenkinsfile.seed`.
+
+If the seed job has **GitHub hook trigger for GITScm polling** and/or **Poll SCM** enabled (see [Step 2](#step-2-create-the-pipeline-seed-job-in-jenkins)), it re-runs automatically on every push to the config repository branch, so config-only changes need no manual run. Changes in `ci-adoptium-pipelines` (e.g. Job DSL scripts or `*.params.json`) do not trigger it; run the seed job manually after those.
 
 ### Adding/Removing JDK Versions
 

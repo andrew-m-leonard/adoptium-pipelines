@@ -230,7 +230,9 @@ Each lib file is a plain CPS script loaded with `load()` — it calls pipeline s
 1. Build step: **Process Job DSLs** → `ci/jenkins/job-dsl/seed/seed_job_dsl.groovy`
 1. Run the seed job with your config repository URL and branch
 
-The seed job creates all launch and platform build jobs automatically.
+The seed job creates all launch jobs automatically.
+
+> To keep the deployed jobs in step with the vendor config repository, enable **GitHub hook trigger for GITScm polling** and/or **Poll SCM** under **Build Triggers** on a seed job whose SCM is the vendor config repository. See [`docs/JOB_DSL_AUTOMATION.md`](docs/JOB_DSL_AUTOMATION.md#step-2-create-the-pipeline-seed-job-in-jenkins).
 
 ### Required Jenkins Plugins
 
